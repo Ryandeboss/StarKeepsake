@@ -1,0 +1,59 @@
+# Dependencies and package caches
+node_modules/
+.npm/
+**/node_modules/
+
+# Frontend build output and generated files
+dist/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# .NET build output and tooling files
+bin/
+obj/
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+
+# Python environments and caches
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Uploads, generated assets, and temporary files
+uploads/
+**/uploads/
+generated/
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+
+# IDE and OS files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
