@@ -1,26 +1,32 @@
 import type { ChangeEvent } from 'react'
-import type { ConfiguratorState, FrameStyle } from '../types'
+import type { DesignSpec, MaterialStyleSpec } from '../designSpec'
 
 type ConfiguratorFormProps = {
-  form: ConfiguratorState
+  designSpec: DesignSpec
+  photoFile: File | null
   activeStep: number
-  onChange: <K extends keyof ConfiguratorState>(field: K, value: ConfiguratorState[K]) => void
+  onMomentChange: <K extends keyof DesignSpec['moment']>(field: K, value: DesignSpec['moment'][K]) => void
+  onCustomTextChange: (value: string) => void
+  onMaterialStyleChange: (materialStyle: MaterialStyleSpec) => void
   onPhotoChange: (event: ChangeEvent<HTMLInputElement>) => void
   onBack: () => void
   onNext: () => void
   onFinish: () => void
 }
 
-const frameOptions: Array<{ name: FrameStyle; className: string }> = [
-  { name: 'Midnight frame', className: 'midnight' },
-  { name: 'Warm walnut', className: 'walnut' },
-  { name: 'Brushed brass', className: 'brass' },
+const frameOptions: MaterialStyleSpec[] = [
+  { material: 'midnight', style: 'Midnight frame' },
+  { material: 'walnut', style: 'Warm walnut' },
+  { material: 'brass', style: 'Brushed brass' },
 ]
 
 export function ConfiguratorForm({
-  form,
+  designSpec,
+  photoFile,
   activeStep,
-  onChange,
+  onMomentChange,
+  onCustomTextChange,
+  onMaterialStyleChange,
   onPhotoChange,
   onBack,
   onNext,
@@ -42,25 +48,25 @@ export function ConfiguratorForm({
                 <input id="photo" type="file" accept="image/*" onChange={onPhotoChange} />
                 <span className="photo-dropzone-content">
                   <span className="photo-icon" aria-hidden="true">+</span>
-                  <strong>{form.photoFile ? form.photoFile.name : 'Choose a photo'}</strong>
-                  <span>{form.photoFile ? 'Ready for your preview' : 'JPG, PNG, or HEIC · up to 10 MB'}</span>
+                  <strong>{photoFile ? photoFile.name : 'Choose a photo'}</strong>
+                  <span>{photoFile ? 'Ready for your preview' : 'JPG, PNG, or HEIC · up to 10 MB'}</span>
                 </span>
               </label>
             </div>
             <div className="field-row">
               <div className="field">
                 <label className="field-label" htmlFor="date">Date</label>
-                <input className="text-input" id="date" type="date" value={form.date} onChange={(event) => onChange('date', event.target.value)} />
+                <input className="text-input" id="date" type="date" value={designSpec.moment.date} onChange={(event) => onMomentChange('date', event.target.value)} />
               </div>
               <div className="field">
                 <label className="field-label" htmlFor="time">Time <span className="field-hint">(optional)</span></label>
-                <input className="text-input" id="time" type="time" value={form.time} disabled={form.exactTimeUnknown} onChange={(event) => onChange('time', event.target.value)} />
+                <input className="text-input" id="time" type="time" value={designSpec.moment.time} disabled={designSpec.moment.exactTimeUnknown} onChange={(event) => onMomentChange('time', event.target.value)} />
               </div>
             </div>
             <label className="toggle-row" htmlFor="unknown-time">
               <span>Exact time unknown</span>
               <span className="toggle-control">
-                <input id="unknown-time" type="checkbox" checked={form.exactTimeUnknown} onChange={(event) => onChange('exactTimeUnknown', event.target.checked)} />
+                <input id="unknown-time" type="checkbox" checked={designSpec.moment.exactTimeUnknown} onChange={(event) => onMomentChange('exactTimeUnknown', event.target.checked)} />
                 <span className="toggle-track" aria-hidden="true" />
               </span>
             </label>
@@ -78,11 +84,11 @@ export function ConfiguratorForm({
           <div className="step-fields">
             <div className="field">
               <label className="field-label" htmlFor="names">Names or custom text</label>
-              <input className="text-input" id="names" type="text" maxLength={48} placeholder="Avery & Jordan" value={form.names} onChange={(event) => onChange('names', event.target.value)} />
+              <input className="text-input" id="names" type="text" maxLength={48} placeholder="Avery & Jordan" value={designSpec.customText.value} onChange={(event) => onCustomTextChange(event.target.value)} />
             </div>
             <div className="field">
               <label className="field-label" htmlFor="location">Where were you?</label>
-              <input className="text-input" id="location" type="text" maxLength={48} placeholder="Joshua Tree, California" value={form.location} onChange={(event) => onChange('location', event.target.value)} />
+              <input className="text-input" id="location" type="text" maxLength={48} placeholder="Joshua Tree, California" value={designSpec.moment.location} onChange={(event) => onMomentChange('location', event.target.value)} />
             </div>
             <p className="field-hint">Location can be a city, a venue, or simply “home.”</p>
           </div>
@@ -102,15 +108,15 @@ export function ConfiguratorForm({
               <div className="style-grid" role="radiogroup" aria-labelledby="frame-style-label">
                 {frameOptions.map((option) => (
                   <button
-                    className={`style-option ${form.frameStyle === option.name ? 'is-selected' : ''}`}
-                    key={option.name}
+                    className={`style-option ${designSpec.materialStyle.material === option.material ? 'is-selected' : ''}`}
+                    key={option.material}
                     type="button"
                     role="radio"
-                    aria-checked={form.frameStyle === option.name}
-                    onClick={() => onChange('frameStyle', option.name)}
+                    aria-checked={designSpec.materialStyle.material === option.material}
+                    onClick={() => onMaterialStyleChange(option)}
                   >
-                    <span className={`style-swatch ${option.className}`} aria-hidden="true" />
-                    <strong>{option.name}</strong>
+                    <span className={`style-swatch ${option.material}`} aria-hidden="true" />
+                    <strong>{option.style}</strong>
                   </button>
                 ))}
               </div>

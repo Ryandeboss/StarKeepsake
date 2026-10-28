@@ -4,34 +4,42 @@ import { ConfiguratorForm } from '../components/ConfiguratorForm'
 import { ProgressSteps } from '../components/ProgressSteps'
 import { SiteHeader } from '../components/SiteHeader'
 import { StarKeepsakePreview } from '../components/StarKeepsakePreview'
-import type { ConfiguratorState } from '../types'
+import { INITIAL_DESIGN_SPEC } from '../designSpec'
+import type { DesignSpec } from '../designSpec'
 
 const steps = ['Your moment', 'Your story', 'Your object']
 
-const initialForm: ConfiguratorState = {
-  photoFile: null,
-  photoPreview: '',
-  date: '',
-  time: '',
-  exactTimeUnknown: false,
-  location: '',
-  names: '',
-  frameStyle: 'Midnight frame',
-}
-
 export function CreatePage() {
   const [activeStep, setActiveStep] = useState(0)
-  const [form, setForm] = useState<ConfiguratorState>(initialForm)
+  const [designSpec, setDesignSpec] = useState<DesignSpec>(INITIAL_DESIGN_SPEC)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState('')
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
     return () => {
-      if (form.photoPreview) URL.revokeObjectURL(form.photoPreview)
+      if (photoPreview) URL.revokeObjectURL(photoPreview)
     }
-  }, [form.photoPreview])
+  }, [photoPreview])
 
-  const updateField = <K extends keyof ConfiguratorState>(field: K, value: ConfiguratorState[K]) => {
-    setForm((current) => ({ ...current, [field]: value }))
+  const updateMoment = <K extends keyof DesignSpec['moment']>(field: K, value: DesignSpec['moment'][K]) => {
+    setDesignSpec((current) => ({
+      ...current,
+      moment: { ...current.moment, [field]: value },
+    }))
+    setIsReady(false)
+  }
+
+  const updateCustomText = (value: string) => {
+    setDesignSpec((current) => ({
+      ...current,
+      customText: { ...current.customText, value },
+    }))
+    setIsReady(false)
+  }
+
+  const updateMaterialStyle = (materialStyle: DesignSpec['materialStyle']) => {
+    setDesignSpec((current) => ({ ...current, materialStyle }))
     setIsReady(false)
   }
 
@@ -39,10 +47,11 @@ export function CreatePage() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    setForm((current) => ({
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+    setDesignSpec((current) => ({
       ...current,
-      photoFile: file,
-      photoPreview: URL.createObjectURL(file),
+      photo: { ...current.photo, assetId: file.name },
     }))
     setIsReady(false)
   }
@@ -73,9 +82,12 @@ export function CreatePage() {
           <div>
             <ProgressSteps activeStep={activeStep} steps={steps} />
             <ConfiguratorForm
-              form={form}
+              designSpec={designSpec}
+              photoFile={photoFile}
               activeStep={activeStep}
-              onChange={updateField}
+              onMomentChange={updateMoment}
+              onCustomTextChange={updateCustomText}
+              onMaterialStyleChange={updateMaterialStyle}
               onPhotoChange={handlePhotoChange}
               onBack={handleBack}
               onNext={handleNext}
@@ -83,7 +95,7 @@ export function CreatePage() {
             />
             <p className="sr-only" aria-live="polite">{isReady ? 'Your StarKeepsake preview is ready.' : ''}</p>
           </div>
-          <StarKeepsakePreview form={form} />
+          <StarKeepsakePreview designSpec={designSpec} photoPreview={photoPreview} />
         </div>
       </main>
     </div>

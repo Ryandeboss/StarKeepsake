@@ -441,11 +441,11 @@
 
 .artwork-canvas {
   position: relative;
-  display: grid;
-  min-height: 535px;
-  place-items: center;
+  display: block;
+  width: 100%;
+  aspect-ratio: 279.4 / 355.6;
   overflow: hidden;
-  padding: 40px 28px;
+  padding: 0;
   border: 1px solid #57605a;
   background:
     radial-gradient(circle at 14% 18%, rgba(255, 220, 150, 0.95) 0 1px, transparent 2px),
@@ -458,16 +458,15 @@
 }
 
 .artwork-canvas.is-dimmed { filter: brightness(0.58) saturate(0.8); }
-.artwork-stars { position: absolute; inset: 0; }
-.artwork-star { position: absolute; border-radius: 50%; background: #f9dda1; box-shadow: 0 0 8px rgba(246, 210, 133, 0.6); }
-.artwork-constellation { position: absolute; top: 10%; right: 13%; width: 128px; height: 88px; border-top: 1px solid rgba(235, 203, 148, 0.32); border-right: 1px solid rgba(235, 203, 148, 0.32); border-radius: 50%; transform: rotate(25deg); }
-.artwork-content { position: relative; z-index: 1; display: grid; width: min(100%, 330px); gap: 17px; text-align: center; }
-.photo-engraving { display: grid; aspect-ratio: 1.6; place-items: center; overflow: hidden; border: 1px solid rgba(238, 210, 157, 0.48); background: rgba(8, 25, 33, 0.55); color: rgba(255, 226, 168, 0.8); }
+.artwork-stars { position: absolute; }
+.artwork-star { position: absolute; border-radius: 50%; background: #f9dda1; box-shadow: 0 0 8px rgba(246, 210, 133, 0.6); transform: translate(-50%, -50%); }
+.artwork-center-mark { position: absolute; z-index: 1; width: 4px; height: 4px; border: 1px solid rgba(255, 240, 195, 0.9); border-radius: 50%; box-shadow: 0 0 9px rgba(246, 210, 133, 0.8); transform: translate(-50%, -50%); }
+.photo-engraving { position: absolute; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(238, 210, 157, 0.48); background: rgba(8, 25, 33, 0.55); color: rgba(255, 226, 168, 0.8); }
 .photo-engraving img { width: 100%; height: 100%; object-fit: cover; opacity: 0.76; }
 .photo-empty { display: grid; gap: 4px; justify-items: center; padding: 18px; }
 .photo-empty strong { font-family: var(--serif); font-size: 18px; font-weight: 500; }
 .photo-empty span { color: rgba(255, 226, 168, 0.58); font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
-.artwork-copy { display: grid; gap: 8px; color: #f1d59a; }
+.artwork-copy { position: absolute; display: grid; align-content: center; gap: 8px; color: #f1d59a; }
 .artwork-copy strong { min-height: 30px; font-family: var(--serif); font-size: clamp(1.4rem, 3vw, 2.05rem); font-weight: 500; line-height: 1.12; }
 .artwork-copy span { min-height: 16px; color: rgba(255, 225, 174, 0.74); font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
 .artwork-location { color: rgba(255, 225, 174, 0.58); font-family: var(--mono); font-size: 10px; }
@@ -490,7 +489,6 @@
   .landing-hero { gap: 60px; padding-top: 40px; }
   .landing-artwork-wrap { width: min(100%, 570px); margin: 0 auto; }
   .preview-card { position: static; order: -1; }
-  .artwork-canvas { min-height: 470px; }
 }
 
 @media (max-width: 560px) {
@@ -512,5 +510,4 @@
   .field-row,
   .style-grid { grid-template-columns: 1fr; }
   .style-option { min-height: 55px; grid-template-columns: auto 1fr; align-items: center; }
-  .artwork-canvas { min-height: 390px; padding: 28px 18px; }
 }
