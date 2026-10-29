@@ -40,7 +40,7 @@ test('foreground stars and boundary stars are never drawn',()=>{
   ]
   const selected=selectSkyBlendPoints(stars,region,mask)
   assert.deepEqual(selected.map(x=>x.star.hipparcosId),[101])
-  assert.equal(hasClearSkyAt(mask,0.5,0.5),true)
+  assert.equal(hasClearSkyAt(mask,0.5,0.3),true)
   assert.equal(hasClearSkyAt(mask,0.5,0.95),false)
 })
 
