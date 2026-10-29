@@ -29,7 +29,7 @@ class EngravingTests(unittest.TestCase):
                     self.assertEqual(output.format, "PNG")
                     self.assertEqual(output.mode, "L")
                     self.assertEqual(output.size, OUTPUT_SIZE_PX)
-                    self.assertEqual(output.getexif(), {})
+                    self.assertEqual(len(output.getexif()), 0)
 
     def test_same_input_produces_same_output(self):
         data = image_bytes()
