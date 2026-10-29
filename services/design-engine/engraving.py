@@ -92,8 +92,7 @@ def prepare_engraving_preview(
     if fit_mode == "contain":
         # Show entire image; fill letterboxed space with a consistent light base.
         fitted = ImageOps.contain(photo, output_size, method=Image.Resampling.LANCZOS)
-        output = Image.new("RGB", output_size, (245, 242, 233))
-        output.paste(fitted, ((output_size[0] - fitted.width) // 2, (output_size[1] - fitted.height) // 2))
+        output = fitted
     else:
         if crop is None:
             raise EngravingInputError("Choose a crop before using fill mode.")
@@ -117,6 +116,16 @@ def prepare_engraving_preview(
     grayscale = ImageOps.autocontrast(grayscale, cutoff=1)
     grayscale = ImageEnhance.Contrast(grayscale).enhance(1.12)
     grayscale = grayscale.filter(ImageFilter.UnsharpMask(radius=1.3, percent=110, threshold=3))
+
+    if fit_mode == "contain":
+        # Letterbox AFTER tonal adjustment; otherwise autocontrast can turn
+        # a light border nearly black and misleadingly obscure the photo.
+        canvas = Image.new("L", output_size, 255)
+        canvas.paste(grayscale, (
+            (output_size[0] - grayscale.width) // 2,
+            (output_size[1] - grayscale.height) // 2,
+        ))
+        grayscale = canvas
 
     buffer = BytesIO()
     grayscale.save(buffer, format="PNG", optimize=True)
