@@ -6,7 +6,7 @@ import { ConfiguratorForm } from '../components/ConfiguratorForm'
 import { ProgressSteps } from '../components/ProgressSteps'
 import { SiteHeader } from '../components/SiteHeader'
 import { StarKeepsakePreview } from '../components/StarKeepsakePreview'
-import { getFrameLayout, INITIAL_DESIGN_SPEC } from '../designSpec'
+import { getFrameLayout, INITIAL_DESIGN_SPEC, toRect } from '../designSpec'
 import type { DesignSpec, FramePresetId, PhotoCrop } from '../designSpec'
 import { FULL_PHOTO_CROP, getCoverCrop } from '../photoCrop'
 
@@ -113,13 +113,13 @@ export function CreatePage() {
       regions,
       photo: {
         ...current.photo,
-        positionMm: regions.engravingPhoto,
+        positionMm: toRect(regions.engravingPhoto),
         crop: current.photo.fitMode === 'cover' && sourceDimensions
           ? getCoverCrop(sourceDimensions.width, sourceDimensions.height,
             regions.engravingPhoto.widthMm / regions.engravingPhoto.heightMm)
           : FULL_PHOTO_CROP,
       },
-      customText: { ...current.customText, positionMm: regions.text },
+      customText: { ...current.customText, positionMm: toRect(regions.text) },
       astronomy: null,
       stars: [],
     }))
