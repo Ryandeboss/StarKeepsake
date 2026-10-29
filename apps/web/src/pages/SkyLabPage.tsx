@@ -101,15 +101,14 @@ export function SkyLabPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const utcMoment = useMemo(() => new Date(`${date}T${time}:00Z`), [date, time])
+  const dateError = !Number.isFinite(utcMoment.getTime()) ||
+    utcMoment.getUTCFullYear() < 1850 || utcMoment.getUTCFullYear() > 2149
+    ? 'Choose a date between 1850 and 2149.'
+    : ''
 
   useEffect(() => {
     if (view !== 'sky' || !date || !time) return
-    if (!Number.isFinite(utcMoment.getTime()) ||
-      utcMoment.getUTCFullYear() < 1850 || utcMoment.getUTCFullYear() > 2149) {
-      setError('Choose a date between 1850 and 2149.')
-      setResult(null)
-      return
-    }
+    if (dateError) return
     let cancelled = false
     const timer = window.setTimeout(async () => {
       setLoading(true)
@@ -146,7 +145,7 @@ export function SkyLabPage() {
       }
     }, 400)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [view, selected, date, time, utcMoment])
+  }, [view, selected, date, time, utcMoment, dateError])
 
   useEffect(() => {
     if (!playing || view !== 'sky') return
@@ -201,7 +200,7 @@ export function SkyLabPage() {
             </div>
             <div className="sky-current-time">{utcMoment.toLocaleString('en-US', { timeZone:'UTC', dateStyle:'full', timeStyle:'short' })} UTC</div>
             <SkyPanorama result={result}/>
-            <p className="sky-loading-status" role="status">{loading ? 'Calculating the star field from Hipparcos and JPL data…' : error || (result
+            <p className="sky-loading-status" role="status">{loading ? 'Calculating the star field from Hipparcos and JPL data…' : dateError || error || (result
               ? `${result.calculation.selectedStars} actual plotted HIP stars · ${result.calculation.visibleCatalogStars} catalogue stars above the ideal horizon · exact time basis`
               : 'Choose a date and time to calculate the view.')}</p>
             <div className="sky-explainer-cards">
