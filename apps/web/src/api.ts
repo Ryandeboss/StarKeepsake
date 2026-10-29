@@ -64,22 +64,24 @@ export function generateAstronomy(
   moment: DesignSpec['moment'],
   skySettings: DesignSpec['skySettings'],
   framePresetId: DesignSpec['framePresetId'],
+  photoAspectRatio: number | null = null,
 ) {
   return apiRequest<AstronomyResult>('/api/astronomy/stars', {
     method: 'POST',
-    body: JSON.stringify({ moment, skySettings, framePresetId }),
+    body: JSON.stringify({ moment, skySettings, framePresetId, photoAspectRatio }),
   })
 }
 
 export async function generateEngravingPreview(
   photo: File,
-  spec: Pick<DesignSpec, 'framePresetId' | 'photo'>,
+  spec: Pick<DesignSpec, 'framePresetId' | 'photoAspectRatio' | 'photo'>,
   signal?: AbortSignal,
 ): Promise<Blob> {
   const form = new FormData()
   // Avoid transmitting the customer's original filename to the processing service.
   form.append('image', photo, 'photo')
   form.append('framePresetId', spec.framePresetId)
+  if (spec.photoAspectRatio != null) form.append('photoAspectRatio', String(spec.photoAspectRatio))
   form.append('fitMode', spec.photo.fitMode)
   form.append('crop', JSON.stringify(spec.photo.crop))
 
