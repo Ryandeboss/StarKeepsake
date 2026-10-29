@@ -39,11 +39,6 @@ export function StarKeepsakePreview({ designSpec, photoPreview }: StarKeepsakePr
 
   const photoRect = rectToDisplayPixels(designSpec.photo.positionMm, displayWidthPx, physicalArtwork.widthMm)
   const textRect = rectToDisplayPixels(designSpec.customText.positionMm, displayWidthPx, physicalArtwork.widthMm)
-  const centerPoint = pointToDisplayPixels(
-    { xMm: physicalArtwork.widthMm / 2, yMm: physicalArtwork.heightMm / 2 },
-    displayWidthPx,
-    physicalArtwork.widthMm,
-  )
   const displaySkyRect = rectToDisplayPixels(regions.sky, displayWidthPx, physicalArtwork.widthMm)
   const displayTextStyle = {
     ...displayRectStyle(textRect),
@@ -89,8 +84,6 @@ export function StarKeepsakePreview({ designSpec, photoPreview }: StarKeepsakePr
               )
             })}
           </div>
-
-          <div className="artwork-center-mark" aria-hidden="true" style={{ left: centerPoint.x, top: centerPoint.y }} />
 
           <div className="photo-engraving" style={displayRectStyle(photoRect)}>
             {photoPreview ? (

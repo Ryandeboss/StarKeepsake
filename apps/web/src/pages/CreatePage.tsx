@@ -128,6 +128,17 @@ export function CreatePage() {
 
   const handleLocationSelect = (location: LocationCandidate) => {
     setSelectedLocation(location)
+    setDesignSpec((current) => ({
+      ...current,
+      moment: {
+        ...current.moment,
+        location: null,
+        localDateTime: null,
+        utcDateTime: null,
+      },
+      astronomy: null,
+      stars: [],
+    }))
     setFormError('')
     setIsReady(false)
   }
