@@ -81,7 +81,9 @@ export async function generateEngravingPreview(
   // Avoid transmitting the customer's original filename to the processing service.
   form.append('image', photo, 'photo')
   form.append('framePresetId', spec.framePresetId)
-  if (spec.photoAspectRatio != null) form.append('photoAspectRatio', String(spec.photoAspectRatio))
+  if (spec.framePresetId === 'auto' && spec.photoAspectRatio != null) {
+    form.append('photoAspectRatio', String(spec.photoAspectRatio))
+  }
   form.append('fitMode', spec.photo.fitMode)
   form.append('crop', JSON.stringify(spec.photo.crop))
 
