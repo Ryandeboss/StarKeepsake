@@ -65,6 +65,18 @@ jobs:
             exit 1
           fi
 
+          echo "Azure Maps timezone response for Chicago (default options):"
+          curl --fail --silent --show-error \
+            -H "subscription-key: $MAPS_KEY" \
+            "https://atlas.microsoft.com/timezone/byCoordinates/json?api-version=1.0&query=41.8781,-87.6298" \
+            | jq .
+
+          echo "Azure Maps timezone response for Chicago (options=all):"
+          curl --fail --silent --show-error \
+            -H "subscription-key: $MAPS_KEY" \
+            "https://atlas.microsoft.com/timezone/byCoordinates/json?api-version=1.0&options=all&query=41.8781,-87.6298" \
+            | jq .
+
           az containerapp secret set             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --secrets "azure-maps-key=$MAPS_KEY"             --output none
 
       - name: Build and push API image
