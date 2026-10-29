@@ -6,6 +6,8 @@ import type { DesignSpec } from '../designSpec'
 type StarKeepsakePreviewProps = {
   designSpec: DesignSpec
   photoPreview: string
+  engravingPreview: string
+  isProcessingPhoto: boolean
 }
 
 function formatDate(date: string) {
@@ -19,7 +21,7 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T12:00:00Z`))
 }
 
-export function StarKeepsakePreview({ designSpec, photoPreview }: StarKeepsakePreviewProps) {
+export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview, isProcessingPhoto }: StarKeepsakePreviewProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [lightsOn, setLightsOn] = useState(true)
   const [displayWidthPx, setDisplayWidthPx] = useState(0)
@@ -87,7 +89,11 @@ export function StarKeepsakePreview({ designSpec, photoPreview }: StarKeepsakePr
 
           <div className="photo-engraving" style={displayRectStyle(photoRect)}>
             {photoPreview ? (
-              <img src={photoPreview} alt="Selected photo for the keepsake" />
+              <img
+                src={engravingPreview || photoPreview}
+                className={engravingPreview ? 'is-engraved' : ''}
+                alt={engravingPreview ? 'Grayscale engraving preview of your photo' : 'Original uploaded photo, awaiting engraving processing'}
+              />
             ) : (
               <div className="photo-empty">
                 <strong>Your photo</strong>
@@ -121,6 +127,13 @@ export function StarKeepsakePreview({ designSpec, photoPreview }: StarKeepsakePr
           <span className="preview-toggle-track" aria-hidden="true" />
         </label>
       </div>
+      {isProcessingPhoto && <p className="preview-engraving-note">Preparing your engraving preview…</p>}
+      {engravingPreview && (
+        <p className="preview-engraving-note">
+          <a href={engravingPreview} download="engraving-preview.png">Save grayscale engraving preview (PNG)</a>
+          <span> · Visual preview only, not a laser-ready file.</span>
+        </p>
+      )}
     </aside>
   )
 }
