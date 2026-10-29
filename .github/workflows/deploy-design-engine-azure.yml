@@ -62,10 +62,10 @@ jobs:
           if az containerapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" >/dev/null 2>&1; then
             az containerapp identity assign --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --user-assigned "$ACR_PULL_IDENTITY_ID" --output none
             az containerapp registry set --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --server "$ACR_SERVER" --identity "$ACR_PULL_IDENTITY_ID" --output none
-            az containerapp update --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --image "$IMAGE" --output none
+            az containerapp update --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --image "$IMAGE" --set-env-vars "DEPLOYMENT_COMMIT_SHA=$GITHUB_SHA" --output none
             az containerapp ingress update --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --target-port "$TARGET_PORT" --transport auto --output none
           else
-            az containerapp create --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --environment "$AZURE_CONTAINER_APP_ENVIRONMENT" --image "$IMAGE" --user-assigned "$ACR_PULL_IDENTITY_ID" --registry-server "$ACR_SERVER" --registry-identity "$ACR_PULL_IDENTITY_ID" --ingress external --target-port "$TARGET_PORT" --output none
+            az containerapp create --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --environment "$AZURE_CONTAINER_APP_ENVIRONMENT" --image "$IMAGE" --user-assigned "$ACR_PULL_IDENTITY_ID" --registry-server "$ACR_SERVER" --registry-identity "$ACR_PULL_IDENTITY_ID" --ingress external --target-port "$TARGET_PORT" --env-vars "DEPLOYMENT_COMMIT_SHA=$GITHUB_SHA" --output none
           fi
 
       - name: Verify health endpoint
@@ -78,15 +78,55 @@ jobs:
           for attempt in {1..30}; do
             BODY="$(curl --fail --silent --show-error "$HEALTH_URL" || true)"
 
+            DEPLOYED_SHA="$(echo "$BODY" | jq -r '.commitSha // empty')"
+
             if echo "$BODY" | grep -q '"service":"design-engine"' &&
-               echo "$BODY" | grep -q '"status":"healthy"'; then
-              echo "Design engine health check passed: $BODY"
+               echo "$BODY" | grep -q '"status":"healthy"' &&
+               [[ "$DEPLOYED_SHA" == "$GITHUB_SHA" ]]; then
+              echo "Design engine health check passed for commit $DEPLOYED_SHA: $BODY"
               exit 0
             fi
 
-            echo "Health check attempt $attempt/30 did not return the expected design-engine payload."
+            echo "Health check attempt $attempt/30 has not reached commit $GITHUB_SHA yet."
             sleep 10
           done
 
           echo "Design engine did not become healthy at $HEALTH_URL"
           exit 1
+
+
+      - name: Smoke test M5 astronomy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FQDN="$(az containerapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --query properties.configuration.ingress.fqdn --output tsv)"
+          BASE_URL="https://${FQDN}"
+
+          EXACT_REQUEST='{"date":"2024-07-04","utcDateTime":"2024-07-05T01:30:00Z","exactTimeUnknown":false,"timeZoneId":"America/Chicago","latitude":41.8781,"longitude":-87.6298,"magnitudeLimit":6.0,"maxStars":96,"minSeparationMm":3.5}'
+
+          EXACT_RESPONSE="$(curl --fail --silent --show-error             -H "Content-Type: application/json"             -d "$EXACT_REQUEST"             "$BASE_URL/astronomy/stars")"
+
+          echo "$EXACT_RESPONSE" | jq -e '
+            .calculation.catalog == "hipparcos" and
+            .calculation.ephemeris == "de440s" and
+            .calculation.projection == "azimuthal-equidistant" and
+            .calculation.timeBasis == "exact" and
+            .calculation.selectedStars > 20 and
+            .calculation.selectedStars <= 96 and
+            (.stars | length) == .calculation.selectedStars and
+            ([.stars[] | select(.xMm < 0 or .xMm > 279.4 or .yMm < 0 or .yMm > 355.6)] | length) == 0 and
+            (.stars[0].hipparcosId | type == "number")
+          ' >/dev/null
+
+          UNKNOWN_REQUEST='{"date":"2024-07-04","utcDateTime":null,"exactTimeUnknown":true,"timeZoneId":"America/Chicago","latitude":41.8781,"longitude":-87.6298,"magnitudeLimit":6.0,"maxStars":96,"minSeparationMm":3.5}'
+
+          UNKNOWN_RESPONSE="$(curl --fail --silent --show-error             -H "Content-Type: application/json"             -d "$UNKNOWN_REQUEST"             "$BASE_URL/astronomy/stars")"
+
+          echo "$UNKNOWN_RESPONSE" | jq -e '
+            .calculation.timeBasis == "date-only-local-midnight" and
+            .calculation.calculationUtcDateTime == "2024-07-04T05:00:00Z" and
+            .calculation.selectedStars > 20
+          ' >/dev/null
+
+          echo "M5 astronomy smoke test passed."
