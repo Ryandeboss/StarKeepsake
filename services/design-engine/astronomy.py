@@ -27,7 +27,12 @@ RESERVED_REGIONS = (
     (34.7, 210.0, 210.0, 86.0),  # custom text / moment metadata
 )
 
-DATA_DIR = Path(os.getenv("SKYFIELD_DATA_DIR", "/app/data"))
+DATA_DIR = Path(
+    os.getenv(
+        "SKYFIELD_DATA_DIR",
+        str(Path(__file__).resolve().parent / "data"),
+    )
+)
 loader = Loader(str(DATA_DIR), verbose=False)
 
 
