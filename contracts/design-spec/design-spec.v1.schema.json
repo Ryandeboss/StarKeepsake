@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://starkeepsake.local/contracts/design-spec/v1",
-  "title": "StarKeepsake DesignSpec v1",
+  "$id": "https://starkeepsake.local/contracts/design-spec/v1.1",
+  "title": "StarKeepsake DesignSpec v1.1",
   "description": "Canonical physical design model for an 11 by 14 inch StarKeepsake artwork.",
   "type": "object",
   "required": ["schemaVersion", "designId", "templateId", "physicalArtwork", "regions", "moment", "photo", "customText", "materialStyle", "skySettings", "stars"],
   "properties": {
-    "schemaVersion": { "const": "1.0" },
+    "schemaVersion": { "const": "1.1" },
     "designId": { "type": "string", "description": "Placeholder is allowed until persistence exists." },
     "templateId": { "type": "string" },
     "physicalArtwork": {
@@ -32,12 +32,19 @@
     },
     "moment": {
       "type": "object",
-      "required": ["date", "time", "exactTimeUnknown", "location"],
+      "required": ["date", "time", "exactTimeUnknown", "location", "localDateTime", "utcDateTime"],
       "properties": {
         "date": { "type": "string" },
-        "time": { "type": "string" },
+        "time": { "type": ["string", "null"] },
         "exactTimeUnknown": { "type": "boolean" },
-        "location": { "type": "string" }
+        "location": {
+          "anyOf": [
+            { "$ref": "#/$defs/resolvedLocation" },
+            { "type": "null" }
+          ]
+        },
+        "localDateTime": { "type": ["string", "null"] },
+        "utcDateTime": { "type": ["string", "null"] }
       },
       "additionalProperties": false
     },
@@ -86,6 +93,20 @@
     }
   },
   "$defs": {
+    "resolvedLocation": {
+      "type": "object",
+      "required": ["query", "displayName", "formattedAddress", "latitude", "longitude", "timeZoneId", "confidence"],
+      "properties": {
+        "query": { "type": "string" },
+        "displayName": { "type": "string" },
+        "formattedAddress": { "type": "string" },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
+        "timeZoneId": { "type": "string" },
+        "confidence": { "enum": ["High", "Medium", "Low", "Unknown"] }
+      },
+      "additionalProperties": false
+    },
     "rect": {
       "type": "object",
       "required": ["xMm", "yMm", "widthMm", "heightMm"],
