@@ -23,6 +23,7 @@ jobs:
       - run: npm run test:crop
       - run: npm run test:stars
       - run: npm run test:sky-blend
+      - run: npm run test:frame
       - run: npm run build
 
   api:
