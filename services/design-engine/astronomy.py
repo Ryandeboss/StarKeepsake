@@ -68,7 +68,13 @@ def _ephemeris():
 
 @lru_cache(maxsize=16)
 def _catalog(magnitude_limit: float):
-    with loader.open(hipparcos.URL) as catalog_file:
+    catalog_path = DATA_DIR / "hip_main.dat"
+    if not catalog_path.exists():
+        raise RuntimeError(
+            "Hipparcos catalog is missing from the design-engine image."
+        )
+
+    with catalog_path.open("rb") as catalog_file:
         frame = hipparcos.load_dataframe(catalog_file)
 
     frame = frame[
