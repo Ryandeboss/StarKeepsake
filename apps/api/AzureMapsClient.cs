@@ -14,6 +14,11 @@ public sealed class AzureMapsException(string message) : Exception(message);
 
 public sealed class AzureMapsClient
 {
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
     private readonly HttpClient _httpClient;
     private readonly string _subscriptionKey;
 
@@ -117,27 +122,16 @@ public sealed class AzureMapsClient
                 $"Azure Maps timezone lookup failed with status {(int)response.StatusCode}.");
         }
 
-        using var document = JsonDocument.Parse(payload);
+        var result = JsonSerializer.Deserialize<AzureMapsTimeZoneResponse>(payload, JsonOptions);
+        var timeZoneId = result?.TimeZones?.FirstOrDefault()?.Id;
 
-        if (!TryGetProperty(document.RootElement, "timeZones", "TimeZones", out var timeZones) ||
-            timeZones.ValueKind != JsonValueKind.Array ||
-            timeZones.GetArrayLength() == 0 ||
-            !TryGetProperty(timeZones[0], "id", "Id", out var idElement))
+        if (string.IsNullOrWhiteSpace(timeZoneId))
         {
             throw new AzureMapsException("Azure Maps did not return a time zone for this location.");
         }
 
-        return idElement.GetString()
-            ?? throw new AzureMapsException("Azure Maps returned an empty time zone identifier.");
+        return timeZoneId;
     }
-
-    private static bool TryGetProperty(
-        JsonElement element,
-        string camelCaseName,
-        string pascalCaseName,
-        out JsonElement value) =>
-        element.TryGetProperty(camelCaseName, out value) ||
-        element.TryGetProperty(pascalCaseName, out value);
 
     private HttpRequestMessage CreateRequest(string requestUri)
     {
@@ -153,4 +147,9 @@ public sealed class AzureMapsClient
             throw new AzureMapsException("Azure Maps is not configured for this environment.");
         }
     }
+
+    private sealed record AzureMapsTimeZoneResponse(
+        IReadOnlyList<AzureMapsTimeZone>? TimeZones);
+
+    private sealed record AzureMapsTimeZone(string? Id);
 }
