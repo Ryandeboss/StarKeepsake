@@ -69,3 +69,31 @@ export function generateAstronomy(
     body: JSON.stringify({ moment, skySettings }),
   })
 }
+
+export async function generateEngravingPreview(photo: File): Promise<Blob> {
+  const form = new FormData()
+  // Avoid transmitting the customer's original filename to the processing service.
+  form.append('image', photo, 'photo')
+
+  const response = await fetch(`${API_BASE_URL}/api/engraving/preview`, {
+    method: 'POST',
+    body: form,
+  })
+
+  if (!response.ok) {
+    let message = 'We could not build your engraving preview.'
+    try {
+      const body = await response.json() as { message?: string; detail?: string; title?: string }
+      message = body.message ?? body.detail ?? body.title ?? message
+    } catch {
+      // Keep generic error if the service returned non-JSON.
+    }
+    throw new Error(message)
+  }
+
+  if (!response.headers.get('Content-Type')?.includes('image/png')) {
+    throw new Error('The engraving service returned an unexpected format.')
+  }
+
+  return response.blob()
+}
