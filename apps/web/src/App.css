@@ -455,11 +455,25 @@
 }
 
 .artwork-canvas.is-dimmed { filter: brightness(0.58) saturate(0.8); }
-.artwork-stars { position: absolute; }
+.artwork-stars {
+  position: absolute;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(10, 25, 39, 0.24), rgba(40, 74, 88, 0.12) 75%, rgba(174, 154, 116, 0.07));
+  border-bottom: 1px solid rgba(230, 202, 153, 0.22);
+}
 .artwork-star { position: absolute; border-radius: 50%; background: #f9dda1; box-shadow: 0 0 8px rgba(246, 210, 133, 0.6); transform: translate(-50%, -50%); }
-.photo-engraving { position: absolute; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(238, 210, 157, 0.48); background: rgba(8, 25, 33, 0.55); color: rgba(255, 226, 168, 0.8); }
-.photo-engraving img { width: 100%; height: 100%; object-fit: cover; opacity: 0.76; }
-.photo-engraving img.is-engraved { filter: sepia(0.62) contrast(1.08); opacity: 0.9; }
+.photo-engraving {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(238, 210, 157, 0.38);
+  background: #f5f2e9;
+  color: #405457;
+}
+.photo-engraving img { user-select: none; }
+.photo-engraving img { display: block; width: 100%; height: 100%; object-fit: contain; opacity: 0.92; }
+.photo-engraving img.is-engraved { filter: sepia(0.38) contrast(1.02); opacity: 0.98; }
 .preview-engraving-note { margin-top: 12px; font-size: 11px; line-height: 1.5; color: var(--muted); }
 .preview-engraving-note a { color: var(--green); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .photo-empty { display: grid; gap: 4px; justify-items: center; padding: 18px; }
@@ -628,3 +642,41 @@
     width: 100%;
   }
 }
+
+/* Full opening layout and temporary image composition controls */
+.frame-size-options, .photo-fit-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.frame-size-options button, .photo-fit-options button {
+  appearance: none;
+  background: #fffdfa;
+  border: 1px solid #d4cbc0;
+  border-radius: 7px;
+  color: var(--green);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  padding: 10px 13px;
+}
+.frame-size-options button.is-selected, .photo-fit-options button.is-selected {
+  background: #e9eee9;
+  border: 2px solid var(--green);
+  padding: 9px 12px;
+  font-weight: 700;
+}
+.frame-size-options button:disabled, .photo-fit-options button:disabled { cursor: not-allowed; opacity: 0.55; }
+.photo-crop-editor { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); background: #fbf9f5; }
+.photo-crop-stage {
+  position: relative;
+  width: 100%;
+  max-height: 330px;
+  overflow: hidden;
+  border: 1px solid #d2c9b8;
+  background: #f5f2e9;
+  display: grid;
+  place-items: center;
+}
+.photo-crop-stage img { display: block; pointer-events: none; user-select: none; }
+.photo-crop-stage.can-drag { cursor: grab; touch-action: none; }
+.photo-crop-stage.can-drag:active { cursor: grabbing; }
+.crop-zoom-control { display: grid; gap: 5px; color: var(--green); font-size: 12px; font-weight: 700; }
+.crop-zoom-control input { width: 100%; accent-color: var(--green); }
+.crop-zoom-control small { color: var(--muted); font-weight: 400; line-height: 1.4; }
