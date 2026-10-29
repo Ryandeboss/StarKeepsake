@@ -130,3 +130,51 @@ jobs:
           ' >/dev/null
 
           echo "M5 astronomy smoke test passed."
+
+      - name: Smoke test M6 engraving preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          FQDN="$(az containerapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --query properties.configuration.ingress.fqdn --output tsv)"
+          INPUT="$(mktemp --suffix=.png)"
+          OUTPUT="$(mktemp --suffix=.png)"
+          trap 'rm -f "$INPUT" "$OUTPUT"' EXIT
+
+          # Tiny synthetic gradient fixture; no customer photo or test assets stored.
+          python3 - "$INPUT" <<'PY'
+          import struct
+          import sys
+          import zlib
+          width, height = 128, 128
+          rows = b"".join(
+              b"\x00" + bytes(((x * 2 + y) % 256 for x in range(width)))
+              for y in range(height)
+          )
+          def chunk(tag, data):
+              return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+          png = (
+              b"\x89PNG\r\n\x1a\n"
+              + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 0, 0, 0, 0))
+              + chunk(b"IDAT", zlib.compress(rows))
+              + chunk(b"IEND", b"")
+          )
+          with open(sys.argv[1], "wb") as output:
+              output.write(png)
+          PY
+
+          curl --fail --silent --show-error \
+            -F "image=@$INPUT;type=image/png" \
+            -o "$OUTPUT" \
+            "https://${FQDN}/engraving/preview"
+
+          python3 - "$OUTPUT" <<'PY'
+          import struct
+          import sys
+          with open(sys.argv[1], "rb") as f:
+              data = f.read(33)
+          assert data[:8] == b"\x89PNG\r\n\x1a\n", "Not a PNG"
+          width, height = struct.unpack(">II", data[16:24])
+          assert (width, height) == (2100, 1250), (width, height)
+          assert data[25] == 0, "Expected 8-bit grayscale output"
+          print("M6 engine engraving smoke test passed.")
+          PY

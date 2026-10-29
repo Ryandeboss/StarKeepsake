@@ -1,10 +1,14 @@
 from datetime import date, datetime
 import os
 
-from fastapi import FastAPI, HTTPException
+from starlette.concurrency import run_in_threadpool
+
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from astronomy import AstronomyInputError, generate_star_field
+from engraving import EngravingInputError, MAX_UPLOAD_BYTES, prepare_engraving_preview
 
 app = FastAPI(title="StarKeepsake Design Engine")
 deployment_commit_sha = os.getenv("DEPLOYMENT_COMMIT_SHA", "unknown")
@@ -47,3 +51,26 @@ def astronomy_stars(request: AstronomyRequest) -> dict:
         )
     except AstronomyInputError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/engraving/preview")
+async def engraving_preview(image: UploadFile = File(...)) -> Response:
+    if image.content_type not in {"image/jpeg", "image/png", "image/webp"}:
+        raise HTTPException(status_code=422, detail="Use a JPG, PNG, or WebP photo.")
+
+    try:
+        # Read only one byte beyond the advertised maximum; never trust Content-Length.
+        payload = await image.read(MAX_UPLOAD_BYTES + 1)
+    finally:
+        await image.close()
+
+    try:
+        output = await run_in_threadpool(prepare_engraving_preview, payload)
+    except EngravingInputError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return Response(
+        content=output,
+        media_type="image/png",
+        headers={"Cache-Control": "no-store"},
+    )
