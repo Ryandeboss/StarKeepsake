@@ -117,6 +117,53 @@ jobs:
           echo "API did not become healthy at $HEALTH_URL"
           exit 1
 
+      - name: Verify M4 location and moment flow
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FQDN="$(az containerapp show \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_CONTAINER_APP" \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)"
+          API_BASE="https://${FQDN}"
+
+          LOCATIONS="$(curl --fail --silent --show-error \
+            --get \
+            --data-urlencode "q=Chicago, Illinois" \
+            "$API_BASE/api/locations/search")"
+
+          LOCATION="$(echo "$LOCATIONS" | jq -c '.[0]')"
+
+          if [[ "$LOCATION" == "null" || -z "$LOCATION" ]]; then
+            echo "M4 geocoding returned no Chicago result."
+            exit 1
+          fi
+
+          REQUEST="$(jq -n \
+            --arg date "2024-06-15" \
+            --arg time "21:30" \
+            --arg query "Chicago, Illinois" \
+            --argjson location "$LOCATION" \
+            '{date:$date,time:$time,exactTimeUnknown:false,locationQuery:$query,location:$location}')"
+
+          MOMENT="$(curl --fail --silent --show-error \
+            -H "Content-Type: application/json" \
+            -d "$REQUEST" \
+            "$API_BASE/api/moments/resolve")"
+
+          TIME_ZONE="$(echo "$MOMENT" | jq -r '.location.timeZoneId // empty')"
+          UTC_DATE_TIME="$(echo "$MOMENT" | jq -r '.utcDateTime // empty')"
+
+          if [[ -z "$TIME_ZONE" || -z "$UTC_DATE_TIME" ]]; then
+            echo "M4 moment resolution did not return a timezone and UTC timestamp."
+            echo "$MOMENT"
+            exit 1
+          fi
+
+          echo "M4 smoke test passed: Chicago resolved to $TIME_ZONE at $UTC_DATE_TIME"
+
 
       - name: Smoke test location and moment resolution
         shell: bash
