@@ -55,7 +55,7 @@ jobs:
           fi
 
           if ! az maps account show             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_MAPS_ACCOUNT"             >/dev/null 2>&1; then
-            az maps account create               --resource-group "$AZURE_RESOURCE_GROUP"               --name "$AZURE_MAPS_ACCOUNT"               --kind Gen2               --sku G2               --location westus2               --disable-local-auth false               --accept-tos true               --output none
+            az maps account create               --resource-group "$AZURE_RESOURCE_GROUP"               --name "$AZURE_MAPS_ACCOUNT"               --kind Gen2               --sku G2               --location westus2               --disable-local-auth false               --accept-tos               --output none
           fi
 
           MAPS_KEY="$(az maps account keys list             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_MAPS_ACCOUNT"             --query primaryKey             --output tsv)"
