@@ -1,4 +1,4 @@
-import type { DesignStar } from './designSpec'
+import type { DesignStar } from '../../../contracts/design-spec/design-spec'
 
 // Only identifiers checked against named-star catalog references.
 // Do not infer a star's name or constellation from its coordinates.
