@@ -44,9 +44,6 @@ export function CreatePage() {
     if (!photoFile) return
 
     let cancelled = false
-    setIsProcessingPhoto(true)
-    setPhotoError('')
-    setEngravingPreview('')
 
     generateEngravingPreview(photoFile)
       .then((png) => {
@@ -128,6 +125,7 @@ export function CreatePage() {
       return
     }
 
+    setIsProcessingPhoto(true)
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
     setDesignSpec((current) => ({
