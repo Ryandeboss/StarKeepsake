@@ -223,3 +223,46 @@ jobs:
           ' >/dev/null
 
           echo "M5 public astronomy smoke test passed."
+
+          # A date-only design must stay explicitly approximate all the way
+          # through the public API, including the correct local-to-UTC conversion.
+          UNKNOWN_REQUEST="$(echo "$REQUEST" | jq -c '
+            .moment.time = null |
+            .moment.exactTimeUnknown = true |
+            .moment.localDateTime = null |
+            .moment.utcDateTime = null
+          ')"
+
+          UNKNOWN_RESPONSE_FILE="$(mktemp)"
+          UNKNOWN_STATUS="$(curl --silent --show-error \
+            --output "$UNKNOWN_RESPONSE_FILE" \
+            --write-out "%{http_code}" \
+            -H "Content-Type: application/json" \
+            -d "$UNKNOWN_REQUEST" \
+            "$BASE_URL/api/astronomy/stars")"
+
+          UNKNOWN_RESPONSE="$(cat "$UNKNOWN_RESPONSE_FILE")"
+
+          if [[ "$UNKNOWN_STATUS" -lt 200 || "$UNKNOWN_STATUS" -ge 300 ]]; then
+            echo "M5 public date-only astronomy failed with HTTP $UNKNOWN_STATUS"
+            echo "$UNKNOWN_RESPONSE"
+            exit 1
+          fi
+
+          echo "$UNKNOWN_RESPONSE" | jq -e '
+            .calculation.catalog == "hipparcos" and
+            .calculation.ephemeris == "de440s" and
+            .calculation.timeBasis == "date-only-local-midnight" and
+            .calculation.calculationUtcDateTime == "2024-07-04T05:00:00Z" and
+            .calculation.selectedStars > 20 and
+            .calculation.selectedStars <= 96 and
+            (.stars | length) == .calculation.selectedStars and
+            (.stars | all(
+              .hipparcosId >= 1 and
+              .xMm >= 0 and .xMm <= 279.4 and
+              .yMm >= 0 and .yMm <= 355.6 and
+              .holeSizeMm > 0
+            ))
+          ' >/dev/null
+
+          echo "M5 public date-only astronomy smoke test passed."
