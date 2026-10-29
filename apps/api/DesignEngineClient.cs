@@ -45,6 +45,9 @@ public sealed class DesignEngineClient
     public async Task<byte[]> GenerateEngravingPreviewAsync(
         Stream photoStream,
         string contentType,
+        string framePresetId,
+        string fitMode,
+        string cropJson,
         CancellationToken cancellationToken)
     {
         if (_httpClient.BaseAddress is null)
@@ -56,6 +59,9 @@ public sealed class DesignEngineClient
         using var image = new StreamContent(photoStream);
         image.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         multipart.Add(image, "image", "photo");
+        multipart.Add(new StringContent(framePresetId), "framePresetId");
+        multipart.Add(new StringContent(fitMode), "fitMode");
+        multipart.Add(new StringContent(cropJson), "crop");
 
         using var response = await _httpClient.PostAsync(
             "engraving/preview", multipart, cancellationToken);
@@ -114,7 +120,8 @@ public sealed record AstronomyEngineRequest(
     double Longitude,
     double MagnitudeLimit,
     int MaxStars,
-    double MinSeparationMm);
+    double MinSeparationMm,
+    string FramePresetId);
 
 public sealed record AstronomyEngineResponse(
     AstronomyCalculation Calculation,
