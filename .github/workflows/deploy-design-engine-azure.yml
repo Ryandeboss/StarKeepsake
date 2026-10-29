@@ -115,7 +115,7 @@ jobs:
             .calculation.selectedStars > 20 and
             .calculation.selectedStars <= 96 and
             (.stars | length) == .calculation.selectedStars and
-            ([.stars[] | select(.xMm < 0 or .xMm > 279.4 or .yMm < 0 or .yMm > 355.6)] | length) == 0 and
+            ([.stars[] | select(.xMm < 0 or .xMm > 279.4 or .yMm < 0 or .yMm > 166)] | length) == 0 and
             (.stars[0].hipparcosId | type == "number")
           ' >/dev/null
 

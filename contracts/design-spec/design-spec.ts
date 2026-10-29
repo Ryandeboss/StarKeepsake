@@ -120,26 +120,28 @@ export type DesignSpec = {
 }
 
 export const DESIGN_REGIONS: DesignRegions = {
+  // The sky occupies its own upper panel. Physical star points are projected
+  // inside this rectangle by the astronomy engine, not shifted by the browser.
   sky: {
     xMm: 0,
     yMm: 0,
     widthMm: 279.4,
-    heightMm: 355.6,
-    label: 'Full physical artwork sky field',
+    heightMm: 166,
+    label: 'Astronomically projected sky above the photograph',
   },
   engravingPhoto: {
     xMm: 34.7,
-    yMm: 54.5,
+    yMm: 174,
     widthMm: 210,
     heightMm: 125,
-    label: 'Engraved photo area',
+    label: 'Engraved photo below sky',
   },
   text: {
     xMm: 34.7,
-    yMm: 210,
+    yMm: 305,
     widthMm: 210,
-    heightMm: 86,
-    label: 'Custom text and moment metadata',
+    heightMm: 44,
+    label: 'Names, date, and location below photograph',
   },
 }
 

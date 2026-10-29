@@ -14,17 +14,20 @@ from skyfield.data import hipparcos
 
 ARTWORK_WIDTH_MM = 279.4
 ARTWORK_HEIGHT_MM = 355.6
-SKY_CENTER_X_MM = ARTWORK_WIDTH_MM / 2
-SKY_CENTER_Y_MM = ARTWORK_HEIGHT_MM / 2
-SKY_RADIUS_MM = min(ARTWORK_WIDTH_MM, ARTWORK_HEIGHT_MM) / 2 - 8.0
+# Physical layout mirrors contracts/design-spec/design-spec.ts.
+# Keep the azimuthal-equidistant projection centered within the top sky region.
+SKY_REGION = (0.0, 0.0, 279.4, 166.0)  # x, y, width, height (mm)
+SKY_CENTER_X_MM = SKY_REGION[0] + SKY_REGION[2] / 2
+SKY_CENTER_Y_MM = SKY_REGION[1] + SKY_REGION[3] / 2
+SKY_RADIUS_MM = min(SKY_REGION[2], SKY_REGION[3]) / 2 - 8.0
 DEFAULT_MAGNITUDE_LIMIT = 6.0
 DEFAULT_MAX_STARS = 96
 DEFAULT_MIN_SEPARATION_MM = 3.5
 RESERVED_MARGIN_MM = 3.0
 
 RESERVED_REGIONS = (
-    (34.7, 54.5, 210.0, 125.0),  # engraved photo
-    (34.7, 210.0, 210.0, 86.0),  # custom text / moment metadata
+    (34.7, 174.0, 210.0, 125.0),  # photo, below the sky
+    (34.7, 305.0, 210.0, 44.0),  # names, date, location
 )
 
 DATA_DIR = Path(
