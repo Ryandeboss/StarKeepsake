@@ -24,6 +24,7 @@ jobs:
       - run: npm run test:stars
       - run: npm run test:sky-blend
       - run: npm run test:frame
+      - run: npm run test:globe
       - run: npm run build
 
   api:

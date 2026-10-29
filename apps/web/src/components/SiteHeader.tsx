@@ -1,5 +1,5 @@
 type SiteHeaderProps = {
-  currentPage?: 'home' | 'create'
+  currentPage?: 'home' | 'create' | 'sky-lab'
 }
 
 export function SiteHeader({ currentPage }: SiteHeaderProps) {
@@ -10,7 +10,9 @@ export function SiteHeader({ currentPage }: SiteHeaderProps) {
         StarKeepsake
       </a>
       {currentPage === 'create' ? (
-        <a className="header-link" href="/">Back to home</a>
+        <a className="header-link" href="/sky-lab">Explore how stars move</a>
+      ) : currentPage === 'sky-lab' ? (
+        <a className="header-link" href="/create">Back to your frame</a>
       ) : (
         <a className="header-link" href="/create">Begin a keepsake</a>
       )}

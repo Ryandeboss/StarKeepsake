@@ -989,3 +989,12 @@
   .layout-mode-options { grid-template-columns: 1fr; }
   .layout-mode-options button { min-height: 76px; }
 }
+
+.sky-lab-launch {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; margin-top: 13px; border-radius: 4px; padding: 12px 13px;
+  color: #fff!important; background: #244d50; text-decoration: none;
+  font-size: 12px; font-weight: 700;
+}
+.sky-lab-launch:hover { background: #183c3e; }
+.sky-lab-launch:focus-visible { outline: 3px solid #d8ad6b; outline-offset: 3px; }
