@@ -811,3 +811,83 @@
   font-size: 11px;
   line-height: 1.55;
 }
+
+/* Scientific provenance appears outside the physical art print, not engraved. */
+.star-hit-target {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  cursor: crosshair;
+  color: inherit;
+}
+.star-hit-target:hover,
+.star-hit-target:focus-visible {
+  background: rgba(251, 217, 154, .18);
+  box-shadow: 0 0 0 1px rgba(249, 222, 173, .60);
+  outline: none;
+}
+.star-hit-target .artwork-star { pointer-events: none; }
+.sky-evidence {
+  margin-top: 15px;
+  border: 1px solid #d9cbb8;
+  background: rgba(244, 240, 231, .74);
+  padding: 14px;
+  color: var(--green);
+}
+.sky-evidence-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.sky-evidence-heading > div { display: grid; gap: 4px; }
+.sky-evidence-heading strong { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+.sky-evidence-heading span { color: var(--muted); font-family: var(--mono); font-size: 10px; line-height: 1.4; }
+.sky-explore-button {
+  padding: 8px 11px;
+  flex-shrink: 0;
+  border: 1px solid #b8aa98;
+  border-radius: 100px;
+  background: #fffdf8;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sky-explore-button[aria-pressed='true'] { background: var(--green); border-color: var(--green); color: white; }
+.sky-explore-button:disabled { cursor: not-allowed; opacity: .45; }
+.sky-explore-button:focus-visible, .sky-method-details summary:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.sky-interaction-hint, .sky-method-details p {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.star-information {
+  display: grid;
+  gap: 3px;
+  margin: 12px 0;
+  padding: 9px 11px;
+  background: #e5ebe5;
+  border-left: 3px solid var(--green);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.star-information strong { font-family: var(--serif); font-size: 15px; }
+.sky-method-details { margin-top: 12px; padding-top: 10px; border-top: 1px solid #d8cbba; }
+.sky-method-details summary { cursor: pointer; font-size: 11px; font-weight: 700; }
+.sky-source-links { display: flex; flex-wrap: wrap; gap: 8px 13px; margin-top: 12px; }
+.sky-source-links a { font-size: 11px; color: var(--green); text-underline-offset: 3px; }
+@media (max-width: 560px) {
+  .sky-evidence-heading { flex-direction: column; align-items: flex-start; }
+}

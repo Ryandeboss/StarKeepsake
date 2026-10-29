@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:crop": "node --experimental-strip-types --test tests/photo-crop.test.mjs"
+    "test:crop": "node --experimental-strip-types --test tests/photo-crop.test.mjs",
+    "test:stars": "node --experimental-strip-types --test tests/star-details.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

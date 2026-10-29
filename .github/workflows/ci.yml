@@ -21,6 +21,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test:crop
+      - run: npm run test:stars
       - run: npm run build
 
   api:

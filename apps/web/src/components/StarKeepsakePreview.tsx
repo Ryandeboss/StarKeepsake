@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { displayRectStyle, millimetersToPixels, pointToDisplayPixels, rectToDisplayPixels } from '../geometry'
 import type { DesignSpec } from '../designSpec'
 import { croppedImageStyle } from '../photoCrop'
+import { starDescription, starDisplayName } from '../starDetails'
 
 type StarKeepsakePreviewProps = {
   designSpec: DesignSpec
@@ -26,8 +27,11 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
   const canvasRef = useRef<HTMLDivElement>(null)
   const [lightsOn, setLightsOn] = useState(true)
   const [showEngraving, setShowEngraving] = useState(true)
+  const [exploreStars, setExploreStars] = useState(false)
+  const [activeStarId, setActiveStarId] = useState<number | null>(null)
   const [displayWidthPx, setDisplayWidthPx] = useState(0)
   const { physicalArtwork, regions } = designSpec
+  const activeStar = designSpec.stars.find((star) => star.hipparcosId === activeStarId)
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current
@@ -69,7 +73,7 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
           data-frame-size={designSpec.framePresetId}
           data-coordinate-system="top-left-origin-mm"
         >
-          <div className="artwork-stars" aria-hidden="true" style={displayRectStyle(displaySkyRect)}>
+          <div className="artwork-stars" aria-hidden={!exploreStars} style={displayRectStyle(displaySkyRect)}>
             {designSpec.stars.map((star) => {
               // The engine outputs canonical artwork coordinates; absolute
               // children of the sky panel need sky-local display coordinates.
@@ -86,6 +90,30 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
                 height: size,
                 opacity: Math.max(0.4, 1 - star.magnitude * 0.14),
               } as CSSProperties
+
+              if (exploreStars) {
+                return (
+                  <button
+                    type="button"
+                    className="star-hit-target"
+                    key={star.hipparcosId}
+                    style={{ left: point.x, top: point.y }}
+                    title={starDescription(star)}
+                    aria-label={starDescription(star)}
+                    data-hipparcos-id={star.hipparcosId}
+                    onMouseEnter={() => setActiveStarId(star.hipparcosId)}
+                    onMouseLeave={() => setActiveStarId(null)}
+                    onFocus={() => setActiveStarId(star.hipparcosId)}
+                    onBlur={() => setActiveStarId(null)}
+                    onClick={() => setActiveStarId(star.hipparcosId)}
+                  >
+                    <span className="artwork-star" aria-hidden="true" style={{
+                      left: '50%', top: '50%', width: size, height: size,
+                      opacity: style.opacity,
+                    }} />
+                  </button>
+                )
+              }
 
               return (
                 <span
@@ -166,6 +194,51 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
           </button>
         </div>
       )}
+      <section className="sky-evidence" aria-label="Astronomy provenance and star explorer">
+        <div className="sky-evidence-heading">
+          <div>
+            <strong>Measured stars, calculated sky</strong>
+            <span>Hipparcos catalogue · Skyfield · JPL DE440s</span>
+          </div>
+          <button type="button" className="sky-explore-button"
+            disabled={!designSpec.astronomy || designSpec.stars.length === 0}
+            aria-pressed={exploreStars}
+            onClick={() => {
+              setExploreStars(!exploreStars)
+              setActiveStarId(null)
+            }}
+          >
+            {exploreStars ? 'Finish exploring' : 'Explore real stars'}
+          </button>
+        </div>
+        {exploreStars && (
+          <p className="sky-interaction-hint">
+            Hover, tap, or focus any star in the framed sky to inspect its actual catalogue ID and sky coordinates.
+          </p>
+        )}
+        {exploreStars && activeStar && (
+          <div className="star-information" role="status">
+            <strong>{starDisplayName(activeStar)}</strong>
+            <span>HIP {activeStar.hipparcosId} · magnitude {activeStar.magnitude.toFixed(2)}</span>
+            <span>Altitude {activeStar.altitudeDeg.toFixed(1)}° · azimuth {activeStar.azimuthDeg.toFixed(1)}°</span>
+          </div>
+        )}
+        <details className="sky-method-details">
+          <summary>How is my sky calculated?</summary>
+          <p>Star positions come from the European Space Agency's Hipparcos catalogue. Skyfield uses your chosen location and time with the JPL DE440s ephemeris to compute apparent star altitude and azimuth.</p>
+          <p>The artwork is an altitude/azimuth map with north in the center and the horizon along the bottom. It is not a photographic view or a measured local landscape horizon.</p>
+          {designSpec.astronomy && (
+            <p><strong>Time basis:</strong> {designSpec.astronomy.timeBasis === 'exact'
+              ? 'Exact local time resolved to UTC.'
+              : 'Exact time unknown: uses local midnight as a representative sky, not an exact historical view.'}</p>
+          )}
+          <div className="sky-source-links">
+            <a href="https://www.esa.int/Science_Exploration/Space_Science/Hipparcos_overview" target="_blank" rel="noopener noreferrer">ESA: Hipparcos catalogue</a>
+            <a href="https://rhodesmill.org/skyfield/positions.html" target="_blank" rel="noopener noreferrer">Skyfield: celestial positions</a>
+            <a href="https://rhodesmill.org/skyfield/planets.html" target="_blank" rel="noopener noreferrer">JPL ephemerides explained</a>
+          </div>
+        </details>
+      </section>
       <p className="preview-physical-note">
         Material and lighting are illustrative. Confirm wood profile, glazing, and finish against your production sample.
       </p>
