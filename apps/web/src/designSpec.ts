@@ -3,7 +3,11 @@ import {
   getFrameLayout,
   DESIGN_SPEC_VERSION,
 } from '../../../contracts/design-spec/design-spec'
-import type { DesignSpec } from '../../../contracts/design-spec/design-spec'
+import type { DesignSpec, MillimeterRect, DesignRegion } from '../../../contracts/design-spec/design-spec'
+
+export function toRect({ xMm, yMm, widthMm, heightMm }: DesignRegion): MillimeterRect {
+  return { xMm, yMm, widthMm, heightMm }
+}
 
 export type {
   DesignSpec,
@@ -33,11 +37,11 @@ export const INITIAL_DESIGN_SPEC: DesignSpec = {
     assetId: 'local-photo-placeholder',
     fitMode: 'contain',
     crop: { x: 0, y: 0, width: 1, height: 1 },
-    positionMm: getFrameLayout('11x14').regions.engravingPhoto,
+    positionMm: toRect(getFrameLayout('11x14').regions.engravingPhoto),
   },
   customText: {
     value: '',
-    positionMm: getFrameLayout('11x14').regions.text,
+    positionMm: toRect(getFrameLayout('11x14').regions.text),
     align: 'center',
   },
   materialStyle: {
