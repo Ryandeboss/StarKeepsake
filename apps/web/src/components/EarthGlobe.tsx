@@ -148,16 +148,15 @@ function drawGlobe(
 export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const dragRef = useRef<{ x: number; y: number; latitude: number; longitude: number; moved: boolean } | null>(null)
-  const [center, setCenter] = useState({ latitude: 28, longitude: -25 })
+  const [center, setCenter] = useState({ latitude: selected.latitude, longitude: selected.longitude })
   const [zoom, setZoom] = useState(1)
   const [zooming, setZooming] = useState(false)
 
-  useEffect(() => {
-    if (!zooming) {
-      setCenter({ latitude: selected.latitude, longitude: selected.longitude })
-      setZoom(1)
-    }
-  }, [selected.latitude, selected.longitude, zooming])
+  const chooseLocation = (location: ExplorerLocation) => {
+    setCenter({ latitude: location.latitude, longitude: location.longitude })
+    onSelect(location)
+    setZoom(1)
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -198,7 +197,7 @@ export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
       const x = CENTER + p.x * RADIUS
       const y = CENTER - p.y * RADIUS
       if (Math.hypot(pos.x - x, pos.y - y) < 22) {
-        onSelect(location)
+        chooseLocation(location)
         enterSky()
         return
       }
@@ -244,7 +243,7 @@ export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
             <button key={location.id} type="button"
               aria-pressed={selected.id === location.id}
               className={selected.id === location.id ? 'is-selected' : ''}
-              onClick={() => onSelect(location)}>
+              onClick={() => chooseLocation(location)}>
               <strong>{location.name}</strong>
               <span>{location.subtitle}</span>
             </button>
