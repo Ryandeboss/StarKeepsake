@@ -199,6 +199,7 @@ export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
       const y = CENTER - p.y * RADIUS
       if (Math.hypot(pos.x - x, pos.y - y) < 22) {
         onSelect(location)
+        enterSky()
         return
       }
     }
