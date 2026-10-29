@@ -1,6 +1,6 @@
-export const DESIGN_SPEC_VERSION = '1.4' as const
+export const DESIGN_SPEC_VERSION = '1.5' as const
 
-export type FramePresetId = '8x10' | '11x14' | '16x20'
+export type FramePresetId = 'auto' | '8x10' | '11x14' | '16x20'
 export type FramePreset = { id: FramePresetId; label: string; widthMm: number; heightMm: number }
 export const FRAME_PRESETS: readonly FramePreset[] = [
   { id: '8x10', label: '8 × 10 in', widthMm: 203.2, heightMm: 254 },
@@ -91,6 +91,7 @@ export type DesignSpec = {
   designId: string
   templateId: string
   framePresetId: FramePresetId
+  photoAspectRatio: number | null
   layoutMode: 'classic' | 'horizon-blend'
   physicalArtwork: PhysicalArtwork
   regions: DesignRegions
@@ -108,12 +109,40 @@ const GEOMETRY: Record<FramePresetId, Geometry> = {
   '8x10': { widthMm: 203.2, heightMm: 254, marginMm: 5 },
   '11x14': { widthMm: 279.4, heightMm: 355.6, marginMm: 6 },
   '16x20': { widthMm: 406.4, heightMm: 508, marginMm: 8 },
+  auto: { widthMm: 279.4, heightMm: 355.6, marginMm: 6 },
 }
 const mm = (value: number) => Number(value.toFixed(3))
-export function getFrameLayout(id: FramePresetId): {
+export function getFrameLayout(id: FramePresetId, photoAspectRatio: number | null = null): {
   physicalArtwork: PhysicalArtwork
   regions: DesignRegions
 } {
+  if (id === 'auto' && photoAspectRatio && Number.isFinite(photoAspectRatio)) {
+    const ratio = Math.min(3, Math.max(0.35, photoAspectRatio))
+    const margin = 6
+    const innerWidth = 279.4 - 2 * margin
+    const photoHeight = innerWidth / ratio
+    const skyHeight = Math.min(180, Math.max(76, photoHeight * 0.56))
+    const textHeight = Math.min(45, Math.max(27, photoHeight * 0.18))
+    const naturalHeight = margin * 2 + skyHeight + photoHeight + textHeight + 16
+    const scale = Math.min(1, 508 / naturalHeight)
+    const w = mm(279.4 * scale)
+    const h = mm(naturalHeight * scale)
+    const m = mm(margin * scale)
+    const xWidth = mm(innerWidth * scale)
+    const yPhoto = mm((margin + skyHeight + 8) * scale)
+    const yText = mm((margin + skyHeight + 8 + photoHeight + 8) * scale)
+    return {
+      physicalArtwork: { widthMm: w, heightMm: h, units: 'mm', origin: 'top-left' },
+      regions: {
+        sky: { xMm: m, yMm: m, widthMm: xWidth, heightMm: mm(skyHeight * scale),
+          label: 'Real sky above the photograph' },
+        engravingPhoto: { xMm: m, yMm: yPhoto, widthMm: xWidth, heightMm: mm(photoHeight * scale),
+          label: 'Full-width photo fitted to source aspect ratio' },
+        text: { xMm: m, yMm: yText, widthMm: xWidth, heightMm: mm(textHeight * scale),
+          label: 'Names, date, and place' },
+      },
+    }
+  }
   const { widthMm, heightMm, marginMm } = GEOMETRY[id]
   const innerWidth = mm(widthMm - 2 * marginMm)
   return {
