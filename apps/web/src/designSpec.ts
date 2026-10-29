@@ -16,7 +16,7 @@ export { DESIGN_SPEC_VERSION, PHYSICAL_ARTWORK } from '../../../contracts/design
 export const INITIAL_DESIGN_SPEC: DesignSpec = {
   schemaVersion: DESIGN_SPEC_VERSION,
   designId: 'design-placeholder',
-  templateId: 'starkeep-11x14-v1',
+  templateId: 'starkeep-11x14-sky-above-photo-v2',
   physicalArtwork: PHYSICAL_ARTWORK,
   regions: DESIGN_REGIONS,
   moment: {
