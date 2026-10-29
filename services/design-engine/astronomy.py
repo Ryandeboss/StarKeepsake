@@ -193,6 +193,7 @@ def generate_star_field(
     max_stars: int = DEFAULT_MAX_STARS,
     min_separation_mm: float = DEFAULT_MIN_SEPARATION_MM,
     frame_preset_id: str = "11x14",
+    photo_aspect_ratio: float | None = None,
 ) -> dict:
     if not -90 <= latitude <= 90:
         raise AstronomyInputError("Latitude must be between -90 and 90 degrees.")
@@ -206,7 +207,7 @@ def generate_star_field(
         raise AstronomyInputError("minSeparationMm must be between 1 and 15 mm.")
 
     try:
-        layout = get_layout(frame_preset_id)
+        layout = get_layout(frame_preset_id, photo_aspect_ratio)
     except ValueError as exc:
         raise AstronomyInputError(str(exc)) from exc
 
