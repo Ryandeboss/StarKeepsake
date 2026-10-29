@@ -12,23 +12,21 @@ import numpy as np
 from skyfield.api import Loader, Star, wgs84
 from skyfield.data import hipparcos
 
-ARTWORK_WIDTH_MM = 279.4
-ARTWORK_HEIGHT_MM = 355.6
-# Physical layout mirrors contracts/design-spec/design-spec.ts.
-# Keep the azimuthal-equidistant projection centered within the top sky region.
-SKY_REGION = (0.0, 0.0, 279.4, 166.0)  # x, y, width, height (mm)
+from frame_layout import FrameLayout, get_layout
+
+DEFAULT_LAYOUT = get_layout("11x14")
+ARTWORK_WIDTH_MM = DEFAULT_LAYOUT.width_mm
+ARTWORK_HEIGHT_MM = DEFAULT_LAYOUT.height_mm
+SKY_REGION = DEFAULT_LAYOUT.sky
+RESERVED_REGIONS = (DEFAULT_LAYOUT.photo, DEFAULT_LAYOUT.text)
+RESERVED_MARGIN_MM = 2.0
 SKY_CENTER_X_MM = SKY_REGION[0] + SKY_REGION[2] / 2
 SKY_CENTER_Y_MM = SKY_REGION[1] + SKY_REGION[3] / 2
-SKY_RADIUS_MM = min(SKY_REGION[2], SKY_REGION[3]) / 2 - 8.0
+# Retained compatibility constant for old importers; projection is now rectangular.
+SKY_RADIUS_MM = min(SKY_REGION[2], SKY_REGION[3]) / 2
 DEFAULT_MAGNITUDE_LIMIT = 6.0
 DEFAULT_MAX_STARS = 96
 DEFAULT_MIN_SEPARATION_MM = 3.5
-RESERVED_MARGIN_MM = 3.0
-
-RESERVED_REGIONS = (
-    (34.7, 174.0, 210.0, 125.0),  # photo, below the sky
-    (34.7, 305.0, 210.0, 44.0),  # names, date, location
-)
 
 DATA_DIR = Path(
     os.getenv(
@@ -126,18 +124,27 @@ def resolve_astronomy_moment(
 def project_alt_az(
     altitude_deg: float,
     azimuth_deg: float,
+    layout: FrameLayout = DEFAULT_LAYOUT,
 ) -> tuple[float, float]:
-    zenith_distance_deg = 90.0 - altitude_deg
-    radial_mm = (zenith_distance_deg / 90.0) * SKY_RADIUS_MM
-    azimuth_rad = math.radians(azimuth_deg)
+    """Plot true altitude and azimuth into a rectangular horizon-to-zenith map.
 
-    x_mm = SKY_CENTER_X_MM + radial_mm * math.sin(azimuth_rad)
-    y_mm = SKY_CENTER_Y_MM - radial_mm * math.cos(azimuth_rad)
-    return x_mm, y_mm
+    North is centered (azimuth 0/360), east to the right, west to the left.
+    The horizon is a horizontal line at the bottom of the sky panel. This is
+    an azimuth-altitude equirectangular projection, not a perspective photo.
+    """
+    x, y, width, height = layout.sky
+    inset = 2.0
+    wrapped_azimuth = ((azimuth_deg + 180.0) % 360.0) / 360.0
+    return (
+        x + inset + wrapped_azimuth * (width - inset * 2),
+        y + inset + (90.0 - altitude_deg) / 90.0 * (height - inset * 2),
+    )
 
 
-def _point_in_reserved_region(x_mm: float, y_mm: float) -> bool:
-    for x, y, width, height in RESERVED_REGIONS:
+def _point_in_reserved_region(
+    x_mm: float, y_mm: float, layout: FrameLayout = DEFAULT_LAYOUT
+) -> bool:
+    for x, y, width, height in (layout.photo, layout.text):
         if (
             x - RESERVED_MARGIN_MM <= x_mm <= x + width + RESERVED_MARGIN_MM
             and y - RESERVED_MARGIN_MM <= y_mm <= y + height + RESERVED_MARGIN_MM
@@ -185,6 +192,7 @@ def generate_star_field(
     magnitude_limit: float = DEFAULT_MAGNITUDE_LIMIT,
     max_stars: int = DEFAULT_MAX_STARS,
     min_separation_mm: float = DEFAULT_MIN_SEPARATION_MM,
+    frame_preset_id: str = "11x14",
 ) -> dict:
     if not -90 <= latitude <= 90:
         raise AstronomyInputError("Latitude must be between -90 and 90 degrees.")
@@ -196,6 +204,11 @@ def generate_star_field(
         raise AstronomyInputError("magnitudeLimit must be between -2.0 and 6.5.")
     if not 1.0 <= min_separation_mm <= 15.0:
         raise AstronomyInputError("minSeparationMm must be between 1 and 15 mm.")
+
+    try:
+        layout = get_layout(frame_preset_id)
+    except ValueError as exc:
+        raise AstronomyInputError(str(exc)) from exc
 
     moment = resolve_astronomy_moment(
         selected_date,
@@ -236,9 +249,9 @@ def generate_star_field(
         azimuth_degrees[visible_mask],
         strict=True,
     ):
-        x_mm, y_mm = project_alt_az(float(altitude_deg), float(azimuth_deg))
+        x_mm, y_mm = project_alt_az(float(altitude_deg), float(azimuth_deg), layout)
 
-        if _point_in_reserved_region(x_mm, y_mm):
+        if _point_in_reserved_region(x_mm, y_mm, layout):
             continue
 
         candidates.append(
@@ -279,8 +292,8 @@ def generate_star_field(
         "calculation": {
             "catalog": "hipparcos",
             "ephemeris": "de440s",
-            "projection": "azimuthal-equidistant",
-            "orientation": "north-up-east-right",
+            "projection": "altaz-equirectangular",
+            "orientation": "north-center-east-right",
             "calculationUtcDateTime": moment.utc_datetime.isoformat().replace("+00:00", "Z"),
             "timeBasis": moment.time_basis,
             "magnitudeLimit": magnitude_limit,
