@@ -48,6 +48,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+var deploymentCommitSha = builder.Configuration["Deployment:CommitSha"] ?? "unknown";
 
 app.UseCors("web");
 app.UseRateLimiter();
@@ -55,7 +56,8 @@ app.UseRateLimiter();
 app.MapGet("/health", () => Results.Ok(new
 {
     service = "StarKeepsake.Api",
-    status = "healthy"
+    status = "healthy",
+    commitSha = deploymentCommitSha
 }));
 
 app.MapGet("/api/locations/search", async (
