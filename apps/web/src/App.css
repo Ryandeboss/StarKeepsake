@@ -511,3 +511,121 @@
   .style-grid { grid-template-columns: 1fr; }
   .style-option { min-height: 55px; grid-template-columns: auto 1fr; align-items: center; }
 }
+
+
+.button-primary:disabled,
+.button-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+.location-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+}
+
+.location-search-button {
+  min-height: 48px;
+  padding: 0 18px;
+}
+
+.location-results {
+  display: grid;
+  gap: 8px;
+}
+
+.location-result {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 12px 14px;
+  color: var(--muted);
+  background: #fffdf8;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.location-result:hover,
+.location-result.is-selected {
+  border-color: var(--green);
+  background: rgba(41, 71, 67, 0.055);
+}
+
+.location-result strong {
+  color: var(--green);
+  font-size: 12px;
+}
+
+.location-result span {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.resolved-location,
+.moment-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(41, 71, 67, 0.22);
+  padding: 12px 14px;
+  color: var(--green);
+  background: rgba(41, 71, 67, 0.045);
+}
+
+.resolved-location > span:last-child,
+.moment-confirmation {
+  min-width: 0;
+}
+
+.resolved-location strong,
+.resolved-location small,
+.moment-confirmation strong,
+.moment-confirmation small,
+.moment-confirmation span {
+  display: block;
+}
+
+.resolved-location strong,
+.moment-confirmation strong {
+  font-size: 12px;
+}
+
+.resolved-location small,
+.moment-confirmation small,
+.moment-confirmation span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.moment-confirmation {
+  display: grid;
+  gap: 2px;
+}
+
+.form-error {
+  margin: 24px 0 0;
+  border-left: 3px solid var(--coral);
+  padding: 10px 12px;
+  color: #8f4535;
+  background: rgba(201, 111, 89, 0.08);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 560px) {
+  .location-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .location-search-button {
+    width: 100%;
+  }
+}
