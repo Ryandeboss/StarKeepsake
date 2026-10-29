@@ -120,6 +120,29 @@ jobs:
           echo "API did not become healthy at $HEALTH_URL"
           exit 1
 
+      - name: Wait for matching design engine on coordinated releases
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git show --pretty='' --name-only "$GITHUB_SHA" | grep -q '^services/design-engine/'; then
+            echo "This API commit has no engine source changes."
+            exit 0
+          fi
+
+          ENGINE_HEALTH_URL="https://starkeepsake-engine-dev.wittyflower-9225f265.centralus.azurecontainerapps.io/health"
+          for attempt in {1..60}; do
+            BODY="$(curl --fail --silent --show-error "$ENGINE_HEALTH_URL" || true)"
+            ENGINE_SHA="$(echo "$BODY" | jq -r '.commitSha // empty')"
+            if [[ "$ENGINE_SHA" == "$GITHUB_SHA" ]]; then
+              echo "Matching engine revision is ready."
+              exit 0
+            fi
+            echo "Waiting for matching engine revision ($attempt/60)."
+            sleep 10
+          done
+          echo "Matching astronomy/engraving engine did not become ready."
+          exit 1
+
       - name: Smoke test location and moment resolution
         shell: bash
         run: |
@@ -219,6 +242,7 @@ jobs:
             .calculation.timeBasis == "exact" and
             .calculation.selectedStars > 20 and
             (.stars | length) == .calculation.selectedStars and
+            .calculation.projection == "altaz-equirectangular" and
             (.stars[0].hipparcosId | type == "number")
           ' >/dev/null
 
@@ -260,7 +284,7 @@ jobs:
             (.stars | all(
               .hipparcosId >= 1 and
               .xMm >= 0 and .xMm <= 279.4 and
-              .yMm >= 0 and .yMm <= 355.6 and
+              .yMm >= 6 and .yMm <= 167.132 and
               .holeSizeMm > 0
             ))
           ' >/dev/null
@@ -300,6 +324,9 @@ jobs:
 
           curl --fail --silent --show-error \
             -F "image=@$INPUT;type=image/png" \
+            -F "framePresetId=11x14" \
+            -F "fitMode=contain" \
+            -F 'crop={"x":0,"y":0,"width":1,"height":1}' \
             -o "$OUTPUT" \
             "https://${FQDN}/api/engraving/preview"
 
@@ -310,7 +337,7 @@ jobs:
               data = f.read(33)
           assert data[:8] == b"\x89PNG\r\n\x1a\n", "Not a PNG"
           width, height = struct.unpack(">II", data[16:24])
-          assert (width, height) == (2100, 1250), (width, height)
+          assert (width, height) == (1604, 853), (width, height)
           assert data[25] == 0, "Expected 8-bit grayscale output"
           print("M6 public engraving smoke test passed.")
           PY
@@ -318,6 +345,9 @@ jobs:
           INVALID_STATUS="$(curl --silent --show-error --output /dev/null \
             --write-out "%{http_code}" \
             -F "image=@$INPUT;type=text/plain" \
+            -F "framePresetId=11x14" \
+            -F "fitMode=contain" \
+            -F 'crop={"x":0,"y":0,"width":1,"height":1}' \
             "https://${FQDN}/api/engraving/preview")"
           [[ "$INVALID_STATUS" == "400" ]] || {
             echo "Expected unsupported media type to be rejected with HTTP 400; received $INVALID_STATUS"
