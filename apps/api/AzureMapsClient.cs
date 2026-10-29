@@ -97,26 +97,15 @@ public sealed class AzureMapsClient
     public async Task<string> GetTimeZoneIdAsync(
         double latitude,
         double longitude,
-        DateOnly date,
         CancellationToken cancellationToken)
     {
         EnsureConfigured();
 
-        var referenceTimestamp = new DateTimeOffset(
-            date.Year,
-            date.Month,
-            date.Day,
-            12,
-            0,
-            0,
-            TimeSpan.Zero);
-
         var lat = latitude.ToString(CultureInfo.InvariantCulture);
         var lon = longitude.ToString(CultureInfo.InvariantCulture);
-        var timestamp = Uri.EscapeDataString(referenceTimestamp.ToString("O", CultureInfo.InvariantCulture));
 
         var requestUri =
-            $"timezone/byCoordinates/json?api-version=1.0&options=none&query={lat},{lon}&timeStamp={timestamp}";
+            $"timezone/byCoordinates/json?api-version=1.0&query={lat},{lon}";
 
         using var request = CreateRequest(requestUri);
         using var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -145,7 +134,6 @@ public sealed class AzureMapsClient
     {
         var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         request.Headers.TryAddWithoutValidation("subscription-key", _subscriptionKey);
-        request.Headers.TryAddWithoutValidation("Accept-Language", "en-US");
         return request;
     }
 

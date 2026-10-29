@@ -142,7 +142,6 @@ app.MapPost("/api/moments/resolve", async (
         var timeZoneId = await maps.GetTimeZoneIdAsync(
             request.Location.Latitude,
             request.Location.Longitude,
-            date,
             cancellationToken);
 
         string? localDateTime = null;
