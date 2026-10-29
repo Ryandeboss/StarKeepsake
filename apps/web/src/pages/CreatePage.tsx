@@ -19,6 +19,7 @@ export function CreatePage() {
   const [designSpec, setDesignSpec] = useState<DesignSpec>(INITIAL_DESIGN_SPEC)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [sourceDimensions, setSourceDimensions] = useState<{ width: number; height: number } | null>(null)
+  const [frameTouched, setFrameTouched] = useState(false)
   const [photoPreview, setPhotoPreview] = useState('')
   const [engravingPreview, setEngravingPreview] = useState('')
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false)
@@ -147,7 +148,7 @@ export function CreatePage() {
 
   const handleSourceDimensions = (size: { width: number; height: number }) => {
     setSourceDimensions(size)
-    if (designSpec.framePresetId === 'auto') {
+    if (designSpec.framePresetId === 'auto' || !frameTouched) {
       const ratio = Math.min(3, Math.max(.35, size.width / size.height))
       const { physicalArtwork, regions } = getFrameLayout('auto', ratio)
       setDesignSpec((current) => ({
@@ -162,13 +163,14 @@ export function CreatePage() {
     } else {
       setDesignSpec((current) => ({ ...current, photoAspectRatio: size.width / size.height }))
     }
-    if (designSpec.photo.fitMode === 'cover' && designSpec.framePresetId !== 'auto') {
+    if (designSpec.photo.fitMode === 'cover' && designSpec.framePresetId !== 'auto' && frameTouched) {
       const { widthMm, heightMm } = designSpec.photo.positionMm
       updatePhotoCrop(getCoverCrop(size.width, size.height, widthMm / heightMm))
     }
   }
 
   const updateFrame = async (id: FramePresetId) => {
+    setFrameTouched(true)
     if (id === designSpec.framePresetId) return
     clearBlend()
     if (id === 'auto' && !sourceDimensions) {
@@ -273,6 +275,7 @@ export function CreatePage() {
       setPhotoPreview('')
       setDesignSpec((current) => ({
         ...current,
+        photoAspectRatio: null,
         photo: { ...current.photo, assetId: 'local-photo-placeholder' },
       }))
       return
