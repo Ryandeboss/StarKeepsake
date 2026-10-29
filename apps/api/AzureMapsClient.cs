@@ -119,9 +119,10 @@ public sealed class AzureMapsClient
 
         using var document = JsonDocument.Parse(payload);
 
-        if (!document.RootElement.TryGetProperty("timeZones", out var timeZones) ||
+        if (!TryGetProperty(document.RootElement, "timeZones", "TimeZones", out var timeZones) ||
+            timeZones.ValueKind != JsonValueKind.Array ||
             timeZones.GetArrayLength() == 0 ||
-            !timeZones[0].TryGetProperty("id", out var idElement))
+            !TryGetProperty(timeZones[0], "id", "Id", out var idElement))
         {
             throw new AzureMapsException("Azure Maps did not return a time zone for this location.");
         }
@@ -129,6 +130,14 @@ public sealed class AzureMapsClient
         return idElement.GetString()
             ?? throw new AzureMapsException("Azure Maps returned an empty time zone identifier.");
     }
+
+    private static bool TryGetProperty(
+        JsonElement element,
+        string camelCaseName,
+        string pascalCaseName,
+        out JsonElement value) =>
+        element.TryGetProperty(camelCaseName, out value) ||
+        element.TryGetProperty(pascalCaseName, out value);
 
     private HttpRequestMessage CreateRequest(string requestUri)
     {
