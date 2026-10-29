@@ -1,4 +1,4 @@
-export const DESIGN_SPEC_VERSION = '1.3' as const
+export const DESIGN_SPEC_VERSION = '1.4' as const
 
 export type FramePresetId = '8x10' | '11x14' | '16x20'
 export type FramePreset = { id: FramePresetId; label: string; widthMm: number; heightMm: number }
@@ -91,6 +91,7 @@ export type DesignSpec = {
   designId: string
   templateId: string
   framePresetId: FramePresetId
+  layoutMode: 'classic' | 'horizon-blend'
   physicalArtwork: PhysicalArtwork
   regions: DesignRegions
   moment: MomentSpec
