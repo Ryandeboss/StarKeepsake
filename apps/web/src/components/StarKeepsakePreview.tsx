@@ -54,7 +54,9 @@ export function StarKeepsakePreview({ designSpec, photoPreview }: StarKeepsakePr
     <aside className="preview-card" aria-label="Live StarKeepsake preview">
       <div className="preview-topline">
         <span>StarKeepsake / preview</span>
-        <span className="preview-live">Live preview</span>
+        <span className="preview-live">
+          {designSpec.astronomy ? `${designSpec.stars.length} real stars` : 'Waiting for your sky'}
+        </span>
       </div>
 
       <div className="frame-preview">
@@ -76,7 +78,15 @@ export function StarKeepsakePreview({ designSpec, photoPreview }: StarKeepsakePr
                 opacity: Math.max(0.4, 1 - star.magnitude * 0.14),
               } as CSSProperties
 
-              return <span className="artwork-star" key={star.ledIndex} style={style} data-led-index={star.ledIndex} />
+              return (
+                <span
+                  className="artwork-star"
+                  key={star.hipparcosId}
+                  style={style}
+                  data-led-index={star.ledIndex}
+                  data-hipparcos-id={star.hipparcosId}
+                />
+              )
             })}
           </div>
 
