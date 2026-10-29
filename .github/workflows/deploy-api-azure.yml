@@ -88,7 +88,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          az containerapp update             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --image "$IMAGE"             --set-env-vars "AzureMaps__SubscriptionKey=secretref:azure-maps-key" "Deployment__CommitSha=$GITHUB_SHA"             --output none
+          az containerapp update             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --image "$IMAGE"             --set-env-vars "AzureMaps__SubscriptionKey=secretref:azure-maps-key" "Deployment__CommitSha=$GITHUB_SHA" "DesignEngine__BaseUrl=https://starkeepsake-engine-dev.wittyflower-9225f265.centralus.azurecontainerapps.io/"             --output none
 
           az containerapp ingress update             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --target-port "$TARGET_PORT"             --transport auto             --output none
 
@@ -177,3 +177,49 @@ jobs:
           ' >/dev/null
 
           echo "M4 smoke test passed."
+
+
+      - name: Smoke test M5 public astronomy flow
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FQDN="$(az containerapp show             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --query properties.configuration.ingress.fqdn             --output tsv)"
+          BASE_URL="https://${FQDN}"
+
+          MOMENT='{"date":"2024-07-04","time":"20:30","exactTimeUnknown":false,"location":{"query":"Chicago, IL","displayName":"Chicago, IL","formattedAddress":"Chicago, IL","latitude":41.8781,"longitude":-87.6298,"timeZoneId":"America/Chicago","confidence":"High"},"localDateTime":"2024-07-04T20:30:00","utcDateTime":"2024-07-05T01:30:00Z"}'
+
+          REQUEST="$(jq -n             --argjson moment "$MOMENT"             '{moment:$moment,skySettings:{background:"deep-space",brightness:1,showConstellation:true,projection:"azimuthal-equidistant",magnitudeLimit:6,maxStars:96,minSeparationMm:3.5}}')"
+
+          RESPONSE_FILE="$(mktemp)"
+          STATUS=""
+
+          for attempt in {1..30}; do
+            STATUS="$(curl --silent --show-error               --output "$RESPONSE_FILE"               --write-out "%{http_code}"               -H "Content-Type: application/json"               -d "$REQUEST"               "$BASE_URL/api/astronomy/stars")"
+
+            if [[ "$STATUS" -ge 200 && "$STATUS" -lt 300 ]]; then
+              break
+            fi
+
+            echo "M5 public astronomy attempt $attempt/30 returned HTTP $STATUS."
+            sleep 10
+          done
+
+          RESPONSE="$(cat "$RESPONSE_FILE")"
+
+          if [[ "$STATUS" -lt 200 || "$STATUS" -ge 300 ]]; then
+            echo "M5 public astronomy failed with HTTP $STATUS"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          echo "$RESPONSE" | jq -e '
+            .calculation.catalog == "hipparcos" and
+            .calculation.ephemeris == "de440s" and
+            .calculation.timeBasis == "exact" and
+            .calculation.selectedStars > 20 and
+            (.stars | length) == .calculation.selectedStars and
+            (.stars[0].hipparcosId | type == "number")
+          ' >/dev/null
+
+          echo "M5 public astronomy smoke test passed."

@@ -1,4 +1,4 @@
-export const DESIGN_SPEC_VERSION = '1.1' as const
+export const DESIGN_SPEC_VERSION = '1.2' as const
 
 export const PHYSICAL_ARTWORK = {
   widthMm: 279.4,
@@ -74,10 +74,32 @@ export type SkySettings = {
   background: 'deep-space'
   brightness: number
   showConstellation: boolean
+  projection: 'azimuthal-equidistant'
+  magnitudeLimit: number
+  maxStars: number
+  minSeparationMm: number
+}
+
+export type AstronomyCalculation = {
+  catalog: 'hipparcos'
+  ephemeris: 'de440s'
+  projection: 'azimuthal-equidistant'
+  orientation: 'north-up-east-right'
+  calculationUtcDateTime: string
+  timeBasis: 'exact' | 'date-only-local-midnight'
+  magnitudeLimit: number
+  maxStars: number
+  minSeparationMm: number
+  visibleCatalogStars: number
+  projectedCandidates: number
+  selectedStars: number
 }
 
 export type DesignStar = MillimeterPoint & {
+  hipparcosId: number
   magnitude: number
+  altitudeDeg: number
+  azimuthDeg: number
   holeSizeMm: number
   ledIndex: number
 }
@@ -93,6 +115,7 @@ export type DesignSpec = {
   customText: CustomTextSpec
   materialStyle: MaterialStyleSpec
   skySettings: SkySettings
+  astronomy: AstronomyCalculation | null
   stars: readonly DesignStar[]
 }
 
@@ -120,15 +143,4 @@ export const DESIGN_REGIONS: DesignRegions = {
   },
 }
 
-export const DEFAULT_STARS: readonly DesignStar[] = [
-  { xMm: 25.4, yMm: 39.2, magnitude: 2.1, holeSizeMm: 1.2, ledIndex: 0 },
-  { xMm: 66.8, yMm: 86.1, magnitude: 1.4, holeSizeMm: 1.6, ledIndex: 1 },
-  { xMm: 103.5, yMm: 30.7, magnitude: 2.8, holeSizeMm: 0.9, ledIndex: 2 },
-  { xMm: 143.2, yMm: 117.6, magnitude: 1.8, holeSizeMm: 1.3, ledIndex: 3 },
-  { xMm: 187.5, yMm: 55.3, magnitude: 2.4, holeSizeMm: 1.1, ledIndex: 4 },
-  { xMm: 232.1, yMm: 101.8, magnitude: 1.2, holeSizeMm: 1.8, ledIndex: 5 },
-  { xMm: 48.6, yMm: 236.5, magnitude: 2.6, holeSizeMm: 1, ledIndex: 6 },
-  { xMm: 91.8, yMm: 315.4, magnitude: 1.7, holeSizeMm: 1.4, ledIndex: 7 },
-  { xMm: 139.7, yMm: 177.8, magnitude: 1.1, holeSizeMm: 1.9, ledIndex: 8 },
-  { xMm: 216.4, yMm: 274.2, magnitude: 2, holeSizeMm: 1.3, ledIndex: 9 },
-]
+export const DEFAULT_STARS: readonly DesignStar[] = []

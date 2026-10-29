@@ -10,6 +10,17 @@ builder.Services.AddHttpClient<AzureMapsClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
+builder.Services.AddHttpClient<DesignEngineClient>(client =>
+{
+    var baseUrl = builder.Configuration["DesignEngine:BaseUrl"];
+    if (Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri))
+    {
+        client.BaseAddress = uri;
+    }
+
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("web", policy =>
@@ -41,6 +52,17 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+
+    options.AddPolicy("astronomy", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
                 AutoReplenishment = true,
@@ -210,6 +232,47 @@ app.MapPost("/api/moments/resolve", async (
     }
 }).RequireRateLimiting("maps");
 
+
+app.MapPost("/api/astronomy/stars", async (
+    GenerateAstronomyRequest request,
+    DesignEngineClient designEngine,
+    CancellationToken cancellationToken) =>
+{
+    if (request.Moment.Location is null)
+    {
+        return Results.BadRequest(new
+        {
+            code = "location_not_resolved",
+            message = "Resolve a location before generating the star field."
+        });
+    }
+
+    try
+    {
+        var response = await designEngine.GenerateStarsAsync(
+            new AstronomyEngineRequest(
+                request.Moment.Date,
+                request.Moment.UtcDateTime,
+                request.Moment.ExactTimeUnknown,
+                request.Moment.Location.TimeZoneId,
+                request.Moment.Location.Latitude,
+                request.Moment.Location.Longitude,
+                request.SkySettings.MagnitudeLimit,
+                request.SkySettings.MaxStars,
+                request.SkySettings.MinSeparationMm),
+            cancellationToken);
+
+        return Results.Ok(response);
+    }
+    catch (DesignEngineException exception)
+    {
+        return Results.Problem(
+            title: "Astronomy service unavailable",
+            detail: exception.Message,
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).RequireRateLimiting("astronomy");
+
 app.Run();
 
 static string NormalizeConfidence(string confidence) =>
@@ -240,3 +303,25 @@ public sealed record ResolvedMomentResponse(
     string? UtcDateTime);
 
 public partial class Program;
+
+
+public sealed record GenerateAstronomyRequest(
+    AstronomyMomentInput Moment,
+    AstronomySkySettingsInput SkySettings);
+
+public sealed record AstronomyMomentInput(
+    string Date,
+    string? Time,
+    bool ExactTimeUnknown,
+    ResolvedLocation? Location,
+    string? LocalDateTime,
+    string? UtcDateTime);
+
+public sealed record AstronomySkySettingsInput(
+    string Background,
+    double Brightness,
+    bool ShowConstellation,
+    string Projection,
+    double MagnitudeLimit,
+    int MaxStars,
+    double MinSeparationMm);

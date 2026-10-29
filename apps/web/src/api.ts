@@ -53,3 +53,19 @@ export function resolveMoment(input: {
     body: JSON.stringify(input),
   })
 }
+
+
+export type AstronomyResult = {
+  calculation: NonNullable<DesignSpec['astronomy']>
+  stars: DesignSpec['stars']
+}
+
+export function generateAstronomy(
+  moment: DesignSpec['moment'],
+  skySettings: DesignSpec['skySettings'],
+) {
+  return apiRequest<AstronomyResult>('/api/astronomy/stars', {
+    method: 'POST',
+    body: JSON.stringify({ moment, skySettings }),
+  })
+}

@@ -55,6 +55,11 @@ export const INITIAL_DESIGN_SPEC: DesignSpec = {
     background: 'deep-space',
     brightness: 1,
     showConstellation: true,
+    projection: 'azimuthal-equidistant',
+    magnitudeLimit: 6,
+    maxStars: 96,
+    minSeparationMm: 3.5,
   },
+  astronomy: null,
   stars: [...DEFAULT_STARS],
 }

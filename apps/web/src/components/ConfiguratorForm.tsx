@@ -54,7 +54,7 @@ export function ConfiguratorForm({
   onFinish,
 }: ConfiguratorFormProps) {
   const nextLabel = activeStep === 1
-    ? isResolvingMoment ? 'Resolving…' : 'Lock in moment'
+    ? isResolvingMoment ? 'Building your sky…' : 'Build my sky'
     : 'Next step'
 
   return (
@@ -218,6 +218,9 @@ export function ConfiguratorForm({
                 <span>Sky anchored to</span>
                 <strong>{designSpec.moment.location.displayName}</strong>
                 <small>{designSpec.moment.location.timeZoneId}</small>
+                {designSpec.astronomy?.timeBasis === 'date-only-local-midnight' && (
+                  <small>Exact time unknown — using local midnight as the representative sky.</small>
+                )}
               </div>
             )}
 
