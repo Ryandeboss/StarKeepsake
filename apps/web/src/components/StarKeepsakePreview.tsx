@@ -25,6 +25,7 @@ function formatDate(date: string) {
 export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview, isProcessingPhoto }: StarKeepsakePreviewProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [lightsOn, setLightsOn] = useState(true)
+  const [showEngraving, setShowEngraving] = useState(true)
   const [displayWidthPx, setDisplayWidthPx] = useState(0)
   const { physicalArtwork, regions } = designSpec
 
@@ -57,7 +58,10 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
         </span>
       </div>
 
-      <div className="frame-preview">
+      <div
+        className={`frame-preview frame-preview--${designSpec.materialStyle.material}`}
+        aria-label={`Physical frame mockup in ${designSpec.materialStyle.style}`}
+      >
         <div
           className={`artwork-canvas ${lightsOn ? '' : 'is-dimmed'}`}
           ref={canvasRef}
@@ -95,20 +99,26 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
             })}
           </div>
 
-          <div className="photo-engraving" style={displayRectStyle(photoRect)}>
-            {engravingPreview ? (
+          <div
+            className="photo-engraving"
+            data-photo-fit={designSpec.photo.fitMode}
+            style={displayRectStyle(photoRect)}
+          >
+            {engravingPreview && showEngraving ? (
               <img
                 src={engravingPreview}
                 className="is-engraved"
-                alt="Server-generated grayscale engraving of your chosen crop"
-                style={{ width: '100%', height: '100%', objectFit: 'fill' }}
+                alt="Processed engraving preview of the full photo or selected crop"
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'fill' }}
               />
             ) : photoPreview ? (
               <img
                 src={photoPreview}
-                alt="Your original photo, displaying the selected fit or crop"
+                alt={designSpec.photo.fitMode === 'contain'
+                  ? 'Entire original photo fitted inside the panel'
+                  : 'Original photo showing the selected crop'}
                 style={designSpec.photo.fitMode === 'contain'
-                  ? { width: '100%', height: '100%', objectFit: 'contain' }
+                  ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }
                   : croppedImageStyle(designSpec.photo.crop)}
               />
             ) : (
@@ -144,7 +154,22 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
           <span className="preview-toggle-track" aria-hidden="true" />
         </label>
       </div>
-      {isProcessingPhoto && <p className="preview-engraving-note">Preparing your engraving preview…</p>}
+      {photoPreview && (
+        <div className="preview-photo-modes" role="group" aria-label="Photo rendering preview">
+          <button type="button" className={!showEngraving ? 'is-selected' : ''}
+            aria-pressed={!showEngraving} onClick={() => setShowEngraving(false)}>
+            Original photograph
+          </button>
+          <button type="button" className={showEngraving ? 'is-selected' : ''}
+            aria-pressed={showEngraving} onClick={() => setShowEngraving(true)}>
+            Engraving simulation
+          </button>
+        </div>
+      )}
+      <p className="preview-physical-note">
+        Material and lighting are illustrative. Confirm wood profile, glazing, and finish against your production sample.
+      </p>
+      {isProcessingPhoto && <p className="preview-engraving-note" role="status">Preparing your engraving preview…</p>}
       {engravingPreview && (
         <p className="preview-engraving-note">
           <a href={engravingPreview} download="engraving-preview.png">Save grayscale engraving preview (PNG)</a>
