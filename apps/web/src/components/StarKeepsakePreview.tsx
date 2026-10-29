@@ -10,6 +10,7 @@ type StarKeepsakePreviewProps = {
   photoPreview: string
   engravingPreview: string
   isProcessingPhoto: boolean
+  blendPreview: string
 }
 
 function formatDate(date: string) {
@@ -23,7 +24,7 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T12:00:00Z`))
 }
 
-export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview, isProcessingPhoto }: StarKeepsakePreviewProps) {
+export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview, isProcessingPhoto, blendPreview }: StarKeepsakePreviewProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [lightsOn, setLightsOn] = useState(true)
   const [showEngraving, setShowEngraving] = useState(true)
@@ -48,6 +49,12 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
   const photoRect = rectToDisplayPixels(designSpec.photo.positionMm, displayWidthPx, physicalArtwork.widthMm)
   const textRect = rectToDisplayPixels(designSpec.customText.positionMm, displayWidthPx, physicalArtwork.widthMm)
   const displaySkyRect = rectToDisplayPixels(regions.sky, displayWidthPx, physicalArtwork.widthMm)
+  const blendDisplayRect = rectToDisplayPixels({
+    xMm: regions.sky.xMm,
+    yMm: regions.sky.yMm,
+    widthMm: regions.sky.widthMm,
+    heightMm: regions.engravingPhoto.yMm + regions.engravingPhoto.heightMm - regions.sky.yMm,
+  }, displayWidthPx, physicalArtwork.widthMm)
   const displayTextStyle = {
     ...displayRectStyle(textRect),
     textAlign: designSpec.customText.align,
@@ -73,6 +80,8 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
           data-frame-size={designSpec.framePresetId}
           data-coordinate-system="top-left-origin-mm"
         >
+          {designSpec.layoutMode === 'classic' ? (
+            <>
           <div className="artwork-stars" aria-hidden={!exploreStars} style={displayRectStyle(displaySkyRect)}>
             {designSpec.stars.map((star) => {
               // The engine outputs canonical artwork coordinates; absolute
@@ -156,6 +165,36 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
               </div>
             )}
           </div>
+            </>
+          ) : (
+            <div className="horizon-blend-scene" style={displayRectStyle(blendDisplayRect)}>
+              {blendPreview ? (
+                <img
+                  src={blendPreview}
+                  alt="AI sky-mask artistic preview, with calculated stars blended into detected open sky"
+                  style={designSpec.photo.fitMode === 'contain'
+                    ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }
+                    : croppedImageStyle(designSpec.photo.crop)}
+                />
+              ) : photoPreview ? (
+                <img
+                  src={photoPreview}
+                  alt="Original photo before optional sky detection"
+                  style={designSpec.photo.fitMode === 'contain'
+                    ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }
+                    : croppedImageStyle(designSpec.photo.crop)}
+                />
+              ) : (
+                <div className="horizon-placeholder">
+                  <strong>A scene beneath your stars</strong>
+                  <span>Choose an outdoor photo with visible sky</span>
+                </div>
+              )}
+              <span className="horizon-blend-watermark">
+                {blendPreview ? 'Artistic sky blend · not camera-aligned' : 'Horizon Blend · preview'}
+              </span>
+            </div>
+          )}
 
           <div className="artwork-copy" style={displayTextStyle}>
             <strong>{designSpec.customText.value || 'Your names here'}</strong>
@@ -182,7 +221,7 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
           <span className="preview-toggle-track" aria-hidden="true" />
         </label>
       </div>
-      {photoPreview && (
+      {photoPreview && designSpec.layoutMode === 'classic' && (
         <div className="preview-photo-modes" role="group" aria-label="Photo rendering preview">
           <button type="button" className={!showEngraving ? 'is-selected' : ''}
             aria-pressed={!showEngraving} onClick={() => setShowEngraving(false)}>
@@ -201,7 +240,7 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
             <span>Hipparcos catalogue · Skyfield · JPL DE440s</span>
           </div>
           <button type="button" className="sky-explore-button"
-            disabled={!designSpec.astronomy || designSpec.stars.length === 0}
+            disabled={designSpec.layoutMode !== 'classic' || !designSpec.astronomy || designSpec.stars.length === 0}
             aria-pressed={exploreStars}
             onClick={() => {
               setExploreStars(!exploreStars)
@@ -239,6 +278,13 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
           </div>
         </details>
       </section>
+      {designSpec.layoutMode === 'horizon-blend' && (
+        <p className="blend-disclaimer">
+          Experimental artistic overlay: a semantic AI model identifies likely photo sky. The Hipparcos stars are genuine,
+          but photo heading, field of view, sky visibility and engravability are not verified. No star placements
+          are approved for manufacturing in this mode.
+        </p>
+      )}
       <p className="preview-physical-note">
         Material and lighting are illustrative. Confirm wood profile, glazing, and finish against your production sample.
       </p>

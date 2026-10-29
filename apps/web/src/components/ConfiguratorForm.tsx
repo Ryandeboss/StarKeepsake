@@ -15,6 +15,11 @@ type ConfiguratorFormProps = {
   onPhotoCrop: (crop: PhotoCrop) => void
   onPhotoFit: (mode: 'contain' | 'cover', crop: PhotoCrop) => void
   onFrameChange: (id: FramePresetId) => void
+  onLayoutModeChange: (mode: DesignSpec['layoutMode']) => void
+  onDetectSky: () => void
+  isDetectingSky: boolean
+  blendStatus: string
+  blendReady: boolean
   photoError: string
   isProcessingPhoto: boolean
   photoIsEngraved: boolean
@@ -52,6 +57,11 @@ export function ConfiguratorForm({
   onPhotoCrop,
   onPhotoFit,
   onFrameChange,
+  onLayoutModeChange,
+  onDetectSky,
+  isDetectingSky,
+  blendStatus,
+  blendReady,
   photoError,
   isProcessingPhoto,
   photoIsEngraved,
@@ -267,6 +277,43 @@ export function ConfiguratorForm({
               </div>
             )}
 
+            <div className="field">
+              <span className="field-label">Your design style</span>
+              <div className="layout-mode-options" role="group" aria-label="Design layout">
+                <button type="button"
+                  className={designSpec.layoutMode === 'classic' ? 'is-selected' : ''}
+                  aria-pressed={designSpec.layoutMode === 'classic'}
+                  onClick={() => onLayoutModeChange('classic')}>
+                  <strong>Classic sky & photo</strong>
+                  <small>A calculated star map above your portrait</small>
+                </button>
+                <button type="button"
+                  className={designSpec.layoutMode === 'horizon-blend' ? 'is-selected' : ''}
+                  aria-pressed={designSpec.layoutMode === 'horizon-blend'}
+                  onClick={() => onLayoutModeChange('horizon-blend')}>
+                  <strong>Horizon Blend · experimental</strong>
+                  <small>Detect photo sky and artistically blend real stars</small>
+                </button>
+              </div>
+              {designSpec.layoutMode === 'horizon-blend' && (
+                <div className="blend-detection-panel">
+                  <p>We'll look for visible sky using an optional AI model in your browser.
+                    Your photo is not uploaded to the sky-detection provider.</p>
+                  <button className="button-secondary" type="button"
+                    disabled={isDetectingSky || !photoUrl || !designSpec.astronomy}
+                    onClick={onDetectSky}>
+                    {isDetectingSky ? 'Detecting sky…' : blendReady ? 'Re-detect sky' : 'Detect sky in my photo'}
+                  </button>
+                  <p className="field-hint" role="status">{blendStatus ||
+                    (!photoUrl ? 'Upload an outdoor photograph with visible sky to try this style.' :
+                      !designSpec.astronomy ? 'Build the sky for your moment before detection.' :
+                      'Detection is optional and may fail on indoor photos or cloudy skies.')}
+                  </p>
+                  <p className="field-hint">The stars are drawn from real Hipparcos calculations, but this overlay is artistic:
+                    it cannot reconstruct the camera's heading or field of view. Not a laser-ready design.</p>
+                </div>
+              )}
+            </div>
             <div className="field">
               <span className="field-label">Choose your frame opening</span>
               <div className="frame-size-options" role="group" aria-label="Frame opening size">

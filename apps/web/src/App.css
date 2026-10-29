@@ -891,3 +891,101 @@
 @media (max-width: 560px) {
   .sky-evidence-heading { flex-direction: column; align-items: flex-start; }
 }
+
+/* Experimental Horizon Blend: semantic sky detection only, never fake stars. */
+.layout-mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.layout-mode-options button {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-height: 100px;
+  text-align: left;
+  padding: 15px 13px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fffdf8;
+  color: var(--green);
+  cursor: pointer;
+}
+.layout-mode-options button.is-selected {
+  border: 2px solid var(--green);
+  background: #eff2ee;
+  padding: 14px 12px;
+}
+.layout-mode-options button:focus-visible,
+.blend-detection-panel button:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+.layout-mode-options strong { font-size: 12px; line-height: 1.45; }
+.layout-mode-options small { font-size: 11px; line-height: 1.5; color: var(--muted); }
+.blend-detection-panel {
+  display: grid;
+  gap: 11px;
+  padding: 14px;
+  background: #f4f2ed;
+  border-left: 3px solid #c7ab82;
+}
+.blend-detection-panel p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.blend-detection-panel .button-secondary {
+  justify-self: start;
+  min-height: 40px;
+  border-radius: 100px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.blend-detection-panel .button-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
+.horizon-blend-scene {
+  position: absolute;
+  display: block;
+  overflow: hidden;
+  background: #fffdf8;
+  border-bottom: 1px solid rgba(255,224,178,.40);
+}
+.horizon-blend-scene img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
+.horizon-placeholder {
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  text-align: center;
+  height: 100%;
+  padding: 20px;
+  color: #475b60;
+  font-family: var(--serif);
+}
+.horizon-placeholder span { font-family: var(--mono); font-size: 10px; }
+.horizon-blend-watermark {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 1;
+  padding: 5px 8px;
+  background: rgba(12,31,43,.86);
+  color: #f3ddb3;
+  font-size: clamp(7px,1.4cqw,11px);
+  font-family: var(--mono);
+  pointer-events: none;
+}
+.blend-disclaimer {
+  margin: 12px 0;
+  border-left: 3px solid #b48f5e;
+  padding: 10px 12px;
+  color: #715737;
+  background: rgba(199,172,129,.14);
+  font-size: 11px;
+  line-height: 1.55;
+}
+@media (max-width: 560px) {
+  .layout-mode-options { grid-template-columns: 1fr; }
+  .layout-mode-options button { min-height: 76px; }
+}
