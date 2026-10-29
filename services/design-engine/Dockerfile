@@ -4,9 +4,13 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV SKYFIELD_DATA_DIR=/app/data
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY prepare_data.py .
+RUN python prepare_data.py
 
 COPY . .
 
