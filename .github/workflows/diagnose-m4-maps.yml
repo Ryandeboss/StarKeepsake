@@ -39,4 +39,14 @@ jobs:
           echo "$GEOCODE_RESPONSE" | jq '{featureCount:(.features|length), geometry:.features[0].geometry, geocodePoints:.features[0].properties.geocodePoints}'
 
           echo "TIMEZONE_KNOWN_CHICAGO:"
-          curl --fail --silent --show-error             -H "subscription-key: $MAPS_KEY"             "https://atlas.microsoft.com/timezone/byCoordinates/json?api-version=1.0&query=41.8781,-87.6298" | jq .
+          curl --fail --silent --show-error \
+            -H "subscription-key: $MAPS_KEY" \
+            "https://atlas.microsoft.com/timezone/byCoordinates/json?api-version=1.0&query=41.8781,-87.6298" | jq .
+
+          LON="$(echo "$GEOCODE_RESPONSE" | jq -r '.features[0].geometry.coordinates[0]')"
+          LAT="$(echo "$GEOCODE_RESPONSE" | jq -r '.features[0].geometry.coordinates[1]')"
+
+          echo "TIMEZONE_EXACT_GEOCODE_COORDINATES: $LAT,$LON"
+          curl --fail --silent --show-error \
+            -H "subscription-key: $MAPS_KEY" \
+            "https://atlas.microsoft.com/timezone/byCoordinates/json?api-version=1.0&query=$LAT,$LON" | jq .
