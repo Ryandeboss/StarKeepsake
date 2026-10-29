@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 using StarKeepsake.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -52,6 +53,17 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+
+    options.AddPolicy("engraving", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 12,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0,
                 AutoReplenishment = true,
@@ -272,6 +284,81 @@ app.MapPost("/api/astronomy/stars", async (
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 }).RequireRateLimiting("astronomy");
+
+app.MapPost("/api/engraving/preview", async (
+    HttpRequest request,
+    DesignEngineClient designEngine,
+    CancellationToken cancellationToken) =>
+{
+    const long maxPhotoBytes = 10L * 1024 * 1024;
+
+    if (!request.HasFormContentType)
+    {
+        return Results.BadRequest(new { message = "Choose a JPG, PNG, or WebP photo." });
+    }
+
+    try
+    {
+        var form = await request.ReadFormAsync(cancellationToken);
+        var photo = form.Files.GetFile("image");
+
+        if (photo is null || photo.Length == 0)
+        {
+            return Results.BadRequest(new { message = "Choose a photo to process." });
+        }
+
+        if (photo.Length > maxPhotoBytes)
+        {
+            return Results.Problem(
+                title: "Photo too large",
+                detail: "Choose a photo no larger than 10 MB.",
+                statusCode: StatusCodes.Status413PayloadTooLarge);
+        }
+
+        if (photo.ContentType is not ("image/jpeg" or "image/png" or "image/webp"))
+        {
+            return Results.BadRequest(new { message = "Use a JPG, PNG, or WebP photo." });
+        }
+
+        using var stream = photo.OpenReadStream();
+        var engravingPng = await designEngine.GenerateEngravingPreviewAsync(
+            stream, photo.ContentType, cancellationToken);
+
+        request.HttpContext.Response.Headers.CacheControl = "no-store";
+        return Results.Bytes(engravingPng, contentType: "image/png");
+    }
+    catch (InvalidDataException)
+    {
+        return Results.BadRequest(new { message = "The photo upload is invalid." });
+    }
+    catch (DesignEngineInputException exception)
+    {
+        return Results.BadRequest(new { message = exception.Message });
+    }
+    catch (DesignEngineException)
+    {
+        return Results.Problem(
+            title: "Engraving preview unavailable",
+            detail: "We could not generate the engraving preview right now.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (HttpRequestException)
+    {
+        return Results.Problem(
+            title: "Engraving preview unavailable",
+            detail: "We could not contact the engraving service right now.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+    {
+        return Results.Problem(
+            title: "Engraving preview timeout",
+            detail: "The engraving preview took too long. Please try again.",
+            statusCode: StatusCodes.Status504GatewayTimeout);
+    }
+})
+.WithMetadata(new RequestSizeLimitAttribute(11L * 1024 * 1024))
+.RequireRateLimiting("engraving");
 
 app.Run();
 
