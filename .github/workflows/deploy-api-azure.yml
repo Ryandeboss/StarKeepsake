@@ -88,7 +88,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          az containerapp update             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --image "$IMAGE"             --set-env-vars "AzureMaps__SubscriptionKey=secretref:azure-maps-key"             --output none
+          az containerapp update             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --image "$IMAGE"             --set-env-vars "AzureMaps__SubscriptionKey=secretref:azure-maps-key" "Deployment__CommitSha=$GITHUB_SHA"             --output none
 
           az containerapp ingress update             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --target-port "$TARGET_PORT"             --transport auto             --output none
 
@@ -104,13 +104,16 @@ jobs:
           for attempt in {1..30}; do
             BODY="$(curl --fail --silent --show-error "$HEALTH_URL" || true)"
 
+            DEPLOYED_SHA="$(echo "$BODY" | jq -r '.commitSha // empty')"
+
             if echo "$BODY" | grep -q '"service":"StarKeepsake.Api"' &&
-               echo "$BODY" | grep -q '"status":"healthy"'; then
-              echo "API health check passed: $BODY"
+               echo "$BODY" | grep -q '"status":"healthy"' &&
+               [[ "$DEPLOYED_SHA" == "$GITHUB_SHA" ]]; then
+              echo "API health check passed for commit $DEPLOYED_SHA: $BODY"
               exit 0
             fi
 
-            echo "Health check attempt $attempt/30 did not return the expected API payload."
+            echo "Health check attempt $attempt/30 has not reached commit $GITHUB_SHA yet."
             sleep 10
           done
 
