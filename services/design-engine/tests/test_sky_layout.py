@@ -5,7 +5,6 @@ skyfield projection is a faithful azimuthal-equidistant circle centered in
 the upper sky panel, rather than visually shifting stars around the photo.
 """
 import math
-import re
 import unittest
 from pathlib import Path
 
@@ -86,17 +85,18 @@ class SkyFirstLayoutTests(unittest.TestCase):
             ("engravingPhoto", RESERVED_REGIONS[0]),
             ("text", RESERVED_REGIONS[1]),
         ):
-            match = re.search(
-                rf"^  {region_name}: \\{{(?P<body>.*?)^  \\}},",
-                contract,
-                flags=re.DOTALL | re.MULTILINE,
-            )
-            self.assertIsNotNone(match, region_name)
-            values = tuple(
-                float(re.search(rf"\\b{key}: ([0-9.]+)", match.group("body")).group(1))
-                for key in ("xMm", "yMm", "widthMm", "heightMm")
-            )
-            self.assertEqual(values, expected, region_name)
+            start = contract.index(f"  {region_name}: {{" )
+            end = contract.index("  },", start)
+            region_lines = contract[start:end].splitlines()
+            values = []
+            for key in ("xMm", "yMm", "widthMm", "heightMm"):
+                line = next(
+                    line.strip()
+                    for line in region_lines
+                    if line.strip().startswith(f"{key}: ")
+                )
+                values.append(float(line.split(": ", 1)[1].rstrip(",")))
+            self.assertEqual(tuple(values), expected, region_name)
 
     def test_reserved_margin_does_not_overlap_upper_sky(self):
         self.assertLess(
