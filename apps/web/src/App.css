@@ -448,10 +448,6 @@
   padding: 0;
   border: 1px solid #57605a;
   background:
-    radial-gradient(circle at 14% 18%, rgba(255, 220, 150, 0.95) 0 1px, transparent 2px),
-    radial-gradient(circle at 78% 16%, rgba(255, 220, 150, 0.86) 0 1px, transparent 2px),
-    radial-gradient(circle at 25% 76%, rgba(255, 220, 150, 0.72) 0 1px, transparent 2px),
-    radial-gradient(circle at 86% 71%, rgba(255, 220, 150, 0.85) 0 1px, transparent 2px),
     radial-gradient(circle at 53% 48%, rgba(57, 93, 101, 0.75), transparent 45%),
     linear-gradient(145deg, #10242d, #1c333c 50%, #0d1d26);
   transition: filter 200ms ease;
@@ -460,7 +456,6 @@
 .artwork-canvas.is-dimmed { filter: brightness(0.58) saturate(0.8); }
 .artwork-stars { position: absolute; }
 .artwork-star { position: absolute; border-radius: 50%; background: #f9dda1; box-shadow: 0 0 8px rgba(246, 210, 133, 0.6); transform: translate(-50%, -50%); }
-.artwork-center-mark { position: absolute; z-index: 1; width: 4px; height: 4px; border: 1px solid rgba(255, 240, 195, 0.9); border-radius: 50%; box-shadow: 0 0 9px rgba(246, 210, 133, 0.8); transform: translate(-50%, -50%); }
 .photo-engraving { position: absolute; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(238, 210, 157, 0.48); background: rgba(8, 25, 33, 0.55); color: rgba(255, 226, 168, 0.8); }
 .photo-engraving img { width: 100%; height: 100%; object-fit: cover; opacity: 0.76; }
 .photo-empty { display: grid; gap: 4px; justify-items: center; padding: 18px; }
