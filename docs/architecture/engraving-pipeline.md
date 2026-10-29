@@ -13,8 +13,10 @@ a photo background; the first iteration center-crops to the reserved area.
   grayscale, autocontrast and subtle sharpening; output PNG without EXIF.
 - Identical input bytes deterministically produce the same output for a
   given deployment and image-processing library version.
-- No user uploads or outputs are written to local disk, database, or blob.
-  The browser preview is temporary and lost on refresh.
+- No application-level storage to a database, blob store, or persistent
+  order record. Multipart upload handling in ASP.NET and FastAPI can buffer
+  request bytes into temporary files on the server; these are request-scoped,
+  not durable user assets. The browser preview is temporary and lost on refresh.
 - `POST /engraving/preview` on Python receives multipart field `image`.
   The public browser will use `POST /api/engraving/preview` on ASP.NET,
   which forwards the image to Python. Never direct frontend uploads to Python.
