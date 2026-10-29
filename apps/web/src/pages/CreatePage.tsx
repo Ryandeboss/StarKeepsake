@@ -1,6 +1,6 @@
 import type { ChangeEvent } from 'react'
 import { useEffect, useState } from 'react'
-import { generateAstronomy, resolveMoment, searchLocations } from '../api'
+import { generateAstronomy, generateEngravingPreview, resolveMoment, searchLocations } from '../api'
 import type { LocationCandidate } from '../api'
 import { ConfiguratorForm } from '../components/ConfiguratorForm'
 import { ProgressSteps } from '../components/ProgressSteps'
@@ -17,6 +17,9 @@ export function CreatePage() {
   const [designSpec, setDesignSpec] = useState<DesignSpec>(INITIAL_DESIGN_SPEC)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
+  const [engravingPreview, setEngravingPreview] = useState('')
+  const [isProcessingPhoto, setIsProcessingPhoto] = useState(false)
+  const [photoError, setPhotoError] = useState('')
   const [isReady, setIsReady] = useState(false)
   const [locationQuery, setLocationQuery] = useState('')
   const [locationCandidates, setLocationCandidates] = useState<LocationCandidate[]>([])
@@ -30,6 +33,35 @@ export function CreatePage() {
       if (photoPreview) URL.revokeObjectURL(photoPreview)
     }
   }, [photoPreview])
+
+  useEffect(() => {
+    return () => {
+      if (engravingPreview) URL.revokeObjectURL(engravingPreview)
+    }
+  }, [engravingPreview])
+
+  useEffect(() => {
+    if (!photoFile) return
+
+    let cancelled = false
+
+    generateEngravingPreview(photoFile)
+      .then((png) => {
+        if (!cancelled) setEngravingPreview(URL.createObjectURL(png))
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setPhotoError(error instanceof Error ? error.message : 'Could not process this photo.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsProcessingPhoto(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [photoFile])
 
   const updateMoment = <K extends MomentInputField>(
     field: K,
@@ -75,13 +107,31 @@ export function CreatePage() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    const isSupported = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+    const isWithinSize = file.size <= 10 * 1024 * 1024
+
+    setPhotoError('')
+    setEngravingPreview('')
+    setIsProcessingPhoto(false)
+    setIsReady(false)
+    if (!isSupported || !isWithinSize) {
+      setPhotoError(isSupported ? 'Choose a photo of 10 MB or less.' : 'Use a JPG, PNG, or WebP photo.')
+      setPhotoFile(null)
+      setPhotoPreview('')
+      setDesignSpec((current) => ({
+        ...current,
+        photo: { ...current.photo, assetId: 'local-photo-placeholder' },
+      }))
+      return
+    }
+
+    setIsProcessingPhoto(true)
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
     setDesignSpec((current) => ({
       ...current,
-      photo: { ...current.photo, assetId: file.name },
+      photo: { ...current.photo, assetId: 'unpersisted-preview-only' },
     }))
-    setIsReady(false)
   }
 
   const handleLocationQueryChange = (value: string) => {
@@ -226,6 +276,9 @@ export function CreatePage() {
             <ConfiguratorForm
               designSpec={designSpec}
               photoFile={photoFile}
+              photoError={photoError}
+              isProcessingPhoto={isProcessingPhoto}
+              photoIsEngraved={Boolean(engravingPreview)}
               activeStep={activeStep}
               locationQuery={locationQuery}
               locationCandidates={locationCandidates}
@@ -246,7 +299,12 @@ export function CreatePage() {
             />
             <p className="sr-only" aria-live="polite">{isReady ? 'Your StarKeepsake preview is ready.' : ''}</p>
           </div>
-          <StarKeepsakePreview designSpec={designSpec} photoPreview={photoPreview} />
+          <StarKeepsakePreview
+            designSpec={designSpec}
+            photoPreview={photoPreview}
+            engravingPreview={engravingPreview}
+            isProcessingPhoto={isProcessingPhoto}
+          />
         </div>
       </main>
     </div>

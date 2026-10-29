@@ -7,6 +7,9 @@ type MomentInputField = 'date' | 'time' | 'exactTimeUnknown'
 type ConfiguratorFormProps = {
   designSpec: DesignSpec
   photoFile: File | null
+  photoError: string
+  isProcessingPhoto: boolean
+  photoIsEngraved: boolean
   activeStep: number
   locationQuery: string
   locationCandidates: LocationCandidate[]
@@ -35,6 +38,9 @@ const frameOptions: MaterialStyleSpec[] = [
 export function ConfiguratorForm({
   designSpec,
   photoFile,
+  photoError,
+  isProcessingPhoto,
+  photoIsEngraved,
   activeStep,
   locationQuery,
   locationCandidates,
@@ -70,13 +76,16 @@ export function ConfiguratorForm({
             <div className="field">
               <label className="field-label" htmlFor="photo">A photo to remember</label>
               <label className="photo-dropzone" htmlFor="photo">
-                <input id="photo" type="file" accept="image/*" onChange={onPhotoChange} />
+                <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoChange} />
                 <span className="photo-dropzone-content">
                   <span className="photo-icon" aria-hidden="true">+</span>
                   <strong>{photoFile ? photoFile.name : 'Choose a photo'}</strong>
-                  <span>{photoFile ? 'Ready for your preview' : 'JPG, PNG, or HEIC · up to 10 MB'}</span>
+                  <span>{photoFile ? (isProcessingPhoto ? 'Preparing engraving…' : photoIsEngraved ? 'Engraving preview ready' : 'Photo selected') : 'JPG, PNG, or WebP · up to 10 MB'}</span>
                 </span>
               </label>
+              {photoError && <p className="form-error" role="alert">{photoError}</p>}
+              {photoIsEngraved && <p className="field-hint">Grayscale engraving preview ready. Final laser results depend on material testing.</p>}
+              <p className="field-hint">We process your photo to make a temporary preview; it is not saved to an order yet. A center crop is used.</p>
             </div>
             <div className="field-row">
               <div className="field">
