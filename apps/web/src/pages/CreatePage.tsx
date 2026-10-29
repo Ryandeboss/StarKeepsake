@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { generateAstronomy, generateEngravingPreview, resolveMoment, searchLocations } from '../api'
 import type { LocationCandidate } from '../api'
 import { ConfiguratorForm } from '../components/ConfiguratorForm'
@@ -9,6 +9,7 @@ import { StarKeepsakePreview } from '../components/StarKeepsakePreview'
 import { getFrameLayout, INITIAL_DESIGN_SPEC, toRect } from '../designSpec'
 import type { DesignSpec, FramePresetId, PhotoCrop } from '../designSpec'
 import { FULL_PHOTO_CROP, getCoverCrop } from '../photoCrop'
+import { generateHorizonBlend } from '../skyBlend'
 
 const steps = ['Your moment', 'Your story', 'Your object']
 type MomentInputField = 'date' | 'time' | 'exactTimeUnknown'
@@ -22,6 +23,11 @@ export function CreatePage() {
   const [engravingPreview, setEngravingPreview] = useState('')
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState('')
+  const [blendPreview, setBlendPreview] = useState('')
+  const [blendStatus, setBlendStatus] = useState('')
+  const [blendReady, setBlendReady] = useState(false)
+  const [isDetectingSky, setIsDetectingSky] = useState(false)
+  const blendRequestRef = useRef(0)
   const [isReady, setIsReady] = useState(false)
   const [locationQuery, setLocationQuery] = useState('')
   const [locationCandidates, setLocationCandidates] = useState<LocationCandidate[]>([])
@@ -69,6 +75,54 @@ export function CreatePage() {
     }
   }, [photoFile, designSpec.framePresetId, designSpec.photo])
 
+  useEffect(() => {
+    return () => {
+      if (blendPreview) URL.revokeObjectURL(blendPreview)
+    }
+  }, [blendPreview])
+
+  const clearBlend = () => {
+    blendRequestRef.current += 1
+    setBlendPreview('')
+    setBlendStatus('')
+    setBlendReady(false)
+    setIsDetectingSky(false)
+  }
+
+  const handleLayoutModeChange = (layoutMode: DesignSpec['layoutMode']) => {
+    setDesignSpec((current) => ({ ...current, layoutMode }))
+    clearBlend()
+    setIsReady(false)
+  }
+
+  const handleDetectSky = async () => {
+    if (!photoPreview || !designSpec.astronomy || !designSpec.stars.length) {
+      setBlendStatus('Upload a photo and calculate the sky first.')
+      return
+    }
+    const requestId = ++blendRequestRef.current
+    setBlendPreview('')
+    setBlendReady(false)
+    setIsDetectingSky(true)
+    setBlendStatus('Loading the sky-detection model and analyzing your image locally…')
+    try {
+      const result = await generateHorizonBlend(photoPreview, designSpec)
+      if (requestId !== blendRequestRef.current) return
+      if (result.kind === 'no-sky') {
+        setBlendStatus('No usable open sky was recognized in this photo. Try an outdoor photo with a visible horizon, or select Classic Frame.')
+        return
+      }
+      setBlendPreview(URL.createObjectURL(result.image))
+      setBlendReady(true)
+      setBlendStatus(`Detected ~${result.skyPercent}% sky; blended ${result.placedStars} real catalog stars (artistic placement).`)
+    } catch (error) {
+      if (requestId !== blendRequestRef.current) return
+      setBlendStatus(error instanceof Error ? error.message : 'Sky detection did not work on this device. Classic Frame remains available.')
+    } finally {
+      if (requestId === blendRequestRef.current) setIsDetectingSky(false)
+    }
+  }
+
   const updatePhotoCrop = (crop: PhotoCrop) => {
     setDesignSpec((current) => ({
       ...current,
@@ -101,6 +155,7 @@ export function CreatePage() {
 
   const updateFrame = async (id: FramePresetId) => {
     if (id === designSpec.framePresetId) return
+    clearBlend()
     const { physicalArtwork, regions } = getFrameLayout(id)
     setIsReady(false)
     setPhotoError('')
@@ -142,6 +197,7 @@ export function CreatePage() {
     field: K,
     value: DesignSpec['moment'][K],
   ) => {
+    clearBlend()
     setDesignSpec((current) => {
       const nextMoment = {
         ...current.moment,
@@ -185,6 +241,7 @@ export function CreatePage() {
     const isSupported = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
     const isWithinSize = file.size <= 10 * 1024 * 1024
 
+    clearBlend()
     setPhotoError('')
     setEngravingPreview('')
     setIsProcessingPhoto(false)
@@ -211,6 +268,7 @@ export function CreatePage() {
   }
 
   const handleLocationQueryChange = (value: string) => {
+    clearBlend()
     setLocationQuery(value)
     setLocationCandidates([])
     setSelectedLocation(null)
@@ -253,6 +311,7 @@ export function CreatePage() {
   }
 
   const handleLocationSelect = (location: LocationCandidate) => {
+    clearBlend()
     setSelectedLocation(location)
     setDesignSpec((current) => ({
       ...current,
@@ -306,6 +365,7 @@ export function CreatePage() {
         })
 
         const astronomy = await generateAstronomy(resolved, designSpec.skySettings, designSpec.framePresetId)
+        clearBlend()
 
         setDesignSpec((current) => ({
           ...current,
@@ -358,6 +418,11 @@ export function CreatePage() {
               onPhotoCrop={updatePhotoCrop}
               onPhotoFit={updatePhotoFit}
               onFrameChange={updateFrame}
+              onLayoutModeChange={handleLayoutModeChange}
+              onDetectSky={handleDetectSky}
+              isDetectingSky={isDetectingSky}
+              blendStatus={blendStatus}
+              blendReady={blendReady}
               photoError={photoError}
               isProcessingPhoto={isProcessingPhoto}
               photoIsEngraved={Boolean(engravingPreview)}
@@ -377,7 +442,14 @@ export function CreatePage() {
               onLocationSelect={handleLocationSelect}
               onBack={handleBack}
               onNext={handleNext}
-              onFinish={() => setIsReady(true)}
+              onFinish={() => {
+                if (designSpec.layoutMode === 'horizon-blend' && !blendReady) {
+                  setFormError('Run sky detection successfully or choose Classic Frame before finishing.')
+                  return
+                }
+                setFormError('')
+                setIsReady(true)
+              }}
             />
             <p className="sr-only" aria-live="polite">{isReady ? 'Your StarKeepsake preview is ready.' : ''}</p>
           </div>
@@ -386,6 +458,7 @@ export function CreatePage() {
             photoPreview={photoPreview}
             engravingPreview={engravingPreview}
             isProcessingPhoto={isProcessingPhoto}
+            blendPreview={blendPreview}
           />
         </div>
       </main>
