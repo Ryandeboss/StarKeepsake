@@ -127,7 +127,17 @@ jobs:
 
           BASE_URL="https://${FQDN}"
 
-          SEARCH_RESPONSE="$(curl --fail --silent --show-error --get             "$BASE_URL/api/locations/search"             --data-urlencode "q=Chicago, IL")"
+          SEARCH_BODY_FILE="$(mktemp)"
+          SEARCH_STATUS="$(curl --silent --show-error --output "$SEARCH_BODY_FILE" --write-out "%{http_code}" --get \
+            "$BASE_URL/api/locations/search" \
+            --data-urlencode "q=Chicago, IL")"
+          SEARCH_RESPONSE="$(cat "$SEARCH_BODY_FILE")"
+
+          if [[ "$SEARCH_STATUS" -lt 200 || "$SEARCH_STATUS" -ge 300 ]]; then
+            echo "Location search failed with HTTP $SEARCH_STATUS"
+            echo "$SEARCH_RESPONSE"
+            exit 1
+          fi
 
           CANDIDATE="$(echo "$SEARCH_RESPONSE" | jq -c '.[0]')"
 
