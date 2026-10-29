@@ -25,8 +25,9 @@ M5 replaces the M3 placeholder stars with a server-generated Hipparcos star fiel
 
 - `astronomy` records the catalog, ephemeris, projection, orientation, calculation UTC time, time basis, selection settings, and star counts.
 - `stars[]` stores physical `xMm`/`yMm` plus Hipparcos ID, apparent altitude/azimuth, visual magnitude, hole size, and LED index.
-- The projection is `azimuthal-equidistant`, with zenith at the artwork center, north up, east right, and the horizon at the projection circle edge.
-- Stars inside the reserved engraving-photo and text regions are omitted rather than moved; remaining star coordinates preserve the real projected sky geometry.
+- The projection is `azimuthal-equidistant`, north up and east right, with the horizon at the projection circle edge. The zenith is centered in the **canonical sky region**; star positions are never reflowed by the browser.
+- In the sky-first template, the sky occupies `(x=0, y=0, w=279.4, h=166) mm`. The reserved photo sits below it at `(34.7, 174, 210, 125) mm`, with text at `(34.7, 305, 210, 44) mm`. The underlying artboard remains `279.4 × 355.6 mm`.
+- Stars outside the top sky projection are not plotted. The photograph and typography remain separate physical regions, so there are no star-hole placements in either region.
 - The default selection uses magnitude limit 6.0, up to 96 stars, and 3.5 mm minimum physical separation.
 - If the exact time is unknown, M5 explicitly calculates a representative sky at local midnight and records `timeBasis = date-only-local-midnight`. The UI must disclose that this is representative rather than exact.
 - Fake placeholder stars are no longer part of the canonical DesignSpec.
