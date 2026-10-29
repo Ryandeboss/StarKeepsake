@@ -149,7 +149,19 @@ jobs:
 
           REQUEST_BODY="$(jq -n             --arg date "2024-07-04"             --arg time "20:30"             --arg query "Chicago, IL"             --argjson location "$CANDIDATE"             '{date:$date,time:$time,exactTimeUnknown:false,locationQuery:$query,location:$location}')"
 
-          MOMENT_RESPONSE="$(curl --fail --silent --show-error             -X POST             -H "Content-Type: application/json"             -d "$REQUEST_BODY"             "$BASE_URL/api/moments/resolve")"
+          MOMENT_BODY_FILE="$(mktemp)"
+          MOMENT_STATUS="$(curl --silent --show-error --output "$MOMENT_BODY_FILE" --write-out "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d "$REQUEST_BODY" \
+            "$BASE_URL/api/moments/resolve")"
+          MOMENT_RESPONSE="$(cat "$MOMENT_BODY_FILE")"
+
+          if [[ "$MOMENT_STATUS" -lt 200 || "$MOMENT_STATUS" -ge 300 ]]; then
+            echo "Moment resolution failed with HTTP $MOMENT_STATUS"
+            echo "$MOMENT_RESPONSE"
+            exit 1
+          fi
 
           echo "$MOMENT_RESPONSE" | jq -e '
             .date == "2024-07-04" and
