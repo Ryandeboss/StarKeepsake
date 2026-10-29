@@ -110,12 +110,12 @@ jobs:
           echo "$EXACT_RESPONSE" | jq -e '
             .calculation.catalog == "hipparcos" and
             .calculation.ephemeris == "de440s" and
-            .calculation.projection == "azimuthal-equidistant" and
+            .calculation.projection == "altaz-equirectangular" and
             .calculation.timeBasis == "exact" and
             .calculation.selectedStars > 20 and
             .calculation.selectedStars <= 96 and
             (.stars | length) == .calculation.selectedStars and
-            ([.stars[] | select(.xMm < 0 or .xMm > 279.4 or .yMm < 0 or .yMm > 166)] | length) == 0 and
+            ([.stars[] | select(.xMm < 6 or .xMm > 273.4 or .yMm < 6 or .yMm > 167.132)] | length) == 0 and
             (.stars[0].hipparcosId | type == "number")
           ' >/dev/null
 
@@ -174,7 +174,33 @@ jobs:
               data = f.read(33)
           assert data[:8] == b"\x89PNG\r\n\x1a\n", "Not a PNG"
           width, height = struct.unpack(">II", data[16:24])
-          assert (width, height) == (2100, 1250), (width, height)
+          assert (width, height) == (1604, 853), (width, height)
           assert data[25] == 0, "Expected 8-bit grayscale output"
           print("M6 engine engraving smoke test passed.")
           PY
+
+      - name: Smoke test all frame geometry presets
+        shell: bash
+        run: |
+          set -euo pipefail
+          FQDN="$(az containerapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --query properties.configuration.ingress.fqdn --output tsv)"
+          for PRESET in 8x10 11x14 16x20; do
+            REQUEST="$(jq -nc --arg id "$PRESET" '{
+              date:"2024-07-04",utcDateTime:"2024-07-05T01:30:00Z",
+              exactTimeUnknown:false,timeZoneId:"America/Chicago",
+              latitude:41.8781,longitude:-87.6298,
+              magnitudeLimit:6,maxStars:96,minSeparationMm:3.5,framePresetId:$id
+            }')"
+            RESPONSE="$(curl --fail --silent --show-error -H "Content-Type: application/json" -d "$REQUEST" "https://${FQDN}/astronomy/stars")"
+            case "$PRESET" in
+              8x10) MAX_X=198.2; MAX_Y=119.38 ;;
+              11x14) MAX_X=273.4; MAX_Y=167.132 ;;
+              16x20) MAX_X=398.4; MAX_Y=238.76 ;;
+            esac
+            echo "$RESPONSE" | jq -e --argjson maxX "$MAX_X" --argjson maxY "$MAX_Y" '
+              .calculation.projection == "altaz-equirectangular" and
+              .calculation.selectedStars > 20 and
+              ([.stars[] | select(.xMm > $maxX or .yMm > $maxY)] | length) == 0
+            ' >/dev/null
+            echo "Frame preset $PRESET astronomy geometry passed"
+          done

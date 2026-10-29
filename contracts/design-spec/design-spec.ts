@@ -1,31 +1,23 @@
-export const DESIGN_SPEC_VERSION = '1.2' as const
+export const DESIGN_SPEC_VERSION = '1.3' as const
 
-export const PHYSICAL_ARTWORK = {
-  widthMm: 279.4,
-  heightMm: 355.6,
-  units: 'mm',
-  origin: 'top-left',
-} as const
+export type FramePresetId = '8x10' | '11x14' | '16x20'
+export type FramePreset = { id: FramePresetId; label: string; widthMm: number; heightMm: number }
+export const FRAME_PRESETS: readonly FramePreset[] = [
+  { id: '8x10', label: '8 × 10 in', widthMm: 203.2, heightMm: 254 },
+  { id: '11x14', label: '11 × 14 in', widthMm: 279.4, heightMm: 355.6 },
+  { id: '16x20', label: '16 × 20 in', widthMm: 406.4, heightMm: 508 },
+] as const
 
-export type MillimeterPoint = {
-  xMm: number
-  yMm: number
-}
-
-export type MillimeterRect = MillimeterPoint & {
+export type PhysicalArtwork = {
   widthMm: number
   heightMm: number
+  units: 'mm'
+  origin: 'top-left'
 }
-
-export type DesignRegion = MillimeterRect & {
-  label: string
-}
-
-export type DesignRegions = {
-  sky: DesignRegion
-  engravingPhoto: DesignRegion
-  text: DesignRegion
-}
+export type MillimeterPoint = { xMm: number; yMm: number }
+export type MillimeterRect = MillimeterPoint & { widthMm: number; heightMm: number }
+export type DesignRegion = MillimeterRect & { label: string }
+export type DesignRegions = { sky: DesignRegion; engravingPhoto: DesignRegion; text: DesignRegion }
 
 export type ResolvedLocation = {
   query: string
@@ -36,7 +28,6 @@ export type ResolvedLocation = {
   timeZoneId: string
   confidence: 'High' | 'Medium' | 'Low' | 'Unknown'
 }
-
 export type MomentSpec = {
   date: string
   time: string | null
@@ -46,45 +37,38 @@ export type MomentSpec = {
   utcDateTime: string | null
 }
 
-export type PhotoCrop = {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
+// Coordinates are normalized to the EXIF-oriented source image, not the artboard.
+// In contain mode, crop stays full-size and any unused photo panel is padded.
+export type PhotoCrop = { x: number; y: number; width: number; height: number }
 export type PhotoSpec = {
   assetId: string
+  fitMode: 'contain' | 'cover'
   crop: PhotoCrop
   positionMm: MillimeterRect
 }
-
 export type CustomTextSpec = {
   value: string
   positionMm: MillimeterRect
   align: 'left' | 'center' | 'right'
 }
-
 export type MaterialStyleSpec = {
   material: 'midnight' | 'walnut' | 'brass'
   style: 'Midnight frame' | 'Warm walnut' | 'Brushed brass'
 }
-
 export type SkySettings = {
   background: 'deep-space'
   brightness: number
   showConstellation: boolean
-  projection: 'azimuthal-equidistant'
+  projection: 'altaz-equirectangular'
   magnitudeLimit: number
   maxStars: number
   minSeparationMm: number
 }
-
 export type AstronomyCalculation = {
   catalog: 'hipparcos'
   ephemeris: 'de440s'
-  projection: 'azimuthal-equidistant'
-  orientation: 'north-up-east-right'
+  projection: 'altaz-equirectangular'
+  orientation: 'north-center-east-right'
   calculationUtcDateTime: string
   timeBasis: 'exact' | 'date-only-local-midnight'
   magnitudeLimit: number
@@ -94,7 +78,6 @@ export type AstronomyCalculation = {
   projectedCandidates: number
   selectedStars: number
 }
-
 export type DesignStar = MillimeterPoint & {
   hipparcosId: number
   magnitude: number
@@ -103,12 +86,12 @@ export type DesignStar = MillimeterPoint & {
   holeSizeMm: number
   ledIndex: number
 }
-
 export type DesignSpec = {
   schemaVersion: typeof DESIGN_SPEC_VERSION
   designId: string
   templateId: string
-  physicalArtwork: typeof PHYSICAL_ARTWORK
+  framePresetId: FramePresetId
+  physicalArtwork: PhysicalArtwork
   regions: DesignRegions
   moment: MomentSpec
   photo: PhotoSpec
@@ -119,30 +102,40 @@ export type DesignSpec = {
   stars: readonly DesignStar[]
 }
 
-export const DESIGN_REGIONS: DesignRegions = {
-  // The sky occupies its own upper panel. Physical star points are projected
-  // inside this rectangle by the astronomy engine, not shifted by the browser.
-  sky: {
-    xMm: 0,
-    yMm: 0,
-    widthMm: 279.4,
-    heightMm: 166,
-    label: 'Astronomically projected sky above the photograph',
-  },
-  engravingPhoto: {
-    xMm: 34.7,
-    yMm: 174,
-    widthMm: 210,
-    heightMm: 125,
-    label: 'Engraved photo below sky',
-  },
-  text: {
-    xMm: 34.7,
-    yMm: 305,
-    widthMm: 210,
-    heightMm: 44,
-    label: 'Names, date, and location below photograph',
-  },
+type Geometry = { widthMm: number; heightMm: number; marginMm: number }
+const GEOMETRY: Record<FramePresetId, Geometry> = {
+  '8x10': { widthMm: 203.2, heightMm: 254, marginMm: 5 },
+  '11x14': { widthMm: 279.4, heightMm: 355.6, marginMm: 6 },
+  '16x20': { widthMm: 406.4, heightMm: 508, marginMm: 8 },
 }
-
+const mm = (value: number) => Number(value.toFixed(3))
+export function getFrameLayout(id: FramePresetId): {
+  physicalArtwork: PhysicalArtwork
+  regions: DesignRegions
+} {
+  const { widthMm, heightMm, marginMm } = GEOMETRY[id]
+  const innerWidth = mm(widthMm - 2 * marginMm)
+  return {
+    physicalArtwork: { widthMm, heightMm, units: 'mm', origin: 'top-left' },
+    regions: {
+      sky: {
+        xMm: marginMm, yMm: marginMm,
+        widthMm: innerWidth, heightMm: mm(heightMm * 0.47 - marginMm),
+        label: 'Actual sky from zenith to horizon',
+      },
+      engravingPhoto: {
+        xMm: marginMm, yMm: mm(heightMm * 0.48),
+        widthMm: innerWidth, heightMm: mm(heightMm * 0.4),
+        label: 'Full-width engraved photograph',
+      },
+      text: {
+        xMm: marginMm, yMm: mm(heightMm * 0.885),
+        widthMm: innerWidth, heightMm: mm(heightMm * 0.115 - marginMm),
+        label: 'Names, date, and place',
+      },
+    },
+  }
+}
+export const PHYSICAL_ARTWORK = getFrameLayout('11x14').physicalArtwork
+export const DESIGN_REGIONS = getFrameLayout('11x14').regions
 export const DEFAULT_STARS: readonly DesignStar[] = []

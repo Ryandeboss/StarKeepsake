@@ -63,21 +63,30 @@ export type AstronomyResult = {
 export function generateAstronomy(
   moment: DesignSpec['moment'],
   skySettings: DesignSpec['skySettings'],
+  framePresetId: DesignSpec['framePresetId'],
 ) {
   return apiRequest<AstronomyResult>('/api/astronomy/stars', {
     method: 'POST',
-    body: JSON.stringify({ moment, skySettings }),
+    body: JSON.stringify({ moment, skySettings, framePresetId }),
   })
 }
 
-export async function generateEngravingPreview(photo: File): Promise<Blob> {
+export async function generateEngravingPreview(
+  photo: File,
+  spec: Pick<DesignSpec, 'framePresetId' | 'photo'>,
+  signal?: AbortSignal,
+): Promise<Blob> {
   const form = new FormData()
   // Avoid transmitting the customer's original filename to the processing service.
   form.append('image', photo, 'photo')
+  form.append('framePresetId', spec.framePresetId)
+  form.append('fitMode', spec.photo.fitMode)
+  form.append('crop', JSON.stringify(spec.photo.crop))
 
   const response = await fetch(`${API_BASE_URL}/api/engraving/preview`, {
     method: 'POST',
     body: form,
+    signal,
   })
 
   if (!response.ok) {

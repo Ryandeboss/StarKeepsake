@@ -6,8 +6,9 @@ import { ConfiguratorForm } from '../components/ConfiguratorForm'
 import { ProgressSteps } from '../components/ProgressSteps'
 import { SiteHeader } from '../components/SiteHeader'
 import { StarKeepsakePreview } from '../components/StarKeepsakePreview'
-import { INITIAL_DESIGN_SPEC } from '../designSpec'
-import type { DesignSpec } from '../designSpec'
+import { getFrameLayout, INITIAL_DESIGN_SPEC, toRect } from '../designSpec'
+import type { DesignSpec, FramePresetId, PhotoCrop } from '../designSpec'
+import { FULL_PHOTO_CROP, getCoverCrop } from '../photoCrop'
 
 const steps = ['Your moment', 'Your story', 'Your object']
 type MomentInputField = 'date' | 'time' | 'exactTimeUnknown'
@@ -16,6 +17,7 @@ export function CreatePage() {
   const [activeStep, setActiveStep] = useState(0)
   const [designSpec, setDesignSpec] = useState<DesignSpec>(INITIAL_DESIGN_SPEC)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [sourceDimensions, setSourceDimensions] = useState<{ width: number; height: number } | null>(null)
   const [photoPreview, setPhotoPreview] = useState('')
   const [engravingPreview, setEngravingPreview] = useState('')
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false)
@@ -44,24 +46,97 @@ export function CreatePage() {
     if (!photoFile) return
 
     let cancelled = false
-
-    generateEngravingPreview(photoFile)
-      .then((png) => {
-        if (!cancelled) setEngravingPreview(URL.createObjectURL(png))
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setPhotoError(error instanceof Error ? error.message : 'Could not process this photo.')
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsProcessingPhoto(false)
-      })
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      generateEngravingPreview(photoFile, designSpec, controller.signal)
+        .then((png) => {
+          if (!cancelled) setEngravingPreview(URL.createObjectURL(png))
+        })
+        .catch((error: unknown) => {
+          if (!cancelled && !controller.signal.aborted) {
+            setPhotoError(error instanceof Error ? error.message : 'Could not process this photo.')
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setIsProcessingPhoto(false)
+        })
+    }, 500)
 
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
+      controller.abort()
     }
-  }, [photoFile])
+  }, [photoFile, designSpec.framePresetId, designSpec.photo])
+
+  const updatePhotoCrop = (crop: PhotoCrop) => {
+    setDesignSpec((current) => ({
+      ...current,
+      photo: { ...current.photo, crop },
+    }))
+    setEngravingPreview('')
+    setPhotoError('')
+    setIsProcessingPhoto(true)
+    setIsReady(false)
+  }
+
+  const updatePhotoFit = (fitMode: 'contain' | 'cover', crop: PhotoCrop) => {
+    setDesignSpec((current) => ({
+      ...current,
+      photo: { ...current.photo, fitMode, crop },
+    }))
+    setEngravingPreview('')
+    setPhotoError('')
+    setIsProcessingPhoto(Boolean(photoFile))
+    setIsReady(false)
+  }
+
+  const handleSourceDimensions = (size: { width: number; height: number }) => {
+    setSourceDimensions(size)
+    if (designSpec.photo.fitMode === 'cover') {
+      const { widthMm, heightMm } = designSpec.photo.positionMm
+      updatePhotoCrop(getCoverCrop(size.width, size.height, widthMm / heightMm))
+    }
+  }
+
+  const updateFrame = async (id: FramePresetId) => {
+    if (id === designSpec.framePresetId) return
+    const { physicalArtwork, regions } = getFrameLayout(id)
+    setIsReady(false)
+    setPhotoError('')
+    setEngravingPreview('')
+    setIsProcessingPhoto(Boolean(photoFile))
+    setDesignSpec((current) => ({
+      ...current,
+      framePresetId: id,
+      physicalArtwork,
+      regions,
+      photo: {
+        ...current.photo,
+        positionMm: toRect(regions.engravingPhoto),
+        crop: current.photo.fitMode === 'cover' && sourceDimensions
+          ? getCoverCrop(sourceDimensions.width, sourceDimensions.height,
+            regions.engravingPhoto.widthMm / regions.engravingPhoto.heightMm)
+          : FULL_PHOTO_CROP,
+      },
+      customText: { ...current.customText, positionMm: toRect(regions.text) },
+      astronomy: null,
+      stars: [],
+    }))
+    if (designSpec.moment.location) {
+      setIsResolvingMoment(true)
+      try {
+        const astronomy = await generateAstronomy(designSpec.moment, designSpec.skySettings, id)
+        setDesignSpec((current) => current.framePresetId === id
+          ? { ...current, astronomy: astronomy.calculation, stars: astronomy.stars }
+          : current)
+      } catch (error) {
+        setFormError(error instanceof Error ? error.message : 'Could not rebuild the sky.')
+      } finally {
+        setIsResolvingMoment(false)
+      }
+    }
+  }
 
   const updateMoment = <K extends MomentInputField>(
     field: K,
@@ -126,11 +201,12 @@ export function CreatePage() {
     }
 
     setIsProcessingPhoto(true)
+    setSourceDimensions(null)
     setPhotoFile(file)
     setPhotoPreview(URL.createObjectURL(file))
     setDesignSpec((current) => ({
       ...current,
-      photo: { ...current.photo, assetId: 'unpersisted-preview-only' },
+      photo: { ...current.photo, assetId: 'unpersisted-preview-only', fitMode: 'contain', crop: FULL_PHOTO_CROP },
     }))
   }
 
@@ -229,7 +305,7 @@ export function CreatePage() {
           location: selectedLocation,
         })
 
-        const astronomy = await generateAstronomy(resolved, designSpec.skySettings)
+        const astronomy = await generateAstronomy(resolved, designSpec.skySettings, designSpec.framePresetId)
 
         setDesignSpec((current) => ({
           ...current,
@@ -276,6 +352,12 @@ export function CreatePage() {
             <ConfiguratorForm
               designSpec={designSpec}
               photoFile={photoFile}
+              photoUrl={photoPreview}
+              sourceDimensions={sourceDimensions}
+              onSourceDimensions={handleSourceDimensions}
+              onPhotoCrop={updatePhotoCrop}
+              onPhotoFit={updatePhotoFit}
+              onFrameChange={updateFrame}
               photoError={photoError}
               isProcessingPhoto={isProcessingPhoto}
               photoIsEngraved={Boolean(engravingPreview)}

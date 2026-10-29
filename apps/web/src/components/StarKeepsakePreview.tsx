@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { displayRectStyle, millimetersToPixels, pointToDisplayPixels, rectToDisplayPixels } from '../geometry'
 import type { DesignSpec } from '../designSpec'
+import { croppedImageStyle } from '../photoCrop'
 
 type StarKeepsakePreviewProps = {
   designSpec: DesignSpec
@@ -60,7 +61,8 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
         <div
           className={`artwork-canvas ${lightsOn ? '' : 'is-dimmed'}`}
           ref={canvasRef}
-          data-physical-center="139.7mm,177.8mm"
+          style={{ aspectRatio: `${physicalArtwork.widthMm} / ${physicalArtwork.heightMm}` }}
+          data-frame-size={designSpec.framePresetId}
           data-coordinate-system="top-left-origin-mm"
         >
           <div className="artwork-stars" aria-hidden="true" style={displayRectStyle(displaySkyRect)}>
@@ -94,11 +96,20 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
           </div>
 
           <div className="photo-engraving" style={displayRectStyle(photoRect)}>
-            {photoPreview ? (
+            {engravingPreview ? (
               <img
-                src={engravingPreview || photoPreview}
-                className={engravingPreview ? 'is-engraved' : ''}
-                alt={engravingPreview ? 'Grayscale engraving preview of your photo' : 'Original uploaded photo, awaiting engraving processing'}
+                src={engravingPreview}
+                className="is-engraved"
+                alt="Server-generated grayscale engraving of your chosen crop"
+                style={{ width: '100%', height: '100%', objectFit: 'fill' }}
+              />
+            ) : photoPreview ? (
+              <img
+                src={photoPreview}
+                alt="Your original photo, displaying the selected fit or crop"
+                style={designSpec.photo.fitMode === 'contain'
+                  ? { width: '100%', height: '100%', objectFit: 'contain' }
+                  : croppedImageStyle(designSpec.photo.crop)}
               />
             ) : (
               <div className="photo-empty">
@@ -121,7 +132,7 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
       </div>
 
       <div className="preview-controls">
-        <span>{designSpec.materialStyle.style}</span>
+        <span>{designSpec.framePresetId.replace('x', ' × ')} in · {designSpec.materialStyle.style}</span>
         <label className="preview-toggle">
           <span>{lightsOn ? 'Lights on' : 'Lights off'}</span>
           <input

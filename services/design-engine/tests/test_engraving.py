@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
+from frame_layout import PRESETS
 from engraving import (
     EngravingInputError,
     OUTPUT_SIZE_PX,
@@ -63,6 +64,49 @@ class EngravingTests(unittest.TestCase):
         with patch("engraving.MAX_SOURCE_PIXELS", 100):
             with self.assertRaisesRegex(EngravingInputError, "20 megapixels"):
                 prepare_engraving_preview(image_bytes(size=(240, 160)))
+
+    def test_each_frame_outputs_photo_panel_pixels(self):
+        data = image_bytes()
+        for id, layout in PRESETS.items():
+            with self.subTest(frame=id):
+                result = prepare_engraving_preview(data, frame_preset_id=id)
+                with Image.open(BytesIO(result)) as output:
+                    self.assertEqual(output.size, (
+                        round(layout.photo[2] * 6),
+                        round(layout.photo[3] * 6),
+                    ))
+
+    def test_default_contain_keeps_whole_image_with_light_borders(self):
+        data = image_bytes(size=(120, 400), color=(20, 20, 20))
+        with Image.open(BytesIO(prepare_engraving_preview(data))) as output:
+            self.assertGreater(output.getpixel((1, output.height // 2)), 200)
+            self.assertLess(output.getpixel((output.width // 2, output.height // 2)), 90)
+
+    def test_cover_uses_user_selected_crop_and_rejects_invalid(self):
+        image = Image.new("RGB", (400, 200))
+        for x in range(400):
+            for y in range(200):
+                image.putpixel((x, y), (x // 2, x // 2, x // 2))
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        data = buffer.getvalue()
+        # Crop 375x200 proportion (~1.875), matching 11x14 photo panel.
+        left_crop = {"x": 0, "y": 0, "width": .9375, "height": 1}
+        right_crop = {"x": .0625, "y": 0, "width": .9375, "height": 1}
+        left = prepare_engraving_preview(data, fit_mode="cover", crop=left_crop)
+        right = prepare_engraving_preview(data, fit_mode="cover", crop=right_crop)
+        self.assertNotEqual(left, right)
+        for crop in (
+            {"x": -.2, "y": 0, "width": .9, "height": 1},
+            {"x": 0, "y": 0, "width": 1.1, "height": 1},
+            {"x": 0, "y": 0, "width": 1, "height": 0},
+        ):
+            with self.subTest(crop=crop), self.assertRaises(EngravingInputError):
+                prepare_engraving_preview(data, fit_mode="cover", crop=crop)
+
+    def test_cover_requires_crop_not_implicit_center_fit(self):
+        with self.assertRaisesRegex(EngravingInputError, "Choose a crop"):
+            prepare_engraving_preview(image_bytes(), fit_mode="cover")
 
 
 if __name__ == "__main__":

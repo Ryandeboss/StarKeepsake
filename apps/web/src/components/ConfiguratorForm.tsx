@@ -1,12 +1,20 @@
 import type { ChangeEvent } from 'react'
 import type { LocationCandidate } from '../api'
-import type { DesignSpec, MaterialStyleSpec } from '../designSpec'
+import { FRAME_PRESETS } from '../designSpec'
+import type { DesignSpec, MaterialStyleSpec, FramePresetId, PhotoCrop } from '../designSpec'
+import { PhotoCropEditor } from './PhotoCropEditor'
 
 type MomentInputField = 'date' | 'time' | 'exactTimeUnknown'
 
 type ConfiguratorFormProps = {
   designSpec: DesignSpec
   photoFile: File | null
+  photoUrl: string
+  sourceDimensions: { width: number; height: number } | null
+  onSourceDimensions: (size: { width: number; height: number }) => void
+  onPhotoCrop: (crop: PhotoCrop) => void
+  onPhotoFit: (mode: 'contain' | 'cover', crop: PhotoCrop) => void
+  onFrameChange: (id: FramePresetId) => void
   photoError: string
   isProcessingPhoto: boolean
   photoIsEngraved: boolean
@@ -38,6 +46,12 @@ const frameOptions: MaterialStyleSpec[] = [
 export function ConfiguratorForm({
   designSpec,
   photoFile,
+  photoUrl,
+  sourceDimensions,
+  onSourceDimensions,
+  onPhotoCrop,
+  onPhotoFit,
+  onFrameChange,
   photoError,
   isProcessingPhoto,
   photoIsEngraved,
@@ -74,6 +88,18 @@ export function ConfiguratorForm({
           </div>
           <div className="step-fields">
             <div className="field">
+              <span className="field-label">Choose your frame opening</span>
+              <div className="frame-size-options" role="group" aria-label="Frame opening size">
+                {FRAME_PRESETS.map((preset) => (
+                  <button type="button" key={preset.id}
+                    className={designSpec.framePresetId === preset.id ? 'is-selected' : ''}
+                    disabled={isResolvingMoment}
+                    onClick={() => onFrameChange(preset.id)}>{preset.label}</button>
+                ))}
+              </div>
+              <p className="field-hint">Nominal print sizes. Actual frame openings and mounting tolerances will be checked against our frame supplier before orders.</p>
+            </div>
+            <div className="field">
               <label className="field-label" htmlFor="photo">A photo to remember</label>
               <label className="photo-dropzone" htmlFor="photo">
                 <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" onChange={onPhotoChange} />
@@ -85,7 +111,15 @@ export function ConfiguratorForm({
               </label>
               {photoError && <p className="form-error" role="alert">{photoError}</p>}
               {photoIsEngraved && <p className="field-hint">Grayscale engraving preview ready. Final laser results depend on material testing.</p>}
-              <p className="field-hint">We process your photo to make a temporary preview; it is not saved to an order yet. A center crop is used.</p>
+              <p className="field-hint">Your photo is processed for a temporary preview, not saved to an order yet.</p>
+              {photoUrl && (
+                <PhotoCropEditor photoUrl={photoUrl}
+                  aspect={designSpec.photo.positionMm.widthMm / designSpec.photo.positionMm.heightMm}
+                  crop={designSpec.photo.crop} fitMode={designSpec.photo.fitMode}
+                  dimensions={sourceDimensions} onDimensions={onSourceDimensions}
+                  onCrop={onPhotoCrop} onFitMode={onPhotoFit}
+                />
+              )}
             </div>
             <div className="field-row">
               <div className="field">
@@ -233,6 +267,26 @@ export function ConfiguratorForm({
               </div>
             )}
 
+            <div className="field">
+              <span className="field-label">Choose your frame opening</span>
+              <div className="frame-size-options" role="group" aria-label="Frame opening size">
+                {FRAME_PRESETS.map((preset) => (
+                  <button type="button" key={preset.id}
+                    className={designSpec.framePresetId === preset.id ? 'is-selected' : ''}
+                    disabled={isResolvingMoment}
+                    onClick={() => onFrameChange(preset.id)}>{preset.label}</button>
+                ))}
+              </div>
+              <p className="field-hint">Nominal print sizes. Actual frame openings and mounting tolerances will be checked against our frame supplier before orders.</p>
+            </div>
+            {photoUrl && (
+              <PhotoCropEditor photoUrl={photoUrl}
+                aspect={designSpec.photo.positionMm.widthMm / designSpec.photo.positionMm.heightMm}
+                crop={designSpec.photo.crop} fitMode={designSpec.photo.fitMode}
+                dimensions={sourceDimensions} onDimensions={onSourceDimensions}
+                onCrop={onPhotoCrop} onFitMode={onPhotoFit}
+              />
+            )}
             <div className="field">
               <span className="field-label" id="frame-style-label">Material and style</span>
               <div className="style-grid" role="radiogroup" aria-labelledby="frame-style-label">

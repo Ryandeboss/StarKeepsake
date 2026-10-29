@@ -1,18 +1,22 @@
-"""Deterministic, storage-free raster preparation for the M6 engraving preview.
+"""Deterministic raster preview, honoring the selected frame and photo crop.
 
-This output is a visual prototype, not material-calibrated laser instructions.
-The reserved photo region is 210 x 125 mm; geometry remains canonical elsewhere.
+Output is a proofing preview only, NOT a material-calibrated laser file.
 """
 from __future__ import annotations
 
+import math
 from io import BytesIO
 
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps, UnidentifiedImageError
+from frame_layout import get_layout
 
-PHOTO_WIDTH_MM = 210
-PHOTO_HEIGHT_MM = 125
-PIXELS_PER_MM = 10
-OUTPUT_SIZE_PX = (PHOTO_WIDTH_MM * PIXELS_PER_MM, PHOTO_HEIGHT_MM * PIXELS_PER_MM)
+PIXELS_PER_MM = 6  # preview only; roughly 152 dpi, not final laser resolution
+PHOTO_WIDTH_MM = get_layout("11x14").photo[2]
+PHOTO_HEIGHT_MM = get_layout("11x14").photo[3]
+OUTPUT_SIZE_PX = (
+    round(PHOTO_WIDTH_MM * PIXELS_PER_MM),
+    round(PHOTO_HEIGHT_MM * PIXELS_PER_MM),
+)
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_SOURCE_PIXELS = 20_000_000
 MIN_SOURCE_EDGE_PX = 64
@@ -21,21 +25,48 @@ Image.MAX_IMAGE_PIXELS = MAX_SOURCE_PIXELS
 
 
 class EngravingInputError(ValueError):
-    """Invalid customer image or image dimensions."""
+    """Invalid customer image, crop, or dimensions."""
 
 
-def prepare_engraving_preview(data: bytes) -> bytes:
-    """Convert a validated photo into a grayscale, center-cropped PNG.
+def validate_crop(crop: dict) -> tuple[float, float, float, float]:
+    try:
+        x, y, width, height = (
+            float(crop[key]) for key in ("x", "y", "width", "height")
+        )
+    except (KeyError, ValueError, TypeError) as exc:
+        raise EngravingInputError("Choose a valid photo crop.") from exc
 
-    The file is processed entirely in memory. EXIF orientation is applied,
-    transparent backgrounds are flattened to white, and metadata is stripped.
-    The grayscale preview is not a final laser calibration or toolpath.
-    """
+    if not all(math.isfinite(v) for v in (x, y, width, height)):
+        raise EngravingInputError("Choose a valid photo crop.")
+    if x < 0 or y < 0 or width <= 0 or height <= 0 or x + width > 1.000001 or y + height > 1.000001:
+        raise EngravingInputError("Photo crop must fit inside the uploaded image.")
+    return x, y, width, height
+
+
+def prepare_engraving_preview(
+    data: bytes,
+    *,
+    frame_preset_id: str = "11x14",
+    fit_mode: str = "contain",
+    crop: dict | None = None,
+) -> bytes:
     if not data:
         raise EngravingInputError("Choose a photo to process.")
     if len(data) > MAX_UPLOAD_BYTES:
         raise EngravingInputError("The photo must be 10 MB or smaller.")
+    try:
+        layout = get_layout(frame_preset_id)
+    except ValueError as exc:
+        raise EngravingInputError(str(exc)) from exc
 
+    if fit_mode not in ("contain", "cover"):
+        raise EngravingInputError("Choose a valid photo fitting mode.")
+
+    photo_region = layout.photo
+    output_size = (
+        round(photo_region[2] * PIXELS_PER_MM),
+        round(photo_region[3] * PIXELS_PER_MM),
+    )
     try:
         with Image.open(BytesIO(data)) as source:
             if source.format not in ALLOWED_FORMATS:
@@ -50,7 +81,6 @@ def prepare_engraving_preview(data: bytes) -> bytes:
             source.load()
             oriented = ImageOps.exif_transpose(source)
             rgba = oriented.convert("RGBA")
-            # White background gives transparent PNGs predictable engraving tones.
             background = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
             photo = Image.alpha_composite(background, rgba).convert("RGB")
 
@@ -59,16 +89,43 @@ def prepare_engraving_preview(data: bytes) -> bytes:
     except (OSError, ValueError, Image.DecompressionBombError, UnidentifiedImageError) as exc:
         raise EngravingInputError("We could not read this image. Try a different JPG, PNG, or WebP.") from exc
 
-    cropped = ImageOps.fit(
-        photo,
-        OUTPUT_SIZE_PX,
-        method=Image.Resampling.LANCZOS,
-        centering=(0.5, 0.5),
-    )
-    grayscale = ImageOps.grayscale(cropped)
+    if fit_mode == "contain":
+        # Show entire image; fill letterboxed space with a consistent light base.
+        fitted = ImageOps.contain(photo, output_size, method=Image.Resampling.LANCZOS)
+        output = fitted
+    else:
+        if crop is None:
+            raise EngravingInputError("Choose a crop before using fill mode.")
+        x, y, w, h = validate_crop(crop)
+        source_w, source_h = photo.size
+        source_ratio = (w * source_w) / (h * source_h)
+        target_ratio = output_size[0] / output_size[1]
+        if abs(source_ratio / target_ratio - 1) > 0.025:
+            raise EngravingInputError("Photo crop does not match the chosen frame ratio.")
+        bounds = (
+            round(x * source_w),
+            round(y * source_h),
+            round((x + w) * source_w),
+            round((y + h) * source_h),
+        )
+        if bounds[2] <= bounds[0] or bounds[3] <= bounds[1]:
+            raise EngravingInputError("Photo crop is too small.")
+        output = photo.crop(bounds).resize(output_size, resample=Image.Resampling.LANCZOS)
+
+    grayscale = ImageOps.grayscale(output)
     grayscale = ImageOps.autocontrast(grayscale, cutoff=1)
     grayscale = ImageEnhance.Contrast(grayscale).enhance(1.12)
     grayscale = grayscale.filter(ImageFilter.UnsharpMask(radius=1.3, percent=110, threshold=3))
+
+    if fit_mode == "contain":
+        # Letterbox AFTER tonal adjustment; otherwise autocontrast can turn
+        # a light border nearly black and misleadingly obscure the photo.
+        canvas = Image.new("L", output_size, 255)
+        canvas.paste(grayscale, (
+            (output_size[0] - grayscale.width) // 2,
+            (output_size[1] - grayscale.height) // 2,
+        ))
+        grayscale = canvas
 
     buffer = BytesIO()
     grayscale.save(buffer, format="PNG", optimize=True)
