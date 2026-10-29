@@ -271,7 +271,8 @@ app.MapPost("/api/astronomy/stars", async (
                 request.Moment.Location.Longitude,
                 request.SkySettings.MagnitudeLimit,
                 request.SkySettings.MaxStars,
-                request.SkySettings.MinSeparationMm),
+                request.SkySettings.MinSeparationMm,
+                request.FramePresetId ?? "11x14"),
             cancellationToken);
 
         return Results.Ok(response);
@@ -320,9 +321,19 @@ app.MapPost("/api/engraving/preview", async (
             return Results.BadRequest(new { message = "Use a JPG, PNG, or WebP photo." });
         }
 
+        var framePresetId = form["framePresetId"].ToString();
+        var fitMode = form["fitMode"].ToString();
+        var cropJson = form["crop"].ToString();
+        if (framePresetId is not ("8x10" or "11x14" or "16x20") ||
+            fitMode is not ("contain" or "cover") ||
+            cropJson.Length is < 2 or > 512)
+        {
+            return Results.BadRequest(new { message = "Choose valid frame and crop settings." });
+        }
+
         using var stream = photo.OpenReadStream();
         var engravingPng = await designEngine.GenerateEngravingPreviewAsync(
-            stream, photo.ContentType, cancellationToken);
+            stream, photo.ContentType, framePresetId, fitMode, cropJson, cancellationToken);
 
         request.HttpContext.Response.Headers.CacheControl = "no-store";
         return Results.Bytes(engravingPng, contentType: "image/png");
@@ -394,7 +405,8 @@ public partial class Program;
 
 public sealed record GenerateAstronomyRequest(
     AstronomyMomentInput Moment,
-    AstronomySkySettingsInput SkySettings);
+    AstronomySkySettingsInput SkySettings,
+    string? FramePresetId = null);
 
 public sealed record AstronomyMomentInput(
     string Date,
