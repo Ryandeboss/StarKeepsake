@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://starkeepsake.local/contracts/design-spec/v1.1",
-  "title": "StarKeepsake DesignSpec v1.1",
+  "$id": "https://starkeepsake.local/contracts/design-spec/v1.2",
+  "title": "StarKeepsake DesignSpec v1.2",
   "description": "Canonical physical design model for an 11 by 14 inch StarKeepsake artwork.",
   "type": "object",
-  "required": ["schemaVersion", "designId", "templateId", "physicalArtwork", "regions", "moment", "photo", "customText", "materialStyle", "skySettings", "stars"],
+  "required": ["schemaVersion", "designId", "templateId", "physicalArtwork", "regions", "moment", "photo", "customText", "materialStyle", "skySettings", "astronomy", "stars"],
   "properties": {
-    "schemaVersion": { "const": "1.1" },
-    "designId": { "type": "string", "description": "Placeholder is allowed until persistence exists." },
+    "schemaVersion": { "const": "1.2" },
+    "designId": { "type": "string" },
     "templateId": { "type": "string" },
     "physicalArtwork": {
       "type": "object",
@@ -79,13 +79,23 @@
     },
     "skySettings": {
       "type": "object",
-      "required": ["background", "brightness", "showConstellation"],
+      "required": ["background", "brightness", "showConstellation", "projection", "magnitudeLimit", "maxStars", "minSeparationMm"],
       "properties": {
         "background": { "const": "deep-space" },
         "brightness": { "type": "number", "minimum": 0, "maximum": 1 },
-        "showConstellation": { "type": "boolean" }
+        "showConstellation": { "type": "boolean" },
+        "projection": { "const": "azimuthal-equidistant" },
+        "magnitudeLimit": { "type": "number", "minimum": -2, "maximum": 6.5 },
+        "maxStars": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "minSeparationMm": { "type": "number", "minimum": 1, "maximum": 15 }
       },
       "additionalProperties": false
+    },
+    "astronomy": {
+      "anyOf": [
+        { "$ref": "#/$defs/astronomyCalculation" },
+        { "type": "null" }
+      ]
     },
     "stars": {
       "type": "array",
@@ -104,6 +114,25 @@
         "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
         "timeZoneId": { "type": "string" },
         "confidence": { "enum": ["High", "Medium", "Low", "Unknown"] }
+      },
+      "additionalProperties": false
+    },
+    "astronomyCalculation": {
+      "type": "object",
+      "required": ["catalog", "ephemeris", "projection", "orientation", "calculationUtcDateTime", "timeBasis", "magnitudeLimit", "maxStars", "minSeparationMm", "visibleCatalogStars", "projectedCandidates", "selectedStars"],
+      "properties": {
+        "catalog": { "const": "hipparcos" },
+        "ephemeris": { "const": "de440s" },
+        "projection": { "const": "azimuthal-equidistant" },
+        "orientation": { "const": "north-up-east-right" },
+        "calculationUtcDateTime": { "type": "string" },
+        "timeBasis": { "enum": ["exact", "date-only-local-midnight"] },
+        "magnitudeLimit": { "type": "number" },
+        "maxStars": { "type": "integer" },
+        "minSeparationMm": { "type": "number" },
+        "visibleCatalogStars": { "type": "integer", "minimum": 0 },
+        "projectedCandidates": { "type": "integer", "minimum": 0 },
+        "selectedStars": { "type": "integer", "minimum": 0 }
       },
       "additionalProperties": false
     },
@@ -143,11 +172,14 @@
     },
     "star": {
       "type": "object",
-      "required": ["xMm", "yMm", "magnitude", "holeSizeMm", "ledIndex"],
+      "required": ["hipparcosId", "xMm", "yMm", "magnitude", "altitudeDeg", "azimuthDeg", "holeSizeMm", "ledIndex"],
       "properties": {
+        "hipparcosId": { "type": "integer", "minimum": 1 },
         "xMm": { "type": "number", "minimum": 0, "maximum": 279.4 },
         "yMm": { "type": "number", "minimum": 0, "maximum": 355.6 },
         "magnitude": { "type": "number" },
+        "altitudeDeg": { "type": "number", "minimum": 0, "maximum": 90 },
+        "azimuthDeg": { "type": "number", "minimum": 0, "maximum": 360 },
         "holeSizeMm": { "type": "number", "exclusiveMinimum": 0 },
         "ledIndex": { "type": "integer", "minimum": 0 }
       },
