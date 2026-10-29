@@ -116,3 +116,40 @@ jobs:
 
           echo "API did not become healthy at $HEALTH_URL"
           exit 1
+
+
+      - name: Smoke test location and moment resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FQDN="$(az containerapp show             --resource-group "$AZURE_RESOURCE_GROUP"             --name "$AZURE_CONTAINER_APP"             --query properties.configuration.ingress.fqdn             --output tsv)"
+
+          BASE_URL="https://${FQDN}"
+
+          SEARCH_RESPONSE="$(curl --fail --silent --show-error --get             "$BASE_URL/api/locations/search"             --data-urlencode "q=Chicago, IL")"
+
+          CANDIDATE="$(echo "$SEARCH_RESPONSE" | jq -c '.[0]')"
+
+          if [[ "$CANDIDATE" == "null" || -z "$CANDIDATE" ]]; then
+            echo "Location search returned no candidate."
+            echo "$SEARCH_RESPONSE"
+            exit 1
+          fi
+
+          REQUEST_BODY="$(jq -n             --arg date "2024-07-04"             --arg time "20:30"             --arg query "Chicago, IL"             --argjson location "$CANDIDATE"             '{date:$date,time:$time,exactTimeUnknown:false,locationQuery:$query,location:$location}')"
+
+          MOMENT_RESPONSE="$(curl --fail --silent --show-error             -X POST             -H "Content-Type: application/json"             -d "$REQUEST_BODY"             "$BASE_URL/api/moments/resolve")"
+
+          echo "$MOMENT_RESPONSE" | jq -e '
+            .date == "2024-07-04" and
+            .time == "20:30" and
+            .exactTimeUnknown == false and
+            (.location.latitude | type == "number") and
+            (.location.longitude | type == "number") and
+            (.location.timeZoneId | length > 0) and
+            .localDateTime == "2024-07-04T20:30:00" and
+            (.utcDateTime | endswith("Z"))
+          ' >/dev/null
+
+          echo "M4 smoke test passed."
