@@ -26,7 +26,8 @@ class AstronomyRequest(BaseModel):
     magnitudeLimit: float = Field(default=6.0, ge=-2.0, le=6.5)
     maxStars: int = Field(default=96, ge=1, le=200)
     minSeparationMm: float = Field(default=3.5, ge=1.0, le=15.0)
-    framePresetId: Literal['8x10', '11x14', '16x20'] = '11x14'
+    framePresetId: Literal['auto', '8x10', '11x14', '16x20'] = '11x14'
+    photoAspectRatio: float | None = Field(default=None, ge=0.35, le=3)
 
 
 @app.get("/health")
@@ -52,6 +53,7 @@ def astronomy_stars(request: AstronomyRequest) -> dict:
             max_stars=request.maxStars,
             min_separation_mm=request.minSeparationMm,
             frame_preset_id=request.framePresetId,
+            photo_aspect_ratio=request.photoAspectRatio,
         )
     except AstronomyInputError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -60,7 +62,8 @@ def astronomy_stars(request: AstronomyRequest) -> dict:
 @app.post("/engraving/preview")
 async def engraving_preview(
     image: UploadFile = File(...),
-    framePresetId: Literal['8x10', '11x14', '16x20'] = Form("11x14"),
+    framePresetId: Literal['auto', '8x10', '11x14', '16x20'] = Form("11x14"),
+    photoAspectRatio: float | None = Form(default=None, ge=0.35, le=3),
     fitMode: Literal['contain', 'cover'] = Form("contain"),
     crop: str = Form('{"x":0,"y":0,"width":1,"height":1}'),
 ) -> Response:
@@ -79,7 +82,8 @@ async def engraving_preview(
             raise EngravingInputError("Choose a valid photo crop.")
         output = await run_in_threadpool(
             prepare_engraving_preview, payload,
-            frame_preset_id=framePresetId, fit_mode=fitMode, crop=parsed_crop,
+            frame_preset_id=framePresetId, photo_aspect_ratio=photoAspectRatio,
+            fit_mode=fitMode, crop=parsed_crop,
         )
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=422, detail="Choose a valid photo crop.") from exc
