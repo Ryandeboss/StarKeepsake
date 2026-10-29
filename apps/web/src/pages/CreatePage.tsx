@@ -153,6 +153,7 @@ export function CreatePage() {
       const { physicalArtwork, regions } = getFrameLayout('auto', ratio)
       setDesignSpec((current) => ({
         ...current,
+        framePresetId: 'auto',
         photoAspectRatio: ratio,
         physicalArtwork,
         regions,
@@ -160,8 +161,24 @@ export function CreatePage() {
         customText: { ...current.customText, positionMm: toRect(regions.text) },
         astronomy: null, stars: [],
       }))
+      if (designSpec.moment.location) {
+        setIsResolvingMoment(true)
+        generateAstronomy(designSpec.moment, designSpec.skySettings, 'auto', ratio)
+          .then((astronomy) => {
+            setDesignSpec((current) => current.framePresetId === 'auto' && current.photoAspectRatio === ratio
+              ? { ...current, astronomy: astronomy.calculation, stars: astronomy.stars }
+              : current)
+          })
+          .catch((cause: unknown) => setFormError(
+            cause instanceof Error ? cause.message : 'Unable to recalculate stars for the new photo size.',
+          ))
+          .finally(() => setIsResolvingMoment(false))
+      }
     } else {
-      setDesignSpec((current) => ({ ...current, photoAspectRatio: size.width / size.height }))
+      setDesignSpec((current) => ({
+        ...current,
+        photoAspectRatio: Math.min(3, Math.max(.35, size.width / size.height)),
+      }))
     }
     if (designSpec.photo.fitMode === 'cover' && designSpec.framePresetId !== 'auto' && frameTouched) {
       const { widthMm, heightMm } = designSpec.photo.positionMm
@@ -177,7 +194,9 @@ export function CreatePage() {
       setFormError('Upload a photo first to make a custom-sized frame.')
       return
     }
-    const photoAspectRatio = sourceDimensions ? sourceDimensions.width / sourceDimensions.height : null
+    const photoAspectRatio = sourceDimensions
+      ? Math.min(3, Math.max(.35, sourceDimensions.width / sourceDimensions.height))
+      : null
     const { physicalArtwork, regions } = getFrameLayout(id, photoAspectRatio)
     setIsReady(false)
     setPhotoError('')
