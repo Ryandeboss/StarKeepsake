@@ -267,6 +267,9 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
             <span>Altitude {activeStar.altitudeDeg.toFixed(1)}° · azimuth {activeStar.azimuthDeg.toFixed(1)}°</span>
           </div>
         )}
+        <a className="sky-lab-launch" href="/sky-lab" target="_blank" rel="noopener noreferrer">
+          Explore the 3D Earth & interactive night sky <span aria-hidden="true">↗</span>
+        </a>
         <details className="sky-method-details">
           <summary>How is my sky calculated?</summary>
           <p>Star positions come from the European Space Agency's Hipparcos catalogue. Skyfield uses your chosen location and time with the JPL DE440s ephemeris to compute apparent star altitude and azimuth.</p>
