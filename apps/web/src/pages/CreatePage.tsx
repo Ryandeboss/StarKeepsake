@@ -19,6 +19,7 @@ export function CreatePage() {
   const [designSpec, setDesignSpec] = useState<DesignSpec>(INITIAL_DESIGN_SPEC)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [sourceDimensions, setSourceDimensions] = useState<{ width: number; height: number } | null>(null)
+  const [frameTouched, setFrameTouched] = useState(false)
   const [photoPreview, setPhotoPreview] = useState('')
   const [engravingPreview, setEngravingPreview] = useState('')
   const [isProcessingPhoto, setIsProcessingPhoto] = useState(false)
@@ -147,16 +148,37 @@ export function CreatePage() {
 
   const handleSourceDimensions = (size: { width: number; height: number }) => {
     setSourceDimensions(size)
-    if (designSpec.photo.fitMode === 'cover') {
+    if (designSpec.framePresetId === 'auto' || !frameTouched) {
+      const ratio = Math.min(3, Math.max(.35, size.width / size.height))
+      const { physicalArtwork, regions } = getFrameLayout('auto', ratio)
+      setDesignSpec((current) => ({
+        ...current,
+        photoAspectRatio: ratio,
+        physicalArtwork,
+        regions,
+        photo: { ...current.photo, positionMm: toRect(regions.engravingPhoto), crop: FULL_PHOTO_CROP, fitMode: 'contain' },
+        customText: { ...current.customText, positionMm: toRect(regions.text) },
+        astronomy: null, stars: [],
+      }))
+    } else {
+      setDesignSpec((current) => ({ ...current, photoAspectRatio: size.width / size.height }))
+    }
+    if (designSpec.photo.fitMode === 'cover' && designSpec.framePresetId !== 'auto' && frameTouched) {
       const { widthMm, heightMm } = designSpec.photo.positionMm
       updatePhotoCrop(getCoverCrop(size.width, size.height, widthMm / heightMm))
     }
   }
 
   const updateFrame = async (id: FramePresetId) => {
+    setFrameTouched(true)
     if (id === designSpec.framePresetId) return
     clearBlend()
-    const { physicalArtwork, regions } = getFrameLayout(id)
+    if (id === 'auto' && !sourceDimensions) {
+      setFormError('Upload a photo first to make a custom-sized frame.')
+      return
+    }
+    const photoAspectRatio = sourceDimensions ? sourceDimensions.width / sourceDimensions.height : null
+    const { physicalArtwork, regions } = getFrameLayout(id, photoAspectRatio)
     setIsReady(false)
     setPhotoError('')
     setEngravingPreview('')
@@ -164,6 +186,7 @@ export function CreatePage() {
     setDesignSpec((current) => ({
       ...current,
       framePresetId: id,
+      photoAspectRatio,
       physicalArtwork,
       regions,
       photo: {
@@ -181,7 +204,7 @@ export function CreatePage() {
     if (designSpec.moment.location) {
       setIsResolvingMoment(true)
       try {
-        const astronomy = await generateAstronomy(designSpec.moment, designSpec.skySettings, id)
+        const astronomy = await generateAstronomy(designSpec.moment, designSpec.skySettings, id, photoAspectRatio)
         setDesignSpec((current) => current.framePresetId === id
           ? { ...current, astronomy: astronomy.calculation, stars: astronomy.stars }
           : current)
@@ -252,6 +275,7 @@ export function CreatePage() {
       setPhotoPreview('')
       setDesignSpec((current) => ({
         ...current,
+        photoAspectRatio: null,
         photo: { ...current.photo, assetId: 'local-photo-placeholder' },
       }))
       return
@@ -364,7 +388,7 @@ export function CreatePage() {
           location: selectedLocation,
         })
 
-        const astronomy = await generateAstronomy(resolved, designSpec.skySettings, designSpec.framePresetId)
+        const astronomy = await generateAstronomy(resolved, designSpec.skySettings, designSpec.framePresetId, designSpec.photoAspectRatio)
         clearBlend()
 
         setDesignSpec((current) => ({

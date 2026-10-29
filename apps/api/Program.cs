@@ -272,7 +272,8 @@ app.MapPost("/api/astronomy/stars", async (
                 request.SkySettings.MagnitudeLimit,
                 request.SkySettings.MaxStars,
                 request.SkySettings.MinSeparationMm,
-                request.FramePresetId ?? "11x14"),
+                request.FramePresetId ?? "11x14",
+                request.PhotoAspectRatio),
             cancellationToken);
 
         return Results.Ok(response);
@@ -322,9 +323,22 @@ app.MapPost("/api/engraving/preview", async (
         }
 
         var framePresetId = form["framePresetId"].ToString();
+        var aspectString = form["photoAspectRatio"].ToString();
+        double? photoAspectRatio = null;
+        if (aspectString.Length > 0)
+        {
+            if (!double.TryParse(aspectString,
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var parsedAspect) ||
+                !double.IsFinite(parsedAspect) || parsedAspect < 0.35 || parsedAspect > 3.0)
+                return Results.BadRequest(new { message = "Choose a valid source photo aspect ratio." });
+            photoAspectRatio = parsedAspect;
+        }
         var fitMode = form["fitMode"].ToString();
         var cropJson = form["crop"].ToString();
-        if (framePresetId is not ("8x10" or "11x14" or "16x20") ||
+        if (framePresetId is not ("auto" or "8x10" or "11x14" or "16x20") ||
+            (framePresetId == "auto" && photoAspectRatio is null) ||
             fitMode is not ("contain" or "cover") ||
             cropJson.Length is < 2 or > 512)
         {
@@ -333,7 +347,7 @@ app.MapPost("/api/engraving/preview", async (
 
         using var stream = photo.OpenReadStream();
         var engravingPng = await designEngine.GenerateEngravingPreviewAsync(
-            stream, photo.ContentType, framePresetId, fitMode, cropJson, cancellationToken);
+            stream, photo.ContentType, framePresetId, photoAspectRatio, fitMode, cropJson, cancellationToken);
 
         request.HttpContext.Response.Headers.CacheControl = "no-store";
         return Results.Bytes(engravingPng, contentType: "image/png");
@@ -406,7 +420,8 @@ public partial class Program;
 public sealed record GenerateAstronomyRequest(
     AstronomyMomentInput Moment,
     AstronomySkySettingsInput SkySettings,
-    string? FramePresetId = null);
+    string? FramePresetId = null,
+    double? PhotoAspectRatio = null);
 
 public sealed record AstronomyMomentInput(
     string Date,

@@ -100,6 +100,10 @@ export function ConfiguratorForm({
             <div className="field">
               <span className="field-label">Choose your frame opening</span>
               <div className="frame-size-options" role="group" aria-label="Frame opening size">
+                <button type="button" className={designSpec.framePresetId === 'auto' ? 'is-selected' : ''}
+                  aria-pressed={designSpec.framePresetId === 'auto'}
+                  disabled={!sourceDimensions}
+                  onClick={() => onFrameChange('auto')}>Fit my photo · custom</button>
                 {FRAME_PRESETS.map((preset) => (
                   <button type="button" key={preset.id}
                     className={designSpec.framePresetId === preset.id ? 'is-selected' : ''}
@@ -107,7 +111,7 @@ export function ConfiguratorForm({
                     onClick={() => onFrameChange(preset.id)}>{preset.label}</button>
                 ))}
               </div>
-              <p className="field-hint">Nominal print sizes. Actual frame openings and mounting tolerances will be checked against our frame supplier before orders.</p>
+              <p className="field-hint">These sizes share a similar shape, so the preview changes in physical scale. “Fit my photo” creates a custom opening from your image's original aspect ratio. Custom framing and dimensions require supplier confirmation before sale.</p>
             </div>
             <div className="field">
               <label className="field-label" htmlFor="photo">A photo to remember</label>
@@ -317,6 +321,10 @@ export function ConfiguratorForm({
             <div className="field">
               <span className="field-label">Choose your frame opening</span>
               <div className="frame-size-options" role="group" aria-label="Frame opening size">
+                <button type="button" className={designSpec.framePresetId === 'auto' ? 'is-selected' : ''}
+                  aria-pressed={designSpec.framePresetId === 'auto'}
+                  disabled={!sourceDimensions}
+                  onClick={() => onFrameChange('auto')}>Fit my photo · custom</button>
                 {FRAME_PRESETS.map((preset) => (
                   <button type="button" key={preset.id}
                     className={designSpec.framePresetId === preset.id ? 'is-selected' : ''}
@@ -324,7 +332,7 @@ export function ConfiguratorForm({
                     onClick={() => onFrameChange(preset.id)}>{preset.label}</button>
                 ))}
               </div>
-              <p className="field-hint">Nominal print sizes. Actual frame openings and mounting tolerances will be checked against our frame supplier before orders.</p>
+              <p className="field-hint">These sizes share a similar shape, so the preview changes in physical scale. “Fit my photo” creates a custom opening from your image's original aspect ratio. Custom framing and dimensions require supplier confirmation before sale.</p>
             </div>
             {photoUrl && (
               <PhotoCropEditor photoUrl={photoUrl}

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test:crop": "node --experimental-strip-types --test tests/photo-crop.test.mjs",
     "test:stars": "node --experimental-strip-types --test tests/star-details.test.mjs",
-    "test:sky-blend": "node --experimental-strip-types --test tests/sky-blend.test.mjs"
+    "test:sky-blend": "node --experimental-strip-types --test tests/sky-blend.test.mjs",
+    "test:frame": "node --experimental-strip-types --test tests/frame-layout.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

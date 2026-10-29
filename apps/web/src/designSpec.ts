@@ -23,6 +23,7 @@ export const INITIAL_DESIGN_SPEC: DesignSpec = {
   designId: 'design-placeholder',
   templateId: 'starkeep-sky-photo-v3',
   framePresetId: '11x14',
+  photoAspectRatio: null,
   layoutMode: 'classic',
   physicalArtwork: getFrameLayout('11x14').physicalArtwork,
   regions: getFrameLayout('11x14').regions,

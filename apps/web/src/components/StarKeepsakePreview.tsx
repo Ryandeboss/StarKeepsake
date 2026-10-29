@@ -60,6 +60,10 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
     textAlign: designSpec.customText.align,
   } as CSSProperties
 
+  const physicalWidthInches = physicalArtwork.widthMm / 25.4
+  const physicalHeightInches = physicalArtwork.heightMm / 25.4
+  const previewScalePercent = Math.max(38, Math.min(100, 100 * physicalArtwork.widthMm / 406.4))
+
   return (
     <aside className="preview-card" aria-label="Live StarKeepsake preview">
       <div className="preview-topline">
@@ -71,6 +75,7 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
 
       <div
         className={`frame-preview frame-preview--${designSpec.materialStyle.material}`}
+        style={{ width: `${previewScalePercent}%`, marginInline: 'auto' }}
         aria-label={`Physical frame mockup in ${designSpec.materialStyle.style}`}
       >
         <div
@@ -209,7 +214,7 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
       </div>
 
       <div className="preview-controls">
-        <span>{designSpec.framePresetId.replace('x', ' × ')} in · {designSpec.materialStyle.style}</span>
+        <span>{designSpec.framePresetId === 'auto' ? 'Custom photo fit' : designSpec.framePresetId.replace('x', ' × ')} · {physicalWidthInches.toFixed(1)} × {physicalHeightInches.toFixed(1)} in · {designSpec.materialStyle.style}</span>
         <label className="preview-toggle">
           <span>{lightsOn ? 'Lights on' : 'Lights off'}</span>
           <input

@@ -47,6 +47,7 @@ def prepare_engraving_preview(
     data: bytes,
     *,
     frame_preset_id: str = "11x14",
+    photo_aspect_ratio: float | None = None,
     fit_mode: str = "contain",
     crop: dict | None = None,
 ) -> bytes:
@@ -55,7 +56,7 @@ def prepare_engraving_preview(
     if len(data) > MAX_UPLOAD_BYTES:
         raise EngravingInputError("The photo must be 10 MB or smaller.")
     try:
-        layout = get_layout(frame_preset_id)
+        layout = get_layout(frame_preset_id, photo_aspect_ratio)
     except ValueError as exc:
         raise EngravingInputError(str(exc)) from exc
 

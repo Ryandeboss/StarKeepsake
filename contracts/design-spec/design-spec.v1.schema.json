@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://starkeepsake.local/contracts/design-spec/v1.4",
-  "title": "StarKeepsake DesignSpec v1.4",
+  "$id": "https://starkeepsake.local/contracts/design-spec/v1.5",
+  "title": "StarKeepsake DesignSpec v1.5",
   "description": "Canonical physical design model for an 11 by 14 inch StarKeepsake artwork.",
   "type": "object",
   "required": [
@@ -9,6 +9,7 @@
     "designId",
     "templateId",
     "framePresetId",
+    "photoAspectRatio",
     "layoutMode",
     "physicalArtwork",
     "regions",
@@ -22,7 +23,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.4"
+      "const": "1.5"
     },
     "designId": {
       "type": "string"
@@ -40,18 +41,14 @@
       ],
       "properties": {
         "widthMm": {
-          "enum": [
-            203.2,
-            279.4,
-            406.4
-          ]
+          "type": "number",
+          "minimum": 70,
+          "maximum": 406.4
         },
         "heightMm": {
-          "enum": [
-            254,
-            355.6,
-            508
-          ]
+          "type": "number",
+          "minimum": 150,
+          "maximum": 508
         },
         "units": {
           "const": "mm"
@@ -267,6 +264,7 @@
     },
     "framePresetId": {
       "enum": [
+        "auto",
         "8x10",
         "11x14",
         "16x20"
@@ -279,6 +277,15 @@
         "horizon-blend"
       ],
       "description": "Horizon blend is a non-manufacturable, artistically registered photo visualization; the canonical stars stay based on real sky calculations."
+    },
+    "photoAspectRatio": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0.35,
+      "maximum": 3,
+      "description": "EXIF-oriented input image aspect ratio. Required when auto frame preset is used."
     }
   },
   "$defs": {
