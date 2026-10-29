@@ -445,10 +445,11 @@
   width: 100%;
   aspect-ratio: 279.4 / 355.6;
   overflow: hidden;
+  container-type: inline-size;
   padding: 0;
   border: 1px solid #57605a;
   background:
-    radial-gradient(circle at 53% 48%, rgba(57, 93, 101, 0.75), transparent 45%),
+    radial-gradient(circle at 50% 24%, rgba(57, 93, 101, 0.64), transparent 48%),
     linear-gradient(145deg, #10242d, #1c333c 50%, #0d1d26);
   transition: filter 200ms ease;
 }
@@ -464,10 +465,10 @@
 .photo-empty { display: grid; gap: 4px; justify-items: center; padding: 18px; }
 .photo-empty strong { font-family: var(--serif); font-size: 18px; font-weight: 500; }
 .photo-empty span { color: rgba(255, 226, 168, 0.58); font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
-.artwork-copy { position: absolute; display: grid; align-content: center; gap: 8px; color: #f1d59a; }
-.artwork-copy strong { min-height: 30px; font-family: var(--serif); font-size: clamp(1.4rem, 3vw, 2.05rem); font-weight: 500; line-height: 1.12; }
-.artwork-copy span { min-height: 16px; color: rgba(255, 225, 174, 0.74); font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
-.artwork-location { color: rgba(255, 225, 174, 0.58); font-family: var(--mono); font-size: 10px; }
+.artwork-copy { position: absolute; display: grid; align-content: center; gap: clamp(2px, 0.75cqw, 8px); color: #f1d59a; overflow: hidden; }
+.artwork-copy strong { font-family: var(--serif); font-size: clamp(0.88rem, 4.8cqw, 2.05rem); font-weight: 500; line-height: 1.1; }
+.artwork-copy span { color: rgba(255, 225, 174, 0.74); font-family: var(--mono); font-size: clamp(0.42rem, 1.5cqw, 0.7rem); letter-spacing: 0.07em; text-transform: uppercase; }
+.artwork-location { color: rgba(255, 225, 174, 0.58); font-family: var(--mono); font-size: clamp(0.42rem, 1.5cqw, 0.7rem); }
 
 .preview-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 17px; }
 .preview-controls > span { color: var(--muted); font-size: 12px; }
