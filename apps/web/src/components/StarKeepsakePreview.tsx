@@ -96,9 +96,11 @@ export function StarKeepsakePreview({ designSpec, photoPreview }: StarKeepsakePr
           <div className="artwork-copy" style={displayTextStyle}>
             <strong>{designSpec.customText.value || 'Your names here'}</strong>
             <span>
-              {formatDate(designSpec.moment.date)} · {designSpec.moment.exactTimeUnknown ? 'Time gently held' : designSpec.moment.time || 'Your special time'}
+              {formatDate(designSpec.moment.date)} · {designSpec.moment.exactTimeUnknown ? 'Exact time unknown' : designSpec.moment.time || 'Your special time'}
             </span>
-            <small className="artwork-location">{designSpec.moment.location || 'A place worth remembering'}</small>
+            <small className="artwork-location">
+              {designSpec.moment.location?.displayName || 'A place worth remembering'}
+            </small>
           </div>
         </div>
       </div>

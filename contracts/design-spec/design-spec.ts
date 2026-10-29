@@ -1,4 +1,4 @@
-export const DESIGN_SPEC_VERSION = '1.0' as const
+export const DESIGN_SPEC_VERSION = '1.1' as const
 
 export const PHYSICAL_ARTWORK = {
   widthMm: 279.4,
@@ -27,11 +27,23 @@ export type DesignRegions = {
   text: DesignRegion
 }
 
+export type ResolvedLocation = {
+  query: string
+  displayName: string
+  formattedAddress: string
+  latitude: number
+  longitude: number
+  timeZoneId: string
+  confidence: 'High' | 'Medium' | 'Low' | 'Unknown'
+}
+
 export type MomentSpec = {
   date: string
-  time: string
+  time: string | null
   exactTimeUnknown: boolean
-  location: string
+  location: ResolvedLocation | null
+  localDateTime: string | null
+  utcDateTime: string | null
 }
 
 export type PhotoCrop = {

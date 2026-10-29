@@ -6,7 +6,11 @@ import {
 } from '../../../contracts/design-spec/design-spec'
 import type { DesignSpec } from '../../../contracts/design-spec/design-spec'
 
-export type { DesignSpec, MaterialStyleSpec } from '../../../contracts/design-spec/design-spec'
+export type {
+  DesignSpec,
+  MaterialStyleSpec,
+  ResolvedLocation,
+} from '../../../contracts/design-spec/design-spec'
 export { DESIGN_SPEC_VERSION, PHYSICAL_ARTWORK } from '../../../contracts/design-spec/design-spec'
 
 export const INITIAL_DESIGN_SPEC: DesignSpec = {
@@ -17,9 +21,11 @@ export const INITIAL_DESIGN_SPEC: DesignSpec = {
   regions: DESIGN_REGIONS,
   moment: {
     date: '',
-    time: '',
+    time: null,
     exactTimeUnknown: false,
-    location: '',
+    location: null,
+    localDateTime: null,
+    utcDateTime: null,
   },
   photo: {
     assetId: 'local-photo-placeholder',
