@@ -1,0 +1,92 @@
+name: Deploy Design Engine to Azure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "services/design-engine/**"
+      - ".github/workflows/deploy-design-engine-azure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-design-engine-azure
+  cancel-in-progress: true
+
+env:
+  AZURE_RESOURCE_GROUP: rg-starkeepsake-dev
+  AZURE_CONTAINER_APP_ENVIRONMENT: cae-starkeepsake-dev
+  AZURE_CONTAINER_APP: starkeepsake-engine-dev
+  ACR_NAME: cad443269256acr
+  IMAGE_NAME: starkeepsake-engine
+  TARGET_PORT: "8080"
+  ACR_PULL_IDENTITY_ID: /subscriptions/23e13257-9e0b-4cd0-9c57-01799ce82243/resourcegroups/rg-starkeepsake-dev/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-starkeepsake-acr-pull-dev
+
+jobs:
+  deploy:
+    name: Build and deploy Python design engine
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Sign in to Azure with OIDC
+        uses: Azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push design-engine image
+        shell: bash
+        run: |
+          set -euo pipefail
+          az acr login --name "$ACR_NAME"
+          ACR_SERVER="${ACR_NAME}.azurecr.io"
+          IMAGE="${ACR_SERVER}/${IMAGE_NAME}:${GITHUB_SHA}"
+          docker build --file services/design-engine/Dockerfile --tag "$IMAGE" services/design-engine
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Create or update Azure Container App
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACR_SERVER="${ACR_NAME}.azurecr.io"
+
+          if az containerapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" >/dev/null 2>&1; then
+            az containerapp identity assign --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --user-assigned "$ACR_PULL_IDENTITY_ID" --output none
+            az containerapp registry set --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --server "$ACR_SERVER" --identity "$ACR_PULL_IDENTITY_ID" --output none
+            az containerapp update --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --image "$IMAGE" --output none
+            az containerapp ingress update --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --target-port "$TARGET_PORT" --transport auto --output none
+          else
+            az containerapp create --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --environment "$AZURE_CONTAINER_APP_ENVIRONMENT" --image "$IMAGE" --user-assigned "$ACR_PULL_IDENTITY_ID" --registry-server "$ACR_SERVER" --registry-identity "$ACR_PULL_IDENTITY_ID" --ingress external --target-port "$TARGET_PORT" --output none
+          fi
+
+      - name: Verify health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          FQDN="$(az containerapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_CONTAINER_APP" --query properties.configuration.ingress.fqdn --output tsv)"
+          HEALTH_URL="https://${FQDN}/health"
+
+          for attempt in {1..30}; do
+            BODY="$(curl --fail --silent --show-error "$HEALTH_URL" || true)"
+
+            if echo "$BODY" | grep -q '"service":"design-engine"' &&
+               echo "$BODY" | grep -q '"status":"healthy"'; then
+              echo "Design engine health check passed: $BODY"
+              exit 0
+            fi
+
+            echo "Health check attempt $attempt/30 did not return the expected design-engine payload."
+            sleep 10
+          done
+
+          echo "Design engine did not become healthy at $HEALTH_URL"
+          exit 1
