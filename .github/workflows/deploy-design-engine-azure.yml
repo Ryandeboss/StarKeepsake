@@ -147,13 +147,13 @@ jobs:
           import zlib
           width, height = 128, 128
           rows = b"".join(
-              b"\\x00" + bytes(((x * 2 + y) % 256 for x in range(width)))
+              b"\x00" + bytes(((x * 2 + y) % 256 for x in range(width)))
               for y in range(height)
           )
           def chunk(tag, data):
               return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
           png = (
-              b"\\x89PNG\\r\\n\\x1a\\n"
+              b"\x89PNG\r\n\x1a\n"
               + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 0, 0, 0, 0))
               + chunk(b"IDAT", zlib.compress(rows))
               + chunk(b"IEND", b"")
@@ -162,9 +162,9 @@ jobs:
               output.write(png)
           PY
 
-          curl --fail --silent --show-error \\
-            -F "image=@$INPUT;type=image/png" \\
-            -o "$OUTPUT" \\
+          curl --fail --silent --show-error \
+            -F "image=@$INPUT;type=image/png" \
+            -o "$OUTPUT" \
             "https://${FQDN}/engraving/preview"
 
           python3 - "$OUTPUT" <<'PY'
@@ -172,7 +172,7 @@ jobs:
           import sys
           with open(sys.argv[1], "rb") as f:
               data = f.read(33)
-          assert data[:8] == b"\\x89PNG\\r\\n\\x1a\\n", "Not a PNG"
+          assert data[:8] == b"\x89PNG\r\n\x1a\n", "Not a PNG"
           width, height = struct.unpack(">II", data[16:24])
           assert (width, height) == (2100, 1250), (width, height)
           assert data[25] == 0, "Expected 8-bit grayscale output"
