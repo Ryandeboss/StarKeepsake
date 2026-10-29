@@ -1,187 +1,525 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://starkeepsake.local/contracts/design-spec/v1.2",
-  "title": "StarKeepsake DesignSpec v1.2",
+  "$id": "https://starkeepsake.local/contracts/design-spec/v1.3",
+  "title": "StarKeepsake DesignSpec v1.3",
   "description": "Canonical physical design model for an 11 by 14 inch StarKeepsake artwork.",
   "type": "object",
-  "required": ["schemaVersion", "designId", "templateId", "physicalArtwork", "regions", "moment", "photo", "customText", "materialStyle", "skySettings", "astronomy", "stars"],
+  "required": [
+    "schemaVersion",
+    "designId",
+    "templateId",
+    "framePresetId",
+    "physicalArtwork",
+    "regions",
+    "moment",
+    "photo",
+    "customText",
+    "materialStyle",
+    "skySettings",
+    "astronomy",
+    "stars"
+  ],
   "properties": {
-    "schemaVersion": { "const": "1.2" },
-    "designId": { "type": "string" },
-    "templateId": { "type": "string" },
+    "schemaVersion": {
+      "const": "1.3"
+    },
+    "designId": {
+      "type": "string"
+    },
+    "templateId": {
+      "type": "string"
+    },
     "physicalArtwork": {
       "type": "object",
-      "required": ["widthMm", "heightMm", "units", "origin"],
+      "required": [
+        "widthMm",
+        "heightMm",
+        "units",
+        "origin"
+      ],
       "properties": {
-        "widthMm": { "const": 279.4 },
-        "heightMm": { "const": 355.6 },
-        "units": { "const": "mm" },
-        "origin": { "const": "top-left" }
+        "widthMm": {
+          "enum": [
+            203.2,
+            279.4,
+            406.4
+          ]
+        },
+        "heightMm": {
+          "enum": [
+            254,
+            355.6,
+            508
+          ]
+        },
+        "units": {
+          "const": "mm"
+        },
+        "origin": {
+          "const": "top-left"
+        }
       },
       "additionalProperties": false
     },
     "regions": {
       "type": "object",
-      "required": ["sky", "engravingPhoto", "text"],
+      "required": [
+        "sky",
+        "engravingPhoto",
+        "text"
+      ],
       "properties": {
-        "sky": { "$ref": "#/$defs/region" },
-        "engravingPhoto": { "$ref": "#/$defs/region" },
-        "text": { "$ref": "#/$defs/region" }
+        "sky": {
+          "$ref": "#/$defs/region"
+        },
+        "engravingPhoto": {
+          "$ref": "#/$defs/region"
+        },
+        "text": {
+          "$ref": "#/$defs/region"
+        }
       },
       "additionalProperties": false
     },
     "moment": {
       "type": "object",
-      "required": ["date", "time", "exactTimeUnknown", "location", "localDateTime", "utcDateTime"],
+      "required": [
+        "date",
+        "time",
+        "exactTimeUnknown",
+        "location",
+        "localDateTime",
+        "utcDateTime"
+      ],
       "properties": {
-        "date": { "type": "string" },
-        "time": { "type": ["string", "null"] },
-        "exactTimeUnknown": { "type": "boolean" },
-        "location": {
-          "anyOf": [
-            { "$ref": "#/$defs/resolvedLocation" },
-            { "type": "null" }
+        "date": {
+          "type": "string"
+        },
+        "time": {
+          "type": [
+            "string",
+            "null"
           ]
         },
-        "localDateTime": { "type": ["string", "null"] },
-        "utcDateTime": { "type": ["string", "null"] }
+        "exactTimeUnknown": {
+          "type": "boolean"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/resolvedLocation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "localDateTime": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "utcDateTime": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "photo": {
       "type": "object",
-      "required": ["assetId", "crop", "positionMm"],
+      "required": [
+        "assetId",
+        "crop",
+        "positionMm",
+        "fitMode"
+      ],
       "properties": {
-        "assetId": { "type": "string" },
-        "crop": { "$ref": "#/$defs/crop" },
-        "positionMm": { "$ref": "#/$defs/rect" }
+        "assetId": {
+          "type": "string"
+        },
+        "crop": {
+          "$ref": "#/$defs/crop"
+        },
+        "positionMm": {
+          "$ref": "#/$defs/rect"
+        },
+        "fitMode": {
+          "enum": [
+            "contain",
+            "cover"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "customText": {
       "type": "object",
-      "required": ["value", "positionMm", "align"],
+      "required": [
+        "value",
+        "positionMm",
+        "align"
+      ],
       "properties": {
-        "value": { "type": "string" },
-        "positionMm": { "$ref": "#/$defs/rect" },
-        "align": { "enum": ["left", "center", "right"] }
+        "value": {
+          "type": "string"
+        },
+        "positionMm": {
+          "$ref": "#/$defs/rect"
+        },
+        "align": {
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "materialStyle": {
       "type": "object",
-      "required": ["material", "style"],
+      "required": [
+        "material",
+        "style"
+      ],
       "properties": {
-        "material": { "enum": ["midnight", "walnut", "brass"] },
-        "style": { "enum": ["Midnight frame", "Warm walnut", "Brushed brass"] }
+        "material": {
+          "enum": [
+            "midnight",
+            "walnut",
+            "brass"
+          ]
+        },
+        "style": {
+          "enum": [
+            "Midnight frame",
+            "Warm walnut",
+            "Brushed brass"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "skySettings": {
       "type": "object",
-      "required": ["background", "brightness", "showConstellation", "projection", "magnitudeLimit", "maxStars", "minSeparationMm"],
+      "required": [
+        "background",
+        "brightness",
+        "showConstellation",
+        "projection",
+        "magnitudeLimit",
+        "maxStars",
+        "minSeparationMm"
+      ],
       "properties": {
-        "background": { "const": "deep-space" },
-        "brightness": { "type": "number", "minimum": 0, "maximum": 1 },
-        "showConstellation": { "type": "boolean" },
-        "projection": { "const": "azimuthal-equidistant" },
-        "magnitudeLimit": { "type": "number", "minimum": -2, "maximum": 6.5 },
-        "maxStars": { "type": "integer", "minimum": 1, "maximum": 200 },
-        "minSeparationMm": { "type": "number", "minimum": 1, "maximum": 15 }
+        "background": {
+          "const": "deep-space"
+        },
+        "brightness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "showConstellation": {
+          "type": "boolean"
+        },
+        "projection": {
+          "const": "altaz-equirectangular"
+        },
+        "magnitudeLimit": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 6.5
+        },
+        "maxStars": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "minSeparationMm": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 15
+        }
       },
       "additionalProperties": false
     },
     "astronomy": {
       "anyOf": [
-        { "$ref": "#/$defs/astronomyCalculation" },
-        { "type": "null" }
+        {
+          "$ref": "#/$defs/astronomyCalculation"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "stars": {
       "type": "array",
-      "items": { "$ref": "#/$defs/star" }
+      "items": {
+        "$ref": "#/$defs/star"
+      }
+    },
+    "framePresetId": {
+      "enum": [
+        "8x10",
+        "11x14",
+        "16x20"
+      ]
     }
   },
   "$defs": {
     "resolvedLocation": {
       "type": "object",
-      "required": ["query", "displayName", "formattedAddress", "latitude", "longitude", "timeZoneId", "confidence"],
+      "required": [
+        "query",
+        "displayName",
+        "formattedAddress",
+        "latitude",
+        "longitude",
+        "timeZoneId",
+        "confidence"
+      ],
       "properties": {
-        "query": { "type": "string" },
-        "displayName": { "type": "string" },
-        "formattedAddress": { "type": "string" },
-        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
-        "longitude": { "type": "number", "minimum": -180, "maximum": 180 },
-        "timeZoneId": { "type": "string" },
-        "confidence": { "enum": ["High", "Medium", "Low", "Unknown"] }
+        "query": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "formattedAddress": {
+          "type": "string"
+        },
+        "latitude": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "timeZoneId": {
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "High",
+            "Medium",
+            "Low",
+            "Unknown"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "astronomyCalculation": {
       "type": "object",
-      "required": ["catalog", "ephemeris", "projection", "orientation", "calculationUtcDateTime", "timeBasis", "magnitudeLimit", "maxStars", "minSeparationMm", "visibleCatalogStars", "projectedCandidates", "selectedStars"],
+      "required": [
+        "catalog",
+        "ephemeris",
+        "projection",
+        "orientation",
+        "calculationUtcDateTime",
+        "timeBasis",
+        "magnitudeLimit",
+        "maxStars",
+        "minSeparationMm",
+        "visibleCatalogStars",
+        "projectedCandidates",
+        "selectedStars"
+      ],
       "properties": {
-        "catalog": { "const": "hipparcos" },
-        "ephemeris": { "const": "de440s" },
-        "projection": { "const": "azimuthal-equidistant" },
-        "orientation": { "const": "north-up-east-right" },
-        "calculationUtcDateTime": { "type": "string" },
-        "timeBasis": { "enum": ["exact", "date-only-local-midnight"] },
-        "magnitudeLimit": { "type": "number" },
-        "maxStars": { "type": "integer" },
-        "minSeparationMm": { "type": "number" },
-        "visibleCatalogStars": { "type": "integer", "minimum": 0 },
-        "projectedCandidates": { "type": "integer", "minimum": 0 },
-        "selectedStars": { "type": "integer", "minimum": 0 }
+        "catalog": {
+          "const": "hipparcos"
+        },
+        "ephemeris": {
+          "const": "de440s"
+        },
+        "projection": {
+          "const": "altaz-equirectangular"
+        },
+        "orientation": {
+          "const": "north-center-east-right"
+        },
+        "calculationUtcDateTime": {
+          "type": "string"
+        },
+        "timeBasis": {
+          "enum": [
+            "exact",
+            "date-only-local-midnight"
+          ]
+        },
+        "magnitudeLimit": {
+          "type": "number"
+        },
+        "maxStars": {
+          "type": "integer"
+        },
+        "minSeparationMm": {
+          "type": "number"
+        },
+        "visibleCatalogStars": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "projectedCandidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "selectedStars": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
       "additionalProperties": false
     },
     "rect": {
       "type": "object",
-      "required": ["xMm", "yMm", "widthMm", "heightMm"],
+      "required": [
+        "xMm",
+        "yMm",
+        "widthMm",
+        "heightMm"
+      ],
       "properties": {
-        "xMm": { "type": "number", "minimum": 0 },
-        "yMm": { "type": "number", "minimum": 0 },
-        "widthMm": { "type": "number", "exclusiveMinimum": 0 },
-        "heightMm": { "type": "number", "exclusiveMinimum": 0 }
+        "xMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "yMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "widthMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "heightMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
       },
       "additionalProperties": false
     },
     "region": {
       "type": "object",
-      "required": ["xMm", "yMm", "widthMm", "heightMm", "label"],
+      "required": [
+        "xMm",
+        "yMm",
+        "widthMm",
+        "heightMm",
+        "label"
+      ],
       "properties": {
-        "xMm": { "type": "number", "minimum": 0 },
-        "yMm": { "type": "number", "minimum": 0 },
-        "widthMm": { "type": "number", "exclusiveMinimum": 0 },
-        "heightMm": { "type": "number", "exclusiveMinimum": 0 },
-        "label": { "type": "string" }
+        "xMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "yMm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "widthMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "heightMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "label": {
+          "type": "string"
+        }
       },
       "additionalProperties": false
     },
     "crop": {
       "type": "object",
-      "required": ["x", "y", "width", "height"],
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
       "properties": {
-        "x": { "type": "number", "minimum": 0, "maximum": 1 },
-        "y": { "type": "number", "minimum": 0, "maximum": 1 },
-        "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
-        "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
       },
       "additionalProperties": false
     },
     "star": {
       "type": "object",
-      "required": ["hipparcosId", "xMm", "yMm", "magnitude", "altitudeDeg", "azimuthDeg", "holeSizeMm", "ledIndex"],
+      "required": [
+        "hipparcosId",
+        "xMm",
+        "yMm",
+        "magnitude",
+        "altitudeDeg",
+        "azimuthDeg",
+        "holeSizeMm",
+        "ledIndex"
+      ],
       "properties": {
-        "hipparcosId": { "type": "integer", "minimum": 1 },
-        "xMm": { "type": "number", "minimum": 0, "maximum": 279.4 },
-        "yMm": { "type": "number", "minimum": 0, "maximum": 355.6 },
-        "magnitude": { "type": "number" },
-        "altitudeDeg": { "type": "number", "minimum": 0, "maximum": 90 },
-        "azimuthDeg": { "type": "number", "minimum": 0, "maximum": 360 },
-        "holeSizeMm": { "type": "number", "exclusiveMinimum": 0 },
-        "ledIndex": { "type": "integer", "minimum": 0 }
+        "hipparcosId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "xMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 406.4
+        },
+        "yMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 508
+        },
+        "magnitude": {
+          "type": "number"
+        },
+        "altitudeDeg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 90
+        },
+        "azimuthDeg": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "holeSizeMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "ledIndex": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
       "additionalProperties": false
     }
