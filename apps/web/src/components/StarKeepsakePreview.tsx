@@ -65,7 +65,13 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
         >
           <div className="artwork-stars" aria-hidden="true" style={displayRectStyle(displaySkyRect)}>
             {designSpec.stars.map((star) => {
-              const point = pointToDisplayPixels(star, displayWidthPx, physicalArtwork.widthMm)
+              // The engine outputs canonical artwork coordinates; absolute
+              // children of the sky panel need sky-local display coordinates.
+              const point = pointToDisplayPixels(
+                { xMm: star.xMm - regions.sky.xMm, yMm: star.yMm - regions.sky.yMm },
+                displayWidthPx,
+                physicalArtwork.widthMm,
+              )
               const size = millimetersToPixels(star.holeSizeMm, displayWidthPx, physicalArtwork.widthMm)
               const style = {
                 left: point.x,
