@@ -147,7 +147,22 @@ export function CreatePage() {
 
   const handleSourceDimensions = (size: { width: number; height: number }) => {
     setSourceDimensions(size)
-    if (designSpec.photo.fitMode === 'cover') {
+    if (designSpec.framePresetId === 'auto') {
+      const ratio = Math.min(3, Math.max(.35, size.width / size.height))
+      const { physicalArtwork, regions } = getFrameLayout('auto', ratio)
+      setDesignSpec((current) => ({
+        ...current,
+        photoAspectRatio: ratio,
+        physicalArtwork,
+        regions,
+        photo: { ...current.photo, positionMm: toRect(regions.engravingPhoto), crop: FULL_PHOTO_CROP, fitMode: 'contain' },
+        customText: { ...current.customText, positionMm: toRect(regions.text) },
+        astronomy: null, stars: [],
+      }))
+    } else {
+      setDesignSpec((current) => ({ ...current, photoAspectRatio: size.width / size.height }))
+    }
+    if (designSpec.photo.fitMode === 'cover' && designSpec.framePresetId !== 'auto') {
       const { widthMm, heightMm } = designSpec.photo.positionMm
       updatePhotoCrop(getCoverCrop(size.width, size.height, widthMm / heightMm))
     }
@@ -156,7 +171,12 @@ export function CreatePage() {
   const updateFrame = async (id: FramePresetId) => {
     if (id === designSpec.framePresetId) return
     clearBlend()
-    const { physicalArtwork, regions } = getFrameLayout(id)
+    if (id === 'auto' && !sourceDimensions) {
+      setFormError('Upload a photo first to make a custom-sized frame.')
+      return
+    }
+    const photoAspectRatio = sourceDimensions ? sourceDimensions.width / sourceDimensions.height : null
+    const { physicalArtwork, regions } = getFrameLayout(id, photoAspectRatio)
     setIsReady(false)
     setPhotoError('')
     setEngravingPreview('')
@@ -164,6 +184,7 @@ export function CreatePage() {
     setDesignSpec((current) => ({
       ...current,
       framePresetId: id,
+      photoAspectRatio,
       physicalArtwork,
       regions,
       photo: {
@@ -181,7 +202,7 @@ export function CreatePage() {
     if (designSpec.moment.location) {
       setIsResolvingMoment(true)
       try {
-        const astronomy = await generateAstronomy(designSpec.moment, designSpec.skySettings, id)
+        const astronomy = await generateAstronomy(designSpec.moment, designSpec.skySettings, id, photoAspectRatio)
         setDesignSpec((current) => current.framePresetId === id
           ? { ...current, astronomy: astronomy.calculation, stars: astronomy.stars }
           : current)
@@ -364,7 +385,7 @@ export function CreatePage() {
           location: selectedLocation,
         })
 
-        const astronomy = await generateAstronomy(resolved, designSpec.skySettings, designSpec.framePresetId)
+        const astronomy = await generateAstronomy(resolved, designSpec.skySettings, designSpec.framePresetId, designSpec.photoAspectRatio)
         clearBlend()
 
         setDesignSpec((current) => ({
