@@ -1,6 +1,6 @@
 import type { ChangeEvent } from 'react'
 import { useEffect, useState } from 'react'
-import { resolveMoment, searchLocations } from '../api'
+import { generateAstronomy, resolveMoment, searchLocations } from '../api'
 import type { LocationCandidate } from '../api'
 import { ConfiguratorForm } from '../components/ConfiguratorForm'
 import { ProgressSteps } from '../components/ProgressSteps'
@@ -47,7 +47,12 @@ export function CreatePage() {
         nextMoment.time = null
       }
 
-      return { ...current, moment: nextMoment }
+      return {
+        ...current,
+        moment: nextMoment,
+        astronomy: null,
+        stars: [],
+      }
     })
     setFormError('')
     setIsReady(false)
@@ -92,6 +97,8 @@ export function CreatePage() {
         localDateTime: null,
         utcDateTime: null,
       },
+      astronomy: null,
+      stars: [],
     }))
     setIsReady(false)
   }
@@ -161,9 +168,13 @@ export function CreatePage() {
           location: selectedLocation,
         })
 
+        const astronomy = await generateAstronomy(resolved, designSpec.skySettings)
+
         setDesignSpec((current) => ({
           ...current,
           moment: resolved,
+          astronomy: astronomy.calculation,
+          stars: astronomy.stars,
         }))
         setActiveStep(2)
         setIsReady(false)
