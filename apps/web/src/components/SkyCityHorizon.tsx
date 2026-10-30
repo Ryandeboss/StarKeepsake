@@ -10,11 +10,6 @@ const noise = (n: number, seed: number) => {
 }
 const wrap = (value: number, span: number) => ((value % span) + span) % span
 
-/** The horizon moves when the viewer tilts. A compass bearing does not affect its height. */
-export function observerHorizonY(heading: number, pitch: number, fov: number): number {
-  return projectObserverStar(heading, 0, heading, pitch, fov).y
-}
-
 function IconicLandmark({ id }: { id: string }) {
   switch (id) {
     case 'chicago':
