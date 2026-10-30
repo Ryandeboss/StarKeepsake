@@ -20,6 +20,7 @@ export function SkyImmersiveView({ result }: Props) {
   const [pinnedHip, setPinnedHip] = useState<number | null>(null)
   const [activePattern, setActivePattern] = useState<string | null>(null)
   const [showLines, setShowLines] = useState(true)
+  const skyWindowRef = useRef<HTMLDivElement | null>(null)
   const drag = useRef<{ x: number; y: number; heading: number; pitch: number; moved: boolean } | null>(null)
 
   const starByHip = useMemo(
@@ -63,6 +64,10 @@ export function SkyImmersiveView({ result }: Props) {
     setPitch(clampPitch(anchors.reduce((total, star) => total + star.altitudeDeg, 0) / anchors.length))
     setActivePattern(id)
     setPinnedHip(null)
+    skyWindowRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'center',
+    })
   }
   function faceStar(id: number) {
     const star = starByHip.get(id)
@@ -102,7 +107,7 @@ export function SkyImmersiveView({ result }: Props) {
           Show constellation guides
         </label>
       </div>
-      <div className="immersive-sky-window" tabIndex={0}
+      <div ref={skyWindowRef} className="immersive-sky-window" tabIndex={0}
         aria-label="First-person sky view. Use arrow keys to pan left, right, up or down."
         onKeyDown={event => {
           if (event.key === 'ArrowLeft') { event.preventDefault(); setHeading(wrapBearing(heading - 10)) }
