@@ -136,3 +136,29 @@
 @media (prefers-reduced-motion: reduce) {
   .immersive-nudge { animation: none; transition: none; }
 }
+
+/* Real Street View is an explicit, billable opt-in and is never fetched until selected. */
+.immersive-view-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; background: #081e2b; border: 1px solid #53707a; border-radius: 25px; }
+.immersive-view-tabs button { background: transparent; border: 0; color: #c7d8d6; padding: 10px 13px; border-radius: 20px; cursor: pointer; font-size: 11px; font-weight: 700; }
+.immersive-view-tabs button.is-selected { background: #eed2a2; color: #173c43; }
+.immersive-view-tabs button:hover:not(.is-selected) { background: #355360; color: white; }
+.streetview-scene { position: relative; width: 100%; aspect-ratio: 5 / 3; min-height: 260px; background: #091c2d; overflow: hidden; }
+.streetview-frame { position: absolute; inset: 0; }
+.streetview-setup { aspect-ratio: 5 / 3; min-height: 300px; padding: clamp(18px,5vw,55px); box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 12px; background: radial-gradient(circle at 60% 30%, #315769, #07192a 68%); color: #eaf1ea; }
+.streetview-setup h3 { color: #ffe4b3; margin: 5px 0; font: 500 clamp(22px,3.4vw,36px) Georgia,serif; }
+.streetview-setup p { font-size: 13px; line-height: 1.75; max-width: 75ch; color: #d4e1df; }
+.streetview-setup code { color: #fff2c8; overflow-wrap: anywhere; }
+.streetview-setup a, .streetview-status a { display: inline-flex; color: #213e43; background: #eed19b; font-size: 12px; font-weight: 700; text-decoration: none; padding: 12px 18px; border-radius: 23px; }
+.streetview-setup small { max-width: 71ch; line-height: 1.6; font-size: 11px; color: #bdd0d0; }
+.streetview-status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; flex-direction: column; gap: 15px; width: min(450px,80%); padding: 22px; text-align: center; border: 1px solid #8d9e9b; border-radius: 10px; background: rgba(3,22,37,.92); color: #f8ebd2; font-size: 13px; line-height: 1.6; }
+.streetview-disclaimer { position: absolute; z-index: 2; top: 10px; left: 11px; max-width: min(370px,60%); padding: 9px 13px; background: rgba(8,27,41,.8); border-radius: 6px; display: grid; gap: 5px; pointer-events: none; }
+.streetview-disclaimer strong { color: #ffe5b1; font-size: 12px; }
+.streetview-disclaimer small { font-size: 10px; line-height: 1.55; color: #d2e1df; }
+.immersive-ground-message { padding: 16px 20px; background: #203d4b; color: #f4dfb5; font-size: 12px; line-height: 1.7; }
+@media (max-width: 620px) {
+  .streetview-scene { aspect-ratio: 4 / 4; }
+  .streetview-setup { aspect-ratio: auto; min-height: 320px; }
+  .streetview-disclaimer { max-width: min(300px,80%); }
+  .immersive-view-tabs { width: 100%; }
+  .immersive-view-tabs button { flex: 1; }
+}
