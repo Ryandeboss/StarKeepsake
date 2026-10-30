@@ -9,7 +9,6 @@ const noise = (n: number, seed: number) => {
   const v = Math.sin((n + seed) * 78.233) * 43758.5453
   return v - Math.floor(v)
 }
-const wrap = (value: number, span: number) => ((value % span) + span) % span
 
 function IconicLandmark({ id }: { id: string }) {
   switch (id) {
@@ -77,44 +76,6 @@ function IconicLandmark({ id }: { id: string }) {
     default:
       return null
   }
-}
-
-function Terrain({ id, seed }: { id: string; seed: number }) {
-  if (id === 'capetown') {
-    return <path d="M0 0 L0 -23 L110 -52 L225 -96 L340 -119 L470 -121 L592 -116 L702 -61 L830 -29 L1000 -16 L1000 0 Z" fill="#1e3d4a"/>
-  }
-  if (id === 'rio') {
-    return <path d="M0 0 L0 -30 Q85 -12 120 -45 Q156 -105 192 -84 Q232 -43 300 -30 Q385 -16 450 -43 Q520 -105 558 -67 Q614 -16 673 -43 Q745 -100 792 -56 Q843 -17 1000 -30 L1000 0 Z" fill="#254656"/>
-  }
-  if (id === 'tokyo') {
-    return <path d="M0 0 L0 -20 L120 -28 L200 -34 L280 -45 L325 -56 L370 -93 L416 -142 L458 -102 L506 -66 L545 -31 L800 -25 L1000 -20 L1000 0 Z" fill="#2b4c5c"/>
-  }
-  if (id === 'reykjavik') {
-    return <path d="M0 0 L0 -18 Q130 -32 234 -63 Q335 -107 480 -70 Q633 -28 760 -51 Q856 -78 1000 -42 L1000 0 Z" fill="#223a4c"/>
-  }
-  const rise = 12 + noise(1, seed) * 25
-  return <path d={`M0 0 V-${rise} Q160 -${rise+9} 280 -${rise+3} Q470 -${rise+25} 600 -${rise} Q840 -${rise+5} 1000 -${rise+11} V0Z`} fill="#1b3647"/>
-}
-
-function BuildingBand({ seed, quiet }: { seed: number; quiet: boolean }) {
-  return <g>
-    {Array.from({ length: quiet ? 28 : 44 }, (_, i) => {
-      const spacing = quiet ? 36 : 24
-      const x = i * spacing - 8
-      const width = (quiet ? 22 : 15) + noise(i, seed + 10) * (quiet ? 19 : 23)
-      const height = (quiet ? 12 : 25) + noise(i, seed) * (quiet ? 44 : 92)
-      return <g key={i}>
-        <rect x={x} y={-height} width={width} height={height+7} fill={i % 2 ? '#172c3b' : '#203747'}/>
-        {Array.from({ length: Math.floor(height / 14) }, (_, row) =>
-          Array.from({ length: Math.max(1, Math.floor(width / 8)) }, (_, col) => {
-            if (noise(i*41+row*7+col, seed) < .58) return null
-            return <rect key={row * 10 + col} x={x + 3 + col*8} y={-height+8+row*13} width="2.2" height="3.3"
-              fill={noise(i + row*8 + col, seed) > .5 ? '#f1bf81' : '#9cc5c7'} opacity=".65"/>
-          }),
-        )}
-      </g>
-    })}
-  </g>
 }
 
 type Props = { location: ExplorerLocation; heading: number; pitch: number; fov: number }
