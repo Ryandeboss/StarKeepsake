@@ -28,11 +28,22 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
   const canvasRef = useRef<HTMLDivElement>(null)
   const [lightsOn, setLightsOn] = useState(true)
   const [showEngraving, setShowEngraving] = useState(true)
-  const [exploreStars, setExploreStars] = useState(false)
-  const [activeStarId, setActiveStarId] = useState<number | null>(null)
+  // Stars are inspectable as soon as a real sky is calculated. A separate
+  // display toggle remains available for customers who want a clean mockup.
+  const [exploreStars, setExploreStars] = useState(true)
+  const [hoveredStarId, setHoveredStarId] = useState<number | null>(null)
+  const [pinnedStarId, setPinnedStarId] = useState<number | null>(null)
   const [displayWidthPx, setDisplayWidthPx] = useState(0)
   const { physicalArtwork, regions } = designSpec
+  const activeStarId = hoveredStarId ?? pinnedStarId
   const activeStar = designSpec.stars.find((star) => star.hipparcosId === activeStarId)
+  const activeStarTooltipPosition = activeStar ? {
+    left: `${activeStar.xMm / physicalArtwork.widthMm * 100}%`,
+    top: `${activeStar.yMm / physicalArtwork.heightMm * 100}%`,
+    transform: `translate(${activeStar.xMm > physicalArtwork.widthMm / 2 ? '-100%' : '0%'}, ${activeStar.yMm > physicalArtwork.heightMm / 3 ? '-100%' : '0%'})`,
+    marginLeft: activeStar.xMm > physicalArtwork.widthMm / 2 ? -12 : 12,
+    marginTop: activeStar.yMm > physicalArtwork.heightMm / 3 ? -12 : 12,
+  } as CSSProperties : undefined
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current
@@ -115,11 +126,13 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
                     title={starDescription(star)}
                     aria-label={starDescription(star)}
                     data-hipparcos-id={star.hipparcosId}
-                    onMouseEnter={() => setActiveStarId(star.hipparcosId)}
-                    onMouseLeave={() => setActiveStarId(null)}
-                    onFocus={() => setActiveStarId(star.hipparcosId)}
-                    onBlur={() => setActiveStarId(null)}
-                    onClick={() => setActiveStarId(star.hipparcosId)}
+                    onPointerEnter={() => setHoveredStarId(star.hipparcosId)}
+                    onPointerLeave={() => setHoveredStarId(null)}
+                    onFocus={() => setHoveredStarId(star.hipparcosId)}
+                    onBlur={() => setHoveredStarId(null)}
+                    aria-pressed={pinnedStarId === star.hipparcosId}
+                    onClick={() => setPinnedStarId((current) =>
+                      current === star.hipparcosId ? null : star.hipparcosId)}
                   >
                     <span className="artwork-star" aria-hidden="true" style={{
                       left: '50%', top: '50%', width: size, height: size,
@@ -201,6 +214,14 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
             </div>
           )}
 
+          {designSpec.layoutMode === 'classic' && exploreStars && activeStar && (
+            <div className="frame-star-tooltip" style={activeStarTooltipPosition} role="status">
+              <strong>{starDisplayName(activeStar)}</strong>
+              <small>HIP {activeStar.hipparcosId} · {activeStar.magnitude.toFixed(2)} mag</small>
+              <small>{activeStar.altitudeDeg.toFixed(1)}° above horizon · {starCompassDirection(activeStar.azimuthDeg)}</small>
+            </div>
+          )}
+
           <div className="artwork-copy" style={displayTextStyle}>
             <strong>{designSpec.customText.value || 'Your names here'}</strong>
             <span>
@@ -249,18 +270,21 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
             aria-pressed={exploreStars}
             onClick={() => {
               setExploreStars(!exploreStars)
-              setActiveStarId(null)
+              setHoveredStarId(null)
+              setPinnedStarId(null)
             }}
           >
-            {exploreStars ? 'Finish exploring' : 'Explore real stars'}
+            {exploreStars ? 'Hide star details' : 'Explore real stars'}
           </button>
         </div>
-        {exploreStars && (
+        {exploreStars && designSpec.layoutMode === 'classic' && (
           <p className="sky-interaction-hint">
-            Hover, tap, or focus any star in the framed sky to inspect its actual catalogue ID and sky coordinates.
+            {designSpec.stars.length
+              ? 'Hover any plotted star for an instant label. Click or tap a star to pin its details and verification link below.'
+              : 'Choose a location and moment to calculate your real star field.'}
           </p>
         )}
-        {exploreStars && activeStar && (
+        {exploreStars && designSpec.layoutMode === 'classic' && activeStar && (
           <div className="star-information" role="status">
             <strong>{starDisplayName(activeStar)}</strong>
             <span>HIP {activeStar.hipparcosId} · apparent magnitude {activeStar.magnitude.toFixed(2)}</span>
