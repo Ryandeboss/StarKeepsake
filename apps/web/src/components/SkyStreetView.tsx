@@ -48,7 +48,7 @@ function mapsApi(key: string): Promise<Maps> {
     }
     holder.__starKeepsakeMapsReady = done
     const params = new URLSearchParams({
-      key, loading: 'async', v: 'weekly', callback: '__starKeepsakeMapsReady',
+      key, loading: 'async', libraries: 'streetView', v: 'weekly', callback: '__starKeepsakeMapsReady',
     })
     script.src = 'https://maps.googleapis.com/maps/api/js?' + params.toString()
     script.async = true
@@ -62,7 +62,7 @@ function mapsApi(key: string): Promise<Maps> {
   return mapsPromise
 }
 
-export function mapsStreetViewUrl(location: ExplorerLocation): string {
+function mapsStreetViewUrl(location: ExplorerLocation): string {
   const lat = Math.max(-90, Math.min(90, location.latitude))
   const lng = Math.max(-180, Math.min(180, location.longitude))
   return 'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + lat + '%2C' + lng
