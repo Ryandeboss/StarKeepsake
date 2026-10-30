@@ -2,197 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { generateAstronomy } from '../api'
 import type { AstronomyResult } from '../api'
 import { EarthGlobe } from '../components/EarthGlobe'
+import { SkyImmersiveView } from '../components/SkyImmersiveView'
 import { SiteHeader } from '../components/SiteHeader'
 import { INITIAL_DESIGN_SPEC } from '../designSpec'
 import { EXPLORER_LOCATIONS } from '../skyExplorerData'
 import type { ExplorerLocation } from '../skyExplorerData'
-import { NAMED_HIPPARCOS_STARS, getStarContext, starCatalogUrl, starCompassDirection, starDisplayName, starDescription } from '../starDetails'
 import './SkyLabPage.css'
 
 function stepUtc(date: string, time: string, hours: number): { date: string; time: string } {
   const next = new Date(`${date}T${time}:00Z`)
   next.setUTCHours(next.getUTCHours() + hours)
   return { date: next.toISOString().slice(0, 10), time: next.toISOString().slice(11, 16) }
-}
-
-function SkyPanorama({ result }: { result: AstronomyResult | null }) {
-  const [hoveredHip, setHoveredHip] = useState<number | null>(null)
-  const [pinnedHip, setPinnedHip] = useState<number | null>(null)
-  const selectedId = hoveredHip ?? pinnedHip
-  const selected = result?.stars.find((star) => star.hipparcosId === selectedId)
-  const starContext = selected ? getStarContext(selected) : null
-  const tooltipPosition = selected ? (() => {
-    const xPercent = (((selected.azimuthDeg + 180) % 360) / 360) * 100
-    const yPercent = ((90 - selected.altitudeDeg) / 90) * (400 / 455) * 100
-    return {
-      left: `${xPercent}%`,
-      top: `${yPercent}%`,
-      transform: `translate(${xPercent >= 50 ? '-100%' : '0%'}, ${yPercent >= 50 ? '-100%' : '0%'})`,
-      marginLeft: xPercent >= 50 ? -13 : 13,
-      marginTop: yPercent >= 50 ? -13 : 13,
-    }
-  })() : undefined
-  const named = result?.stars
-    .filter((star) => Boolean(NAMED_HIPPARCOS_STARS[star.hipparcosId]))
-    .sort((a, b) => a.magnitude - b.magnitude)
-    .slice(0, 8) ?? []
-  const brightest = result?.stars.slice().sort((a, b) => a.magnitude - b.magnitude).slice(0, 5) ?? []
-  const suggestions = named.length ? named : brightest
-
-  function togglePinnedStar(id: number) {
-    setPinnedHip((current) => current === id ? null : id)
-  }
-
-  return (
-    <div className="sky-panorama">
-      <div className="sky-panorama-instructions">
-        <span>Hover a star to see its name above the chart</span>
-        <span>Click or tap to pin its details</span>
-      </div>
-      <div className="sky-panorama-canvas">
-      <svg viewBox="0 0 1000 455" role="img"
-        aria-label="Calculated panoramic above-horizon Hipparcos stars, west left, north center, east right">
-        <defs>
-          <linearGradient id="sky-lab-night" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#061122"/>
-            <stop offset="70%" stopColor="#112f46"/>
-            <stop offset="100%" stopColor="#33616a"/>
-          </linearGradient>
-          <radialGradient id="sky-lab-haze">
-            <stop offset="0" stopColor="#d4b27a" stopOpacity=".24"/>
-            <stop offset="1" stopColor="#d4b27a" stopOpacity="0"/>
-          </radialGradient>
-          <filter id="sky-lab-glow" x="-150%" y="-150%" width="400%" height="400%">
-            <feGaussianBlur stdDeviation="2.3"/>
-          </filter>
-        </defs>
-        <rect width="1000" height="455" fill="url(#sky-lab-night)"/>
-        <ellipse cx="510" cy="435" rx="620" ry="230" fill="url(#sky-lab-haze)" />
-        {[90, 180, 270, 360].map((y) => (
-          <g key={y}>
-            <path d={`M0 ${y} H1000`} stroke="#bad5db" strokeOpacity=".16" strokeDasharray="4 11"/>
-            <text x="15" y={y - 8} fill="#c3d6d9" fontSize="11" opacity=".7">
-              {90 - Math.round(y / 400 * 90)}° alt
-            </text>
-          </g>
-        ))}
-        {[0, 250, 500, 750, 1000].map((x) => (
-          <path key={x} d={`M${x} 0 V405`} stroke="#c6dce1" strokeOpacity=".085"/>
-        ))}
-        {result?.stars.map((star) => {
-          const x = (((star.azimuthDeg + 180) % 360) / 360) * 1000
-          const y = (90 - star.altitudeDeg) / 90 * 400
-          const radius = Math.max(1.2, 3.5 - star.magnitude * .38)
-          const active = selectedId === star.hipparcosId
-          return (
-            <g key={star.hipparcosId}
-              className={`sky-panorama-star ${active ? 'is-inspected' : ''}`}
-              onPointerEnter={() => setHoveredHip(star.hipparcosId)}
-              onPointerLeave={() => setHoveredHip(null)}
-              onFocus={() => setHoveredHip(star.hipparcosId)}
-              onBlur={() => setHoveredHip(null)}
-              onClick={() => togglePinnedStar(star.hipparcosId)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault()
-                  togglePinnedStar(star.hipparcosId)
-                }
-              }}
-              tabIndex={0} role="button"
-              aria-pressed={pinnedHip === star.hipparcosId}
-              aria-label={starDescription(star)}>
-              <circle cx={x} cy={y} r={Math.max(13, radius + 7)} fill="transparent"/>
-              <circle cx={x} cy={y} r={radius + 3} fill="#ffe9b5" opacity=".3" filter="url(#sky-lab-glow)"/>
-              <circle cx={x} cy={y} r={radius} fill="#fff1cd"/>
-              {active && <circle cx={x} cy={y} r="13" fill="none" stroke="#f4dba4" strokeWidth="1.5" />}
-              <title>{starDescription(star)}</title>
-            </g>
-          )
-        })}
-        <path d="M0 407 Q240 409 485 407 Q730 404 1000 407 L1000 455 L0 455Z" fill="#071d27" fillOpacity=".78" />
-        <path d="M0 407 H1000" stroke="#dabf8a" strokeOpacity=".75" strokeWidth="1.4"/>
-        {['S','W','N','E','S'].map((label, index) => (
-          <text key={index} x={index * 250 || 10} y="437"
-            textAnchor={index === 0 ? 'start' : index === 4 ? 'end' : 'middle'}
-            fontSize="15" fill="#f5dbac" fontFamily="monospace">{label}</text>
-        ))}
-        <text x="500" y="27" textAnchor="middle" fontSize="11" letterSpacing="3" fill="#d4e5e8">
-          ALL-SKY HORIZON PANORAMA
-        </text>
-      </svg>
-      {selected && (
-        <div className="sky-star-hover-tooltip" style={tooltipPosition} role="status">
-          <strong>{starDisplayName(selected)}</strong>
-          <span>HIP {selected.hipparcosId} · magnitude {selected.magnitude.toFixed(2)}</span>
-          <span>{selected.altitudeDeg.toFixed(1)}° altitude · {starCompassDirection(selected.azimuthDeg)}</span>
-          <small>{pinnedHip === selected.hipparcosId
-            ? 'Pinned · details and catalog link below'
-            : 'Click to pin this star and keep its details'}</small>
-        </div>
-      )}
-      </div>
-      <div className="sky-star-explorer">
-        <section className="sky-star-inspector" aria-label="Selected star details">
-          {selected && starContext ? (
-            <>
-              <div className="sky-inspector-eyebrow">
-                <span>{starContext.constellation ? 'Named Hipparcos star' : 'Catalogued Hipparcos star'}</span>
-                <span>HIP {selected.hipparcosId}</span>
-              </div>
-              <h3>{starDisplayName(selected)}</h3>
-              <p className="sky-star-summary">{starContext.summary}</p>
-              {starContext.constellation && <p className="sky-star-constellation">Constellation: <strong>{starContext.constellation}</strong></p>}
-              <div className="sky-star-facts">
-                <div><small>Apparent brightness</small><strong>{selected.magnitude.toFixed(2)} mag</strong></div>
-                <div><small>Height above horizon</small><strong>{selected.altitudeDeg.toFixed(1)}°</strong></div>
-                <div><small>Compass bearing</small><strong>{starCompassDirection(selected.azimuthDeg)} · {selected.azimuthDeg.toFixed(1)}°</strong></div>
-              </div>
-              <p className="sky-star-math-note">
-                Lower magnitude numbers mean brighter-looking stars. Altitude is the angle above the ideal horizon;
-                azimuth is measured clockwise from north. The coordinates shown are for the selected location and UTC moment.
-              </p>
-              <a className="sky-star-catalog-link" href={starCatalogUrl(selected)}
-                target="_blank" rel="noopener noreferrer">
-                Verify HIP {selected.hipparcosId} in CDS SIMBAD <span aria-hidden="true">↗</span>
-              </a>
-              <button type="button" className="sky-inspector-clear" onClick={() => {
-                setPinnedHip(null)
-                setHoveredHip(null)
-              }}>
-                Clear selection
-              </button>
-            </>
-          ) : (
-            <div className="sky-inspector-placeholder">
-              <span className="sky-lab-eyebrow">02 / Meet a star</span>
-              <h3>Every point has a story.</h3>
-              <p>Hover over a star to inspect its identity, brightness, height and compass direction. Click to keep the details visible.</p>
-              <p>Not every star has a familiar name; every plotted point is linked to its actual Hipparcos catalogue number.</p>
-            </div>
-          )}
-        </section>
-        <aside className="sky-bright-star-list" aria-label="Stars to explore">
-          <h3>{named.length ? 'Named stars in this sky' : 'Bright stars in this sky'}</h3>
-          <p>Pick one to locate it in the chart. This list changes when you change the date or observing place.</p>
-          <div className="sky-star-shortcuts">
-            {suggestions.map((star) => (
-              <button type="button" key={star.hipparcosId}
-                className={selectedId === star.hipparcosId ? 'is-selected' : ''}
-                aria-pressed={pinnedHip === star.hipparcosId}
-                onMouseEnter={() => setHoveredHip(star.hipparcosId)}
-                onMouseLeave={() => setHoveredHip(null)}
-                onFocus={() => setHoveredHip(star.hipparcosId)}
-                onBlur={() => setHoveredHip(null)}
-                onClick={() => togglePinnedStar(star.hipparcosId)}>
-                <span>{starDisplayName(star)}</span><small>{star.magnitude.toFixed(1)} mag</small>
-              </button>
-            ))}
-            {!result && <small>Calculate the sky to see the visible stars.</small>}
-          </div>
-        </aside>
-      </div>
-    </div>
-  )
 }
 
 function SkyReferences() {
@@ -334,7 +154,7 @@ export function SkyLabPage() {
         <section className="sky-lab-hero">
           <p className="sky-lab-eyebrow">StarKeepsake / The observatory</p>
           <h1>Stand anywhere on Earth.<br/><em>Discover the sky above it.</em></h1>
-          <p>Pick an observing place, journey from the globe to the horizon, and change the date and time to see real calculated stars move across the sky.</p>
+          <p>Choose a city and fly from the globe into a first-person night sky. Turn to discover real calculated stars, colorful bright stars and the constellations people recognize.</p>
           <div className="sky-lab-progress"><span className={view === 'earth' ? 'is-active' : ''}>01 · The Earth</span><span className={view === 'sky' ? 'is-active' : ''}>02 · The Night Sky</span></div>
         </section>
 
@@ -368,14 +188,14 @@ export function SkyLabPage() {
               </button>
             </div>
             <div className="sky-current-time">{utcMoment.toLocaleString('en-US', { timeZone:'UTC', dateStyle:'full', timeStyle:'short' })} UTC</div>
-            <SkyPanorama result={result}/>
+            <SkyImmersiveView result={result}/>
             <p className="sky-loading-status" role="status">{loading ? 'Calculating the star field from Hipparcos and JPL data…' : dateError || error || (result
               ? `${result.calculation.selectedStars} actual plotted HIP stars · ${result.calculation.visibleCatalogStars} catalogue stars above the ideal horizon · exact time basis`
               : 'Choose a date and time to calculate the view.')}</p>
             <div className="sky-explainer-cards">
               <article><span>01 / Observer</span><h3>Where you stand matters</h3><p>Latitude and longitude determine your local horizon. Moving from Chicago to Sydney reveals a different portion of the celestial sphere.</p></article>
-              <article><span>02 / Earth rotates</span><h3>The stars appear to travel</h3><p>As Earth rotates, a star's apparent altitude and azimuth change. Each animation step requests a new astronomical calculation; transitions between steps are visual.</p></article>
-              <article><span>03 / Projection</span><h3>From sky to artwork</h3><p>This is a complete 360° altitude/azimuth panorama, not a camera's field of view. North is centered and the ideal horizon is the lower line.</p></article>
+              <article><span>02 / Earth rotates</span><h3>The stars appear to travel</h3><p>As Earth rotates, a star's apparent altitude and azimuth change. Each animation step requests a new astronomical calculation; the camera remains independently controllable.</p></article>
+              <article><span>03 / Projection</span><h3>From sky to artwork</h3><p>This is a first-person perspective sky camera, not the artwork projection. Drag to look in any direction; guides are drawn only when their HIP stars appear in the calculated sample.</p></article>
             </div>
           </section>
         )}
