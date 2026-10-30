@@ -32,13 +32,20 @@ export function SkyImmersiveView({ result, location }: Props) {
   const ignoreClick = useRef(false)
   const tourCamera = useRef({ heading: suggestedObserverHeading(result?.stars ?? []), pitch: 15 })
   const tourFrame = useRef<number | null>(null)
+  const introTimer = useRef<number | null>(null)
 
   // Show the camera freedom without requiring users to discover a hidden gesture.
   // This is only a client-side camera tour: astronomy positions stay untouched.
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const id = window.setTimeout(() => setDemoRun(1), 700)
-    return () => window.clearTimeout(id)
+    introTimer.current = window.setTimeout(() => {
+      introTimer.current = null
+      setDemoRun(1)
+    }, 700)
+    return () => {
+      if (introTimer.current !== null) window.clearTimeout(introTimer.current)
+      introTimer.current = null
+    }
   }, [])
 
   useEffect(() => {
@@ -70,6 +77,8 @@ export function SkyImmersiveView({ result, location }: Props) {
   }, [demoRun])
 
   function interruptTour() {
+    if (introTimer.current !== null) window.clearTimeout(introTimer.current)
+    introTimer.current = null
     if (tourFrame.current !== null) window.cancelAnimationFrame(tourFrame.current)
     tourFrame.current = null
     setTouring(false)
