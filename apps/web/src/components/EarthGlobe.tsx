@@ -151,11 +151,13 @@ export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
   const [center, setCenter] = useState({ latitude: selected.latitude, longitude: selected.longitude })
   const [zoom, setZoom] = useState(1)
   const [zooming, setZooming] = useState(false)
+  const travelTimer = useRef<number | null>(null)
+  useEffect(() => () => { if (travelTimer.current !== null) window.clearTimeout(travelTimer.current) }, [])
 
   const chooseLocation = (location: ExplorerLocation) => {
     setCenter({ latitude: location.latitude, longitude: location.longitude })
     onSelect(location)
-    setZoom(1)
+    enterSky()
   }
 
   useEffect(() => {
@@ -198,7 +200,6 @@ export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
       const y = CENTER - p.y * RADIUS
       if (Math.hypot(pos.x - x, pos.y - y) < 22) {
         chooseLocation(location)
-        enterSky()
         return
       }
     }
@@ -207,12 +208,12 @@ export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
   const enterSky = () => {
     if (zooming) return
     setZooming(true)
-    setZoom(1.4)
-    window.setTimeout(() => {
+    setZoom(3.25)
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    travelTimer.current = window.setTimeout(() => {
       onEnterSky()
-      setZooming(false)
-      setZoom(1)
-    }, 820)
+      travelTimer.current = null
+    }, reduced ? 40 : 1150)
   }
 
   return (
@@ -231,6 +232,11 @@ export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
             aria-label="Interactive globe. Drag to rotate, then click a highlighted city; or use the city buttons."
           />
         </div>
+        {zooming && <div className="globe-arrival-screen" role="status">
+          <span>DESCENDING TO THE OBSERVER</span>
+          <strong>{selected.name}</strong>
+          <small>Entering the sky above this location…</small>
+        </div>}
         <div className="globe-axis-label">EARTH / INTERACTIVE GLOBE</div>
         <div className="globe-drag-caption">Drag to rotate · Select a glowing marker</div>
       </div>
@@ -255,7 +261,7 @@ export function EarthGlobe({ selected, onSelect, onEnterSky }: Props) {
           <small>{selected.latitude.toFixed(2)}° latitude · {selected.longitude.toFixed(2)}° longitude</small>
         </div>
         <button type="button" className="sky-lab-primary" onClick={enterSky} disabled={zooming}>
-          {zooming ? 'Travelling to the observer…' : 'Travel down & view the sky'}
+          {zooming ? 'Approaching your location…' : 'Travel down & view the sky'}
           <span aria-hidden="true">↗</span>
         </button>
         <p className="globe-footnote">Illustrative 3D globe silhouettes; city coordinates are geographic. The sky calculation uses the real coordinates, not the globe illustration.</p>
