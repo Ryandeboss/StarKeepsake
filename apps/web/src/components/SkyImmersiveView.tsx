@@ -1,6 +1,8 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { AstronomyResult } from '../api'
+import type { ExplorerLocation } from '../skyExplorerData'
+import { getObserverScene, SkyCityHorizon } from './SkyCityHorizon'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, suggestedObserverHeading,
@@ -8,20 +10,85 @@ import {
 import { getStarContext, starCatalogUrl, starCompassDirection, starDisplayName, starDescription } from '../starDetails'
 import './SkyImmersiveView.css'
 
-type Props = { result: AstronomyResult | null }
+type Props = { result: AstronomyResult | null; location: ExplorerLocation }
 const wrapBearing = (value: number) => ((value % 360) + 360) % 360
 const clampPitch = (value: number) => Math.max(-8, Math.min(88, value))
 
-export function SkyImmersiveView({ result }: Props) {
+export function SkyImmersiveView({ result, location }: Props) {
   const [heading, setHeading] = useState(() => suggestedObserverHeading(result?.stars ?? []))
-  const [pitch, setPitch] = useState(() => clampPitch(result?.stars.find(star => NAMED_STAR_COLORS[star.hipparcosId])?.altitudeDeg ?? 24))
+  const [pitch, setPitch] = useState(15)
   const [fov, setFov] = useState(105)
   const [hoveredHip, setHoveredHip] = useState<number | null>(null)
   const [pinnedHip, setPinnedHip] = useState<number | null>(null)
   const [activePattern, setActivePattern] = useState<string | null>(null)
   const [showLines, setShowLines] = useState(true)
+  const [showScenery, setShowScenery] = useState(true)
+  const [showHint, setShowHint] = useState(true)
+  const [demoRun, setDemoRun] = useState(0)
+  const [touring, setTouring] = useState(false)
   const skyWindowRef = useRef<HTMLDivElement | null>(null)
   const drag = useRef<{ x: number; y: number; heading: number; pitch: number; moved: boolean } | null>(null)
+  const ignoreClick = useRef(false)
+  const tourCamera = useRef({ heading: suggestedObserverHeading(result?.stars ?? []), pitch: 15 })
+  const tourFrame = useRef<number | null>(null)
+
+  // Show the camera freedom without requiring users to discover a hidden gesture.
+  // This is only a client-side camera tour: astronomy positions stay untouched.
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const id = window.setTimeout(() => setDemoRun(1), 700)
+    return () => window.clearTimeout(id)
+  }, [])
+
+  useEffect(() => {
+    if (!demoRun) return
+    const base = tourCamera.current
+    let begun = 0
+    let announced = false
+    const tick = (now: number) => {
+      if (!announced) { setTouring(true); announced = true }
+      if (!begun) begun = now
+      const t = Math.min(1, (now - begun) / 3600)
+      // Oscillate to demonstrate both directions, then return to the start.
+      setHeading(wrapBearing(base.heading + Math.sin(t * Math.PI * 2) * 28))
+      setPitch(clampPitch(base.pitch + Math.sin(t * Math.PI) * 5))
+      if (t < 1) {
+        tourFrame.current = window.requestAnimationFrame(tick)
+      } else {
+        tourFrame.current = null
+        setTouring(false)
+        setHeading(base.heading)
+        setPitch(base.pitch)
+      }
+    }
+    tourFrame.current = window.requestAnimationFrame(tick)
+    return () => {
+      if (tourFrame.current !== null) window.cancelAnimationFrame(tourFrame.current)
+      tourFrame.current = null
+    }
+  }, [demoRun])
+
+  function interruptTour() {
+    if (tourFrame.current !== null) window.cancelAnimationFrame(tourFrame.current)
+    tourFrame.current = null
+    setTouring(false)
+    setShowHint(false)
+  }
+  function replayTour() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setShowHint(true)
+      return
+    }
+    if (tourFrame.current !== null) window.cancelAnimationFrame(tourFrame.current)
+    tourCamera.current = { heading, pitch }
+    setShowHint(true)
+    setDemoRun(run => run + 1)
+  }
+  function nudge(dx: number, dy: number) {
+    interruptTour()
+    setHeading(current => wrapBearing(current + dx))
+    setPitch(current => clampPitch(current + dy))
+  }
 
   const starByHip = useMemo(
     () => new Map<number, AstronomyResult['stars'][number]>(result?.stars.map(star => [star.hipparcosId, star] as const) ?? []),
@@ -43,16 +110,8 @@ export function SkyImmersiveView({ result }: Props) {
     framed: pattern.stars.filter(point => pointsByHip.has(point.hip)).length,
   })).sort((a, b) => b.found - a.found), [starByHip, pointsByHip])
 
-  const horizon = Array.from({ length: 29 }, (_, i) => {
-    const x = i / 28 * 1000
-    const delta = Math.atan((x - 500) / 500 * Math.tan(fov * Math.PI / 360)) * 180 / Math.PI
-    return projectObserverStar(heading + delta, 0, heading, pitch, fov).y
-  })
-  const groundPath = 'M 0 ' + horizon[0] +
-    horizon.map((y, i) => ' L ' + (i / 28 * 1000) + ' ' + y).join('') +
-    ' L 1000 600 L 0 600 Z'
-
   function facePattern(id: string) {
+    interruptTour()
     const pattern = SKY_PATTERNS.find(item => item.id === id)
     if (!pattern) return
     const anchors = pattern.stars.map(point => starByHip.get(point.hip)).filter(star => star !== undefined)
@@ -70,6 +129,7 @@ export function SkyImmersiveView({ result }: Props) {
     })
   }
   function faceStar(id: number) {
+    interruptTour()
     const star = starByHip.get(id)
     if (!star) return
     setHeading(wrapBearing(star.azimuthDeg))
@@ -78,6 +138,8 @@ export function SkyImmersiveView({ result }: Props) {
   }
   function startDrag(event: ReactPointerEvent<SVGSVGElement>) {
     if (event.button !== 0) return
+    interruptTour()
+    ignoreClick.current = false
     drag.current = { x: event.clientX, y: event.clientY, heading, pitch, moved: false }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
@@ -92,7 +154,13 @@ export function SkyImmersiveView({ result }: Props) {
     setPitch(clampPitch(start.pitch + dy * 0.15))
     setHoveredHip(null)
   }
-  function endDrag() { drag.current = null }
+  function endDrag() {
+    if (drag.current?.moved) {
+      ignoreClick.current = true
+      window.setTimeout(() => { ignoreClick.current = false }, 0)
+    }
+    drag.current = null
+  }
 
   return (
     <div className="immersive-observatory">
@@ -100,20 +168,29 @@ export function SkyImmersiveView({ result }: Props) {
         <div>
           <span className="immersive-eyebrow">Live calculated observer's view</span>
           <strong>Look around the night sky</strong>
-          <small>Drag to turn · Touch and swipe · Arrow keys to look around</small>
+          <small>First-person view · Drag or swipe the sky, or use the glowing arrows</small>
         </div>
-        <label className="immersive-toggle">
-          <input type="checkbox" checked={showLines} onChange={event => setShowLines(event.target.checked)}/>
-          Show constellation guides
-        </label>
+        <div className="immersive-toolbar-options">
+          <label className="immersive-toggle">
+            <input type="checkbox" checked={showLines} onChange={event => setShowLines(event.target.checked)}/>
+            Constellations
+          </label>
+          <label className="immersive-toggle">
+            <input type="checkbox" checked={showScenery} onChange={event => setShowScenery(event.target.checked)}/>
+            City scenery
+          </label>
+          <button type="button" className="immersive-replay-button" onClick={replayTour}>
+            ↻ Show me how to look around
+          </button>
+        </div>
       </div>
       <div ref={skyWindowRef} className="immersive-sky-window" tabIndex={0}
         aria-label="First-person sky view. Use arrow keys to pan left, right, up or down."
         onKeyDown={event => {
-          if (event.key === 'ArrowLeft') { event.preventDefault(); setHeading(wrapBearing(heading - 10)) }
-          if (event.key === 'ArrowRight') { event.preventDefault(); setHeading(wrapBearing(heading + 10)) }
-          if (event.key === 'ArrowUp') { event.preventDefault(); setPitch(clampPitch(pitch + 8)) }
-          if (event.key === 'ArrowDown') { event.preventDefault(); setPitch(clampPitch(pitch - 8)) }
+          if (event.key === 'ArrowLeft') { event.preventDefault(); nudge(-10, 0) }
+          if (event.key === 'ArrowRight') { event.preventDefault(); nudge(10, 0) }
+          if (event.key === 'ArrowUp') { event.preventDefault(); nudge(0, 8) }
+          if (event.key === 'ArrowDown') { event.preventDefault(); nudge(0, -8) }
         }}>
         <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice"
           role="img" aria-label="Perspective view of real calculated stars, with optional constellation guide lines"
@@ -161,7 +238,7 @@ export function SkyImmersiveView({ result }: Props) {
               onPointerLeave={() => setHoveredHip(null)}
               onFocus={() => setHoveredHip(star.hipparcosId)}
               onBlur={() => setHoveredHip(null)}
-              onClick={() => { if (!drag.current?.moved) setPinnedHip(current => current === star.hipparcosId ? null : star.hipparcosId) }}
+              onClick={() => { if (!ignoreClick.current) setPinnedHip(current => current === star.hipparcosId ? null : star.hipparcosId) }}
               onKeyDown={event => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault()
@@ -179,10 +256,26 @@ export function SkyImmersiveView({ result }: Props) {
               <title>{starDescription(star)}</title>
             </g>
           ))}
-          <path d={groundPath} fill="#061624" fillOpacity=".88" pointerEvents="none"/>
-          <path d={groundPath.split(' L 1000 600')[0]} fill="none" stroke="#a6a7a0" strokeOpacity=".3" pointerEvents="none"/>
+          {showScenery && <SkyCityHorizon location={location} heading={heading} pitch={pitch} fov={fov}/>}
+          {!showScenery && <path
+            d={`M0 ${projectObserverStar(heading, 0, heading, pitch, fov).y} H1000 V600 H0Z`}
+            fill="#061624" pointerEvents="none"/>}
         </svg>
         <div className="immersive-crosshair" aria-hidden="true">+</div>
+        {showHint && <div className="immersive-look-hint" role="status">
+          <span className="immersive-look-hint-eyebrow">{touring ? 'Watch the camera turn' : 'YOUR VIEW IS INTERACTIVE'}</span>
+          <strong>↔ Drag to look around ↕</strong>
+          <span>Swipe anywhere in the sky, or tap a direction arrow.</span>
+          <button type="button" onClick={() => { interruptTour(); skyWindowRef.current?.focus() }}>Got it</button>
+        </div>}
+        <button type="button" aria-label="Look left" className="immersive-nudge immersive-nudge-left" onClick={() => nudge(-22, 0)}>‹</button>
+        <button type="button" aria-label="Look right" className="immersive-nudge immersive-nudge-right" onClick={() => nudge(22, 0)}>›</button>
+        <button type="button" aria-label="Look higher" className="immersive-nudge immersive-nudge-up" onClick={() => nudge(0, 12)}>⌃</button>
+        <button type="button" aria-label="Look lower" className="immersive-nudge immersive-nudge-down" onClick={() => nudge(0, -12)}>⌄</button>
+        <div className="immersive-location-readout">
+          <strong>{location.name}</strong>
+          <small>{getObserverScene(location.id).title} · illustrative scenery, not an exact sightline</small>
+        </div>
         <div className="immersive-view-readout">LOOK {Math.round(heading)}° · UP {Math.round(pitch)}° · FOV {fov}°</div>
         {chosen && chosenPoint && (
           <div className="immersive-star-tooltip" role="status">
@@ -195,13 +288,13 @@ export function SkyImmersiveView({ result }: Props) {
         {!result && <div className="immersive-waiting" role="status">Calculating this sky…</div>}
       </div>
       <div className="immersive-view-controls">
-        <button type="button" onClick={() => setHeading(wrapBearing(heading - 18))}>← Turn left</button>
-        <button type="button" onClick={() => setHeading(wrapBearing(heading + 18))}>Turn right →</button>
-        <button type="button" onClick={() => setPitch(clampPitch(pitch + 12))}>↑ Look up</button>
-        <button type="button" onClick={() => setPitch(clampPitch(pitch - 12))}>↓ Look down</button>
+        <button type="button" onClick={() => nudge(-18, 0)}>← Turn left</button>
+        <button type="button" onClick={() => nudge(18, 0)}>Turn right →</button>
+        <button type="button" onClick={() => nudge(0, 12)}>↑ Look up</button>
+        <button type="button" onClick={() => nudge(0, -12)}>↓ Look down</button>
         <label>Field of view <input type="range" min="65" max="120" step="5" value={fov}
-          onChange={event => setFov(Number(event.target.value))} aria-label="Sky field of view"/></label>
-        <button type="button" onClick={() => { setHeading(180); setPitch(24); setFov(105); setActivePattern(null) }}>Reset view</button>
+          onChange={event => { interruptTour(); setFov(Number(event.target.value)) }} aria-label="Sky field of view"/></label>
+        <button type="button" onClick={() => { interruptTour(); setHeading(suggestedObserverHeading(result?.stars ?? [])); setPitch(15); setFov(105); setActivePattern(null) }}>Reset view</button>
       </div>
       <div className="immersive-educational-note">
         <span className="immersive-legend-star immersive-blue"/> Hot blue-white
@@ -210,7 +303,8 @@ export function SkyImmersiveView({ result }: Props) {
         <span className="immersive-legend-star immersive-neutral"/> Unclassified here
         <p>Color is shown for a curated group of identified stars; neutral white is used when our data has no verified color.
           Dot size follows apparent magnitude (brightness as seen from Earth), <strong>not physical star size</strong>.
-          Lines are modern illustrative guides, not objects in space or official constellation boundaries.</p>
+          Lines are modern illustrative guides, not objects in space or official constellation boundaries.
+          The local skylines are original, geographically inspired artwork, not photographs or landmark-accurate bearings.</p>
       </div>
       <div className="immersive-below">
         <div className="immersive-inspector">
