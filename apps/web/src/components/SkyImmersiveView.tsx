@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { AstronomyResult } from '../api'
 import type { ExplorerLocation } from '../skyExplorerData'
-import { getObserverScene, SkyCityHorizon } from './SkyCityHorizon'
+import { SkyCityHorizon } from './SkyCityHorizon'
+import { getObserverScene } from '../skyLandscapeData'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, suggestedObserverHeading,
