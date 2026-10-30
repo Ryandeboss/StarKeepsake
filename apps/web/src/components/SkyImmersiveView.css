@@ -1,0 +1,89 @@
+.immersive-observatory { color: #243e43; }
+.immersive-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 23px; background: #102732; color: #f6e8ce; border-radius: 12px 12px 0 0; }
+.immersive-toolbar > div { display: grid; gap: 6px; }
+.immersive-eyebrow { color: #d2a776; font: 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .14em; }
+.immersive-toolbar strong { font: 500 clamp(20px, 2.5vw, 30px) Georgia,serif; }
+.immersive-toolbar small { color: #b9ccca; font-size: 11px; }
+.immersive-toggle { display: flex; align-items: center; gap: 10px; color: #e8e9df; font-size: 12px; cursor: pointer; }
+.immersive-toggle input { width: 19px; height: 19px; accent-color: #caa16c; }
+.immersive-sky-window { position: relative; overflow: hidden; background: #030b1c; color: #f4e8d5; min-height: 250px; touch-action: pan-y; outline-offset: 3px; }
+.immersive-sky-window:focus-visible { outline: 3px solid #b98b4c; }
+.immersive-sky-window svg { display: block; width: 100%; aspect-ratio: 5/3; height: auto; touch-action: none; cursor: grab; user-select: none; }
+.immersive-sky-window svg:active { cursor: grabbing; }
+.immersive-star { cursor: crosshair; outline: none; }
+.immersive-star:focus-visible circle:nth-of-type(3) { stroke: #fff0bd; stroke-width: 3px; }
+.immersive-star-label { font: 12px ui-monospace,monospace; fill: #eff5f2; paint-order: stroke; stroke: #101d2d; stroke-width: 4px; stroke-linejoin: round; }
+.immersive-constellation-line { opacity: .66; pointer-events: none; transition: stroke 200ms ease; }
+.immersive-pattern-marker { stroke: #ffdeb0; stroke-width: 1.3px; fill: none; opacity: .9; pointer-events: none; }
+.immersive-crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: rgba(231,241,235,.38); font: 25px system-ui; pointer-events: none; }
+.immersive-view-readout { position: absolute; bottom: 17px; left: 19px; padding: 9px 13px; background: rgba(1,14,27,.69); border: 1px solid rgba(220,227,211,.22); border-radius: 20px; font: 11px ui-monospace,monospace; letter-spacing: .05em; pointer-events: none; }
+.immersive-star-tooltip { position: absolute; z-index: 3; top: 15px; right: 15px; max-width: min(315px,80%); display: grid; gap: 4px; background: rgba(6,26,37,.96); border: 1px solid rgba(249,214,161,.75); border-radius: 8px; padding: 13px 16px; pointer-events: none; box-shadow: 0 10px 35px rgba(0,0,0,.4); }
+.immersive-star-tooltip strong { font: 500 23px Georgia,serif; color: #ffe2af; }
+.immersive-star-tooltip span { font: 11px ui-monospace,monospace; color: #e0edeb; }
+.immersive-star-tooltip small { color: #b5cecc; font-size: 10px; }
+.immersive-waiting { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); border-radius: 5px; background: rgba(2,19,36,.9); color: #f9e5bf; font-size: 15px; padding: 15px; white-space: nowrap; }
+.immersive-view-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; background: #173542; padding: 14px 17px; color: #ecede5; }
+.immersive-view-controls button { border: 1px solid #6f8990; border-radius: 18px; padding: 9px 14px; background: #214653; color: #f4eee3; font-size: 11px; cursor: pointer; }
+.immersive-view-controls button:hover { background: #3c6371; }
+.immersive-view-controls label { display: flex; gap: 9px; align-items: center; font: 11px ui-monospace,monospace; }
+.immersive-view-controls input { accent-color: #edc78a; width: 120px; }
+.immersive-educational-note { padding: 14px 19px; border-bottom: 1px solid #375260; background: #122b37; color: #dbe7e4; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; }
+.immersive-educational-note p { flex-basis: 100%; color: #bfcecd; max-width: 97ch; line-height: 1.6; margin: 4px 0; }
+.immersive-legend-star { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-left: 12px; box-shadow: 0 0 10px currentColor; }
+.immersive-blue { background: #a9ceff; color: #a9ceff; }
+.immersive-white { background: #f8f5ed; color: #f8f5ed; }
+.immersive-orange { background: #ffa18c; color: #ffa18c; }
+.immersive-neutral { background: #ccc; color: #ccc; }
+.immersive-below { display: grid; grid-template-columns: 1.1fr .9fr; background: #122d39; color: #eaf1ea; border-radius: 0 0 10px 10px; overflow: hidden; }
+.immersive-inspector, .immersive-named-stars { padding: clamp(19px,3vw,31px); }
+.immersive-inspector { min-height: 220px; }
+.immersive-inspector h3, .immersive-named-stars h3 { font: 500 29px Georgia,serif; color: #ffdfab; margin: 12px 0; }
+.immersive-inspector p { line-height: 1.7; color: #d1dcda; font-size: 13px; max-width: 60ch; }
+.immersive-inspector a { display: inline-block; margin-top: 16px; color: #ffe3aa; font-size: 12px; text-underline-offset: 4px; }
+.immersive-facts { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; }
+.immersive-facts span { font-size: 11px; color: #c2d4d3; }
+.immersive-facts strong { color: #fff0c5; }
+.immersive-named-stars { border-left: 1px solid #39525f; }
+.immersive-named-stars h3 { font-size: 23px; }
+.immersive-star-shortcuts { display: flex; flex-wrap: wrap; gap: 8px; }
+.immersive-star-shortcuts button { border: 1px solid #506a74; border-radius: 20px; background: #244653; color: #f0e7da; padding: 9px 12px; cursor: pointer; font-size: 11px; }
+.immersive-star-shortcuts button:hover { background: #38616b; }
+.immersive-star-shortcuts small { margin-left: 6px; color: #bbceca; }
+.immersive-patterns { padding: clamp(35px, 5vw, 62px) 0 42px; }
+.immersive-patterns-heading { max-width: 780px; }
+.immersive-patterns-heading h2 { font: 500 clamp(30px,4vw,52px) Georgia,serif; letter-spacing: -.025em; color: #214246; margin: 12px 0; }
+.immersive-patterns-heading p { color: #647775; line-height: 1.8; font-size: 14px; }
+.immersive-pattern-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 18px; margin-top: 28px; }
+.immersive-pattern-card { display: flex; flex-direction: column; min-width: 0; padding: clamp(19px,3vw,32px); background: #183540; color: #ebf0e8; border-radius: 10px; border: 2px solid transparent; }
+.immersive-pattern-card.is-active { border-color: #e5bd7f; }
+.immersive-card-caption { font: 10px ui-monospace,monospace; letter-spacing: .13em; color: #d8b37f; text-transform: uppercase; }
+.immersive-pattern-card h3 { font: 500 33px Georgia,serif; color: #ffe6b8; margin: 11px 0 2px; }
+.immersive-card-subtitle { color: #b6d5d1; font: 12px ui-monospace,monospace; }
+.immersive-pattern-sketch { width: 100%; max-width: 320px; height: 186px; background: radial-gradient(circle at 50% 50%,#264755,#101f30); border-radius: 8px; margin: 19px auto; padding: 12px 22px; box-sizing: border-box; }
+.immersive-pattern-card p { font-size: 12px; line-height: 1.7; color: #dae7e2; margin: 8px 0; }
+.immersive-pattern-card p strong { color: #f1d5a9; }
+.immersive-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 13px; flex-wrap: wrap; margin-top: auto; padding-top: 23px; }
+.immersive-card-footer span { font-size: 10px; color: #bdcfce; max-width: 24ch; }
+.immersive-card-footer button { padding: 11px 16px; border-radius: 24px; border: 1px solid #efcc93; background: #ebcea0; color: #1f3f42; font-size: 11px; font-weight: 700; cursor: pointer; }
+.immersive-card-footer button:disabled { opacity: .4; cursor: not-allowed; }
+.immersive-card-footer button:not(:disabled):hover { background: #ffe7c1; }
+.immersive-pattern-source { margin: 20px 0 0; display: flex; gap: 9px 16px; align-items: center; flex-wrap: wrap; font-size: 11px; color: #617473; }
+.immersive-pattern-source a { color: #1d5558; text-underline-offset: 4px; font-weight: 700; }
+.immersive-view-controls button:focus-visible, .immersive-pattern-card button:focus-visible,
+.immersive-star-shortcuts button:focus-visible { outline: 3px solid #f7c889; outline-offset: 3px; }
+@media (max-width: 820px) {
+  .immersive-below, .immersive-pattern-grid { grid-template-columns: 1fr; }
+  .immersive-named-stars { border-left: 0; border-top: 1px solid #39525f; }
+  .immersive-toolbar { align-items: start; flex-direction: column; }
+  .immersive-sky-window svg { aspect-ratio: 5/3; }
+}
+@media (max-width: 550px) {
+  .immersive-sky-window svg { aspect-ratio: 4/3; }
+  .immersive-view-controls { gap: 7px; }
+  .immersive-view-controls button { flex-grow: 1; }
+  .immersive-view-readout { font-size: 9px; }
+  .immersive-star-label { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-constellation-line { transition: none; }
+}
