@@ -37,13 +37,20 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
   const { physicalArtwork, regions } = designSpec
   const activeStarId = hoveredStarId ?? pinnedStarId
   const activeStar = designSpec.stars.find((star) => star.hipparcosId === activeStarId)
-  const activeStarTooltipPosition = activeStar ? {
-    left: `${activeStar.xMm / physicalArtwork.widthMm * 100}%`,
-    top: `${activeStar.yMm / physicalArtwork.heightMm * 100}%`,
-    transform: `translate(${activeStar.xMm > physicalArtwork.widthMm / 2 ? '-100%' : '0%'}, ${activeStar.yMm > physicalArtwork.heightMm / 3 ? '-100%' : '0%'})`,
-    marginLeft: activeStar.xMm > physicalArtwork.widthMm / 2 ? -12 : 12,
-    marginTop: activeStar.yMm > physicalArtwork.heightMm / 3 ? -12 : 12,
-  } as CSSProperties : undefined
+  const activeStarTooltipPosition = activeStar ? (() => {
+    const starX = millimetersToPixels(activeStar.xMm, displayWidthPx, physicalArtwork.widthMm)
+    const starY = millimetersToPixels(activeStar.yMm, displayWidthPx, physicalArtwork.widthMm)
+    const tooltipWidth = Math.min(188, Math.max(80, displayWidthPx - 16))
+    const proposedX = starX > displayWidthPx / 2 ? starX - tooltipWidth - 10 : starX + 10
+    const skyBottom = millimetersToPixels(
+      regions.sky.yMm + regions.sky.heightMm, displayWidthPx, physicalArtwork.widthMm,
+    )
+    return {
+      width: tooltipWidth,
+      left: Math.max(6, Math.min(proposedX, displayWidthPx - tooltipWidth - 6)),
+      top: Math.max(6, Math.min(starY + 8, skyBottom - 74)),
+    } as CSSProperties
+  })() : undefined
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current
