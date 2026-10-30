@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { displayRectStyle, millimetersToPixels, pointToDisplayPixels, rectToDisplayPixels } from '../geometry'
 import type { DesignSpec } from '../designSpec'
 import { croppedImageStyle } from '../photoCrop'
-import { starDescription, starDisplayName } from '../starDetails'
+import { getStarContext, starCatalogUrl, starCompassDirection, starDescription, starDisplayName } from '../starDetails'
 
 type StarKeepsakePreviewProps = {
   designSpec: DesignSpec
@@ -263,8 +263,13 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
         {exploreStars && activeStar && (
           <div className="star-information" role="status">
             <strong>{starDisplayName(activeStar)}</strong>
-            <span>HIP {activeStar.hipparcosId} · magnitude {activeStar.magnitude.toFixed(2)}</span>
-            <span>Altitude {activeStar.altitudeDeg.toFixed(1)}° · azimuth {activeStar.azimuthDeg.toFixed(1)}°</span>
+            <span>HIP {activeStar.hipparcosId} · apparent magnitude {activeStar.magnitude.toFixed(2)}</span>
+            <span>Altitude {activeStar.altitudeDeg.toFixed(1)}° above the ideal horizon</span>
+            <span>Azimuth {activeStar.azimuthDeg.toFixed(1)}° · {starCompassDirection(activeStar.azimuthDeg)}</span>
+            <span>{getStarContext(activeStar).summary}</span>
+            <a href={starCatalogUrl(activeStar)} target="_blank" rel="noopener noreferrer">
+              Verify this HIP star in CDS SIMBAD
+            </a>
           </div>
         )}
         <a className="sky-lab-launch" href="/sky-lab" target="_blank" rel="noopener noreferrer">
