@@ -1,25 +1,8 @@
-import { projectObserverStar } from '../skyImmersiveData'
 import type { ExplorerLocation } from '../skyExplorerData'
+import { getObserverScene, observerHorizonY } from '../skyLandscapeData'
 
-// The horizon below is an original location-inspired illustration, not a
-// georeferenced photograph or measured skyline. Azimuth never determines real
-// landmark bearings in this artwork; only stars use measured sky coordinates.
-export const OBSERVER_SCENES = {
-  chicago: { title: 'Chicago lakefront', terrain: 'lake', landmark: 'Willis Tower', seed: 11 },
-  london: { title: 'London and the Thames', terrain: 'river', landmark: 'Elizabeth Tower', seed: 23 },
-  tokyo: { title: 'Tokyo skyline', terrain: 'mountains', landmark: 'Tokyo Skytree', seed: 37 },
-  sydney: { title: 'Sydney Harbour', terrain: 'harbour', landmark: 'Harbour Bridge and Opera House', seed: 41 },
-  capetown: { title: 'Cape Town foothills', terrain: 'mountains', landmark: 'Table Mountain', seed: 53 },
-  rio: { title: 'Rio de Janeiro bay', terrain: 'harbour', landmark: 'Sugarloaf Mountain', seed: 67 },
-  reykjavik: { title: 'Reykjavík coast', terrain: 'coast', landmark: 'Hallgrímskirkja', seed: 71 },
-  mumbai: { title: 'Mumbai waterfront', terrain: 'coast', landmark: 'Gateway of India', seed: 83 },
-} as const
-
-export type SceneId = keyof typeof OBSERVER_SCENES
-export function getObserverScene(id: string) {
-  return OBSERVER_SCENES[id as SceneId] ?? OBSERVER_SCENES.chicago
-}
-
+// Original city-inspired illustration. Astronomical star positions alone are
+// georeferenced; no exact landmark bearings are claimed.
 const wet = new Set(['lake', 'river', 'harbour', 'coast'])
 const noise = (n: number, seed: number) => {
   const v = Math.sin((n + seed) * 78.233) * 43758.5453
