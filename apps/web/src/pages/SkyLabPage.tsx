@@ -6,7 +6,7 @@ import { SiteHeader } from '../components/SiteHeader'
 import { INITIAL_DESIGN_SPEC } from '../designSpec'
 import { EXPLORER_LOCATIONS } from '../skyExplorerData'
 import type { ExplorerLocation } from '../skyExplorerData'
-import { starDisplayName, starDescription } from '../starDetails'
+import { NAMED_HIPPARCOS_STARS, getStarContext, starCatalogUrl, starCompassDirection, starDisplayName, starDescription } from '../starDetails'
 import './SkyLabPage.css'
 
 function stepUtc(date: string, time: string, hours: number): { date: string; time: string } {
@@ -16,11 +16,28 @@ function stepUtc(date: string, time: string, hours: number): { date: string; tim
 }
 
 function SkyPanorama({ result }: { result: AstronomyResult | null }) {
-  const [selectedHip, setSelectedHip] = useState<number | null>(null)
-  const selected = result?.stars.find((star) => star.hipparcosId === selectedHip)
+  const [hoveredHip, setHoveredHip] = useState<number | null>(null)
+  const [pinnedHip, setPinnedHip] = useState<number | null>(null)
+  const selectedId = hoveredHip ?? pinnedHip
+  const selected = result?.stars.find((star) => star.hipparcosId === selectedId)
+  const starContext = selected ? getStarContext(selected) : null
+  const named = result?.stars
+    .filter((star) => Boolean(NAMED_HIPPARCOS_STARS[star.hipparcosId]))
+    .sort((a, b) => a.magnitude - b.magnitude)
+    .slice(0, 8) ?? []
+  const brightest = result?.stars.slice().sort((a, b) => a.magnitude - b.magnitude).slice(0, 5) ?? []
+  const suggestions = named.length ? named : brightest
+
+  function togglePinnedStar(id: number) {
+    setPinnedHip((current) => current === id ? null : id)
+  }
 
   return (
     <div className="sky-panorama">
+      <div className="sky-panorama-instructions">
+        <span>Live catalog stars · Select any point</span>
+        <span>Every star has a HIP identifier</span>
+      </div>
       <svg viewBox="0 0 1000 455" role="img"
         aria-label="Calculated panoramic above-horizon Hipparcos stars, west left, north center, east right">
         <defs>
@@ -54,17 +71,28 @@ function SkyPanorama({ result }: { result: AstronomyResult | null }) {
           const x = (((star.azimuthDeg + 180) % 360) / 360) * 1000
           const y = (90 - star.altitudeDeg) / 90 * 400
           const radius = Math.max(1.2, 3.5 - star.magnitude * .38)
+          const active = selectedId === star.hipparcosId
           return (
-            <g key={star.hipparcosId} className="sky-panorama-star"
-              onMouseEnter={() => setSelectedHip(star.hipparcosId)}
-              onMouseLeave={() => setSelectedHip(null)}
-              onFocus={() => setSelectedHip(star.hipparcosId)}
-              onBlur={() => setSelectedHip(null)}
-              onClick={() => setSelectedHip(star.hipparcosId)}
-              tabIndex={0} role="button" aria-label={starDescription(star)}>
-              <circle cx={x} cy={y} r={Math.max(11, radius + 6)} fill="transparent"/>
+            <g key={star.hipparcosId}
+              className={`sky-panorama-star ${active ? 'is-inspected' : ''}`}
+              onMouseEnter={() => setHoveredHip(star.hipparcosId)}
+              onMouseLeave={() => setHoveredHip(null)}
+              onFocus={() => setHoveredHip(star.hipparcosId)}
+              onBlur={() => setHoveredHip(null)}
+              onClick={() => togglePinnedStar(star.hipparcosId)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  togglePinnedStar(star.hipparcosId)
+                }
+              }}
+              tabIndex={0} role="button"
+              aria-pressed={pinnedHip === star.hipparcosId}
+              aria-label={starDescription(star)}>
+              <circle cx={x} cy={y} r={Math.max(13, radius + 7)} fill="transparent"/>
               <circle cx={x} cy={y} r={radius + 3} fill="#ffe9b5" opacity=".3" filter="url(#sky-lab-glow)"/>
               <circle cx={x} cy={y} r={radius} fill="#fff1cd"/>
+              {active && <circle cx={x} cy={y} r="13" fill="none" stroke="#f4dba4" strokeWidth="1.5" />}
               <title>{starDescription(star)}</title>
             </g>
           )
@@ -80,14 +108,132 @@ function SkyPanorama({ result }: { result: AstronomyResult | null }) {
           ALL-SKY HORIZON PANORAMA
         </text>
       </svg>
-      <div className="sky-panorama-info" aria-live="polite">
-        {selected ? (
-          <span><strong>{starDisplayName(selected)}</strong> · HIP {selected.hipparcosId} · altitude {selected.altitudeDeg.toFixed(1)}° · azimuth {selected.azimuthDeg.toFixed(1)}° · magnitude {selected.magnitude.toFixed(2)}</span>
-        ) : (
-          <span>Hover, tap, or focus a plotted star to inspect its real catalogue coordinates.</span>
-        )}
+      <div className="sky-star-explorer">
+        <section className="sky-star-inspector" aria-label="Selected star details">
+          {selected && starContext ? (
+            <>
+              <div className="sky-inspector-eyebrow">
+                <span>{starContext.constellation ? 'Named Hipparcos star' : 'Catalogued Hipparcos star'}</span>
+                <span>HIP {selected.hipparcosId}</span>
+              </div>
+              <h3>{starDisplayName(selected)}</h3>
+              <p className="sky-star-summary">{starContext.summary}</p>
+              {starContext.constellation && <p className="sky-star-constellation">Constellation: <strong>{starContext.constellation}</strong></p>}
+              <div className="sky-star-facts">
+                <div><small>Apparent brightness</small><strong>{selected.magnitude.toFixed(2)} mag</strong></div>
+                <div><small>Height above horizon</small><strong>{selected.altitudeDeg.toFixed(1)}°</strong></div>
+                <div><small>Compass bearing</small><strong>{starCompassDirection(selected.azimuthDeg)} · {selected.azimuthDeg.toFixed(1)}°</strong></div>
+              </div>
+              <p className="sky-star-math-note">
+                Lower magnitude numbers mean brighter-looking stars. Altitude is the angle above the ideal horizon;
+                azimuth is measured clockwise from north. The coordinates shown are for the selected location and UTC moment.
+              </p>
+              <a className="sky-star-catalog-link" href={starCatalogUrl(selected)}
+                target="_blank" rel="noopener noreferrer">
+                Verify HIP {selected.hipparcosId} in CDS SIMBAD <span aria-hidden="true">↗</span>
+              </a>
+              <button type="button" className="sky-inspector-clear" onClick={() => {
+                setPinnedHip(null)
+                setHoveredHip(null)
+              }}>
+                Clear selection
+              </button>
+            </>
+          ) : (
+            <div className="sky-inspector-placeholder">
+              <span className="sky-lab-eyebrow">02 / Meet a star</span>
+              <h3>Every point has a story.</h3>
+              <p>Hover over a star to inspect its identity, brightness, height and compass direction. Click to keep the details visible.</p>
+              <p>Not every star has a familiar name; every plotted point is linked to its actual Hipparcos catalogue number.</p>
+            </div>
+          )}
+        </section>
+        <aside className="sky-bright-star-list" aria-label="Stars to explore">
+          <h3>{named.length ? 'Named stars in this sky' : 'Bright stars in this sky'}</h3>
+          <p>Pick one to locate it in the chart. This list changes when you change the date or observing place.</p>
+          <div className="sky-star-shortcuts">
+            {suggestions.map((star) => (
+              <button type="button" key={star.hipparcosId}
+                className={selectedId === star.hipparcosId ? 'is-selected' : ''}
+                aria-pressed={pinnedHip === star.hipparcosId}
+                onMouseEnter={() => setHoveredHip(star.hipparcosId)}
+                onMouseLeave={() => setHoveredHip(null)}
+                onFocus={() => setHoveredHip(star.hipparcosId)}
+                onBlur={() => setHoveredHip(null)}
+                onClick={() => togglePinnedStar(star.hipparcosId)}>
+                <span>{starDisplayName(star)}</span><small>{star.magnitude.toFixed(1)} mag</small>
+              </button>
+            ))}
+            {!result && <small>Calculate the sky to see the visible stars.</small>}
+          </div>
+        </aside>
       </div>
     </div>
+  )
+}
+
+function SkyReferences() {
+  return (
+    <section className="sky-references" aria-labelledby="sky-reference-heading">
+      <div className="sky-references-intro">
+        <span className="sky-lab-eyebrow">Compare the calculation / Real world evidence</span>
+        <h2 id="sky-reference-heading">Check the science. See the real sky.</h2>
+        <p>These independently maintained astronomy resources and actual NASA photographs help explain why the sky changes
+          with your location and time. They are references—not a claim that an image exactly matches your selected moment.
+          StarKeepsake is not affiliated with or endorsed by NASA, ESA or Stellarium.</p>
+      </div>
+      <div className="sky-reference-tools">
+        <article>
+          <span>NASA / Interactive visualization</span>
+          <h3>NASA's Eyes: Telescope Mode</h3>
+          <p>NASA lets visitors choose a point on Earth and explore the sky and constellations above that place. NASA's guide describes it as a view of the sky <em>right now</em>.</p>
+          <a href="https://eyes.nasa.gov/apps/solar-system/" target="_blank" rel="noopener noreferrer">Explore NASA's Eyes <span aria-hidden="true">↗</span></a>
+          <a className="sky-reference-secondary" href="https://science.nasa.gov/skywatching/" target="_blank" rel="noopener noreferrer">Read NASA's skywatching guide</a>
+        </article>
+        <article>
+          <span>Open-source planetarium / Compare by date and time</span>
+          <h3>Stellarium Web</h3>
+          <p>An independent, widely used astronomy simulator where you can set your own location, date and time and explore constellations and star names.</p>
+          <a href="https://stellarium-web.org/" target="_blank" rel="noopener noreferrer">Open Stellarium Web <span aria-hidden="true">↗</span></a>
+          <a className="sky-reference-secondary" href="https://itu.physics.uiowa.edu/labs/foundational/exploring-sky-i/using-stellarium-web" target="_blank" rel="noopener noreferrer">University of Iowa instructions</a>
+        </article>
+      </div>
+      <div className="sky-reference-photo-heading">
+        <h3>Actual star fields, photographed by astronauts</h3>
+        <p>Long-exposure photographs capture many more stars and colors than a person may see unaided.
+          These examples were taken from orbit, not from your selected city.</p>
+      </div>
+      <div className="sky-photo-gallery">
+        <a href="https://svs.gsfc.nasa.gov/31347/" target="_blank" rel="noopener noreferrer">
+          <img loading="lazy" src="https://svs.gsfc.nasa.gov/vis/a030000/a031300/a031347/pettit-star-field.jpg"
+            alt="NASA astronaut Don Pettit's real Milky Way star-field photograph with atmospheric glow from the ISS" />
+          <div><span>NASA Scientific Visualization Studio</span><strong>Milky Way and Southern Cross from space</strong>
+            <small>Photograph: Don Pettit · Image processing: Babak Tafreshi</small></div>
+        </a>
+        <a href="https://svs.gsfc.nasa.gov/31347/" target="_blank" rel="noopener noreferrer">
+          <img loading="lazy" src="https://svs.gsfc.nasa.gov/vis/a030000/a031300/a031347/star-field-showing-m31-and-m33.jpg"
+            alt="Real astronaut photograph featuring stars and Andromeda over the glowing curved Earth" />
+          <div><span>NASA Scientific Visualization Studio</span><strong>Andromeda in a photographed star field</strong>
+            <small>Photograph: NASA astronaut Don Pettit</small></div>
+        </a>
+        <a href="https://science.nasa.gov/skywatching/" target="_blank" rel="noopener noreferrer">
+          <img loading="lazy"
+            src="https://assets.science.nasa.gov/dynamicimage/assets/science/psd/solar-system/skywatching/2025/april/orion_on_the_horizon_credit_nasa_preston_dyches.jpg?crop=faces%2Cfocalpoint&amp;fit=crop&amp;h=4024&amp;w=6048"
+            alt="NASA photograph of real stars in Orion rising above a rural landscape" />
+          <div><span>NASA Skywatching</span><strong>Orion above the horizon, from Earth</strong>
+            <small>Photo: NASA / Preston Dyches</small></div>
+        </a>
+      </div>
+      <p className="sky-reference-matched-note">
+        <strong>How scientists validate a star field:</strong> NASA describes matching an astronaut's
+        photographed stars with charts using a precisely known time and location. That is the
+        same general observational idea behind recalculating stars here; our illustration has
+        not been independently matched to a photograph of your chosen sky.
+        <a href="https://www.nasa.gov/image-article/stargazing-from-international-space-station/" target="_blank" rel="noopener noreferrer">
+          Read NASA's example <span aria-hidden="true">↗</span>
+        </a>
+      </p>
+    </section>
   )
 }
 
@@ -210,6 +356,8 @@ export function SkyLabPage() {
             </div>
           </section>
         )}
+
+        <SkyReferences />
 
         <section className="sky-history">
           <div><p className="sky-lab-eyebrow">A practice more than 3,000 years old</p><h2>Humans have been finding order in the stars for millennia.</h2></div>
