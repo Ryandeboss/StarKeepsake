@@ -209,3 +209,5 @@
   .earth-globe-zoom { transition: none; }
   .globe-arrival-screen { animation: none; }
 }
+
+.sky-observer-awaiting { min-height: 340px; display: grid; place-items: center; text-align: center; padding: 26px; color: #f6e6c4; border-radius: 8px; background: radial-gradient(ellipse at 50% 20%,#234758,#07162b); font: 500 clamp(18px,2.5vw,26px) Georgia,serif; }
