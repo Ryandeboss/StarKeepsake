@@ -20,6 +20,21 @@ export const NAMED_STAR_COLORS: Readonly<Record<number, { color: string; categor
   102098: { color: '#b4d8ff', category: 'blue-white supergiant' },
   3179: { color: '#ffca9b', category: 'orange giant' },
   54061: { color: '#ffcf9a', category: 'orange giant' },
+  25336: { color: '#aed1ff', category: 'blue-white' },
+  25930: { color: '#b8d7ff', category: 'blue-white' },
+  26311: { color: '#b1d2ff', category: 'blue-white supergiant' },
+  26727: { color: '#b8d7ff', category: 'blue-white' },
+  27366: { color: '#aed1ff', category: 'blue-white supergiant' },
+  53910: { color: '#eaf0ff', category: 'white' },
+  58001: { color: '#eff3ff', category: 'white' },
+  59774: { color: '#f6f5ff', category: 'white' },
+  62956: { color: '#f6f5ff', category: 'white' },
+  65378: { color: '#f6f5ff', category: 'white' },
+  67301: { color: '#b2d3ff', category: 'blue-white' },
+  746: { color: '#ffedcb', category: 'yellow-white' },
+  4427: { color: '#b4d6ff', category: 'blue-white' },
+  6686: { color: '#eff3ff', category: 'white' },
+  8886: { color: '#bbd9ff', category: 'blue-white' },
 }
 
 export function starAppearance(star: Pick<DesignStar, 'hipparcosId' | 'magnitude'>): {
