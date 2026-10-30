@@ -998,3 +998,34 @@
 }
 .sky-lab-launch:hover { background: #183c3e; }
 .sky-lab-launch:focus-visible { outline: 3px solid #d8ad6b; outline-offset: 3px; }
+
+/* The frame's physical-star dots are always inspectable in Classic mode.
+   Keep the floating label within even narrow custom frame previews. */
+.frame-star-tooltip {
+  position: absolute;
+  z-index: 9;
+  padding: 9px 10px;
+  border: 1px solid rgba(249,224,169,.75);
+  border-radius: 5px;
+  background: rgba(10,29,39,.97);
+  box-shadow: 0 5px 17px rgba(0,0,0,.4);
+  color: #fff1d1;
+  display: grid;
+  gap: 3px;
+  line-height: 1.35;
+  pointer-events: none;
+  font-size: 10px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.frame-star-tooltip strong {
+  font: 600 13px Georgia, serif;
+  color: #ffe1a5;
+}
+.frame-star-tooltip small { color: #edf0e2; font-size: 9px; }
+.star-information a {
+  color: #204f55;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 700;
+}
