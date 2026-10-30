@@ -188,7 +188,7 @@ export function SkyLabPage() {
               </button>
             </div>
             <div className="sky-current-time">{utcMoment.toLocaleString('en-US', { timeZone:'UTC', dateStyle:'full', timeStyle:'short' })} UTC</div>
-            {result ? <SkyImmersiveView result={result}/> : <div className="sky-observer-awaiting" role="status">Calculating the observer's sky and star positions…</div>}
+            {result ? <SkyImmersiveView result={result} location={selected}/> : <div className="sky-observer-awaiting" role="status">Calculating the observer's sky and star positions…</div>}
             <p className="sky-loading-status" role="status">{loading ? 'Calculating the star field from Hipparcos and JPL data…' : dateError || error || (result
               ? `${result.calculation.selectedStars} actual plotted HIP stars · ${result.calculation.visibleCatalogStars} catalogue stars above the ideal horizon · exact time basis`
               : 'Choose a date and time to calculate the view.')}</p>
