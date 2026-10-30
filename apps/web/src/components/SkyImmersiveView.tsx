@@ -124,6 +124,7 @@ export function SkyImmersiveView({ result, location }: Props) {
 
   function facePattern(id: string) {
     interruptTour()
+    setGroundView(false)
     const pattern = SKY_PATTERNS.find(item => item.id === id)
     if (!pattern) return
     const anchors = pattern.stars.map(point => starByHip.get(point.hip)).filter(star => star !== undefined)
@@ -142,6 +143,7 @@ export function SkyImmersiveView({ result, location }: Props) {
   }
   function faceStar(id: number) {
     interruptTour()
+    setGroundView(false)
     const star = starByHip.get(id)
     if (!star) return
     setHeading(wrapBearing(star.azimuthDeg))
