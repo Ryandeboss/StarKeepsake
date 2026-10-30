@@ -92,3 +92,47 @@
 .immersive-observatory { animation: immersive-arrival 700ms ease both; }
 @keyframes immersive-arrival { from { opacity: .15; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .immersive-observatory { animation: none; } }
+
+
+/* A visible first-person camera tutorial, not a hidden interaction. */
+.immersive-toolbar-options { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px 17px; }
+.immersive-replay-button { border: 1px solid #bca87f; color: #ffe7bf; background: #254654; padding: 10px 13px; border-radius: 24px; font-size: 11px; cursor: pointer; }
+.immersive-replay-button:hover { background: #41606a; }
+.immersive-look-hint { position: absolute; z-index: 4; top: 12%; left: 50%; transform: translateX(-50%); width: min(355px,67%); text-align: center; padding: 17px 19px; border: 1px solid rgba(250,217,152,.72); border-radius: 12px; background: rgba(6,26,42,.92); color: #f8edce; box-shadow: 0 18px 45px rgba(0,0,0,.4); display: grid; justify-items: center; gap: 8px; }
+.immersive-look-hint-eyebrow { color: #f4ca8a; font: 10px ui-monospace,monospace; letter-spacing: .16em; }
+.immersive-look-hint strong { font: 500 clamp(19px,2.5vw,26px) Georgia,serif; }
+.immersive-look-hint > span:last-of-type { font-size: 11px; color: #d8e7e5; line-height: 1.5; }
+.immersive-look-hint button { border: 1px solid #f6d8a3; border-radius: 18px; background: #eacb94; color: #1e3c43; padding: 8px 19px; cursor: pointer; font-size: 11px; font-weight: 700; }
+.immersive-look-hint button:hover { background: #fbe7ba; }
+.immersive-nudge { position: absolute; z-index: 5; width: 48px; height: 58px; border: 1px solid rgba(246,221,167,.73); border-radius: 16px; background: rgba(13,39,55,.73); color: #ffe8b9; font: 500 40px/1 Georgia,serif; cursor: pointer; display: grid; place-items: center; text-shadow: 0 0 10px rgba(255,225,159,.8); box-shadow: 0 0 24px rgba(243,211,145,.12); transition: transform 180ms ease,background 180ms ease; }
+.immersive-nudge:hover { background: rgba(48,84,95,.94); transform: scale(1.08); }
+.immersive-nudge-left { left: 12px; top: 50%; translate: 0 -50%; }
+.immersive-nudge-right { right: 12px; top: 50%; translate: 0 -50%; }
+.immersive-nudge-up { left: 50%; top: 9px; translate: -50% 0; width: 64px; height: 38px; }
+.immersive-nudge-down { left: 50%; bottom: 11px; translate: -50% 0; width: 64px; height: 38px; }
+.immersive-nudge-left,.immersive-nudge-right { animation: immersive-nudge-pulse 2.3s ease-in-out 2; }
+@keyframes immersive-nudge-pulse {
+  0%,100% { box-shadow: 0 0 15px rgba(243,211,145,.12); }
+  50% { box-shadow: 0 0 30px rgba(250,224,155,.48); }
+}
+.immersive-location-readout { position: absolute; z-index: 2; right: 18px; bottom: 17px; display: grid; gap: 4px; text-align: right; max-width: 42%; padding: 10px 12px; border-radius: 8px; background: rgba(3,22,34,.73); pointer-events: none; }
+.immersive-location-readout strong { color: #ffdfab; font: 500 18px Georgia,serif; }
+.immersive-location-readout small { color: #cbddd8; font-size: 10px; line-height: 1.45; }
+.immersive-nudge:focus-visible,.immersive-look-hint button:focus-visible,.immersive-replay-button:focus-visible { outline: 3px solid #ffde9d; outline-offset: 3px; }
+@media (max-width: 680px) {
+  .immersive-toolbar-options { justify-content: flex-start; }
+  .immersive-nudge { width: 37px; height: 47px; font-size: 32px; border-radius: 11px; }
+  .immersive-nudge-up,.immersive-nudge-down { width: 52px; height: 33px; }
+  .immersive-nudge-left { left: 5px; }
+  .immersive-nudge-right { right: 5px; }
+  .immersive-look-hint { width: min(270px,70%); top: 12%; padding: 12px; gap: 5px; }
+  .immersive-look-hint strong { font-size: 18px; }
+  .immersive-look-hint > span:last-of-type { font-size: 10px; }
+  .immersive-location-readout { bottom: 55px; right: 9px; max-width: 50%; }
+  .immersive-location-readout strong { font-size: 15px; }
+  .immersive-location-readout small { font-size: 8px; }
+  .immersive-view-readout { bottom: 18px; left: 9px; max-width: 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-nudge { animation: none; transition: none; }
+}
