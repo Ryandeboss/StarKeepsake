@@ -21,6 +21,17 @@ function SkyPanorama({ result }: { result: AstronomyResult | null }) {
   const selectedId = hoveredHip ?? pinnedHip
   const selected = result?.stars.find((star) => star.hipparcosId === selectedId)
   const starContext = selected ? getStarContext(selected) : null
+  const tooltipPosition = selected ? (() => {
+    const xPercent = (((selected.azimuthDeg + 180) % 360) / 360) * 100
+    const yPercent = ((90 - selected.altitudeDeg) / 90) * (400 / 455) * 100
+    return {
+      left: `${xPercent}%`,
+      top: `${yPercent}%`,
+      transform: `translate(${xPercent >= 50 ? '-100%' : '0%'}, ${yPercent >= 50 ? '-100%' : '0%'})`,
+      marginLeft: xPercent >= 50 ? -13 : 13,
+      marginTop: yPercent >= 50 ? -13 : 13,
+    }
+  })() : undefined
   const named = result?.stars
     .filter((star) => Boolean(NAMED_HIPPARCOS_STARS[star.hipparcosId]))
     .sort((a, b) => a.magnitude - b.magnitude)
@@ -35,9 +46,10 @@ function SkyPanorama({ result }: { result: AstronomyResult | null }) {
   return (
     <div className="sky-panorama">
       <div className="sky-panorama-instructions">
-        <span>Live catalog stars · Select any point</span>
-        <span>Every star has a HIP identifier</span>
+        <span>Hover a star to see its name above the chart</span>
+        <span>Click or tap to pin its details</span>
       </div>
+      <div className="sky-panorama-canvas">
       <svg viewBox="0 0 1000 455" role="img"
         aria-label="Calculated panoramic above-horizon Hipparcos stars, west left, north center, east right">
         <defs>
@@ -75,8 +87,8 @@ function SkyPanorama({ result }: { result: AstronomyResult | null }) {
           return (
             <g key={star.hipparcosId}
               className={`sky-panorama-star ${active ? 'is-inspected' : ''}`}
-              onMouseEnter={() => setHoveredHip(star.hipparcosId)}
-              onMouseLeave={() => setHoveredHip(null)}
+              onPointerEnter={() => setHoveredHip(star.hipparcosId)}
+              onPointerLeave={() => setHoveredHip(null)}
               onFocus={() => setHoveredHip(star.hipparcosId)}
               onBlur={() => setHoveredHip(null)}
               onClick={() => togglePinnedStar(star.hipparcosId)}
@@ -108,6 +120,17 @@ function SkyPanorama({ result }: { result: AstronomyResult | null }) {
           ALL-SKY HORIZON PANORAMA
         </text>
       </svg>
+      {selected && (
+        <div className="sky-star-hover-tooltip" style={tooltipPosition} role="status">
+          <strong>{starDisplayName(selected)}</strong>
+          <span>HIP {selected.hipparcosId} · magnitude {selected.magnitude.toFixed(2)}</span>
+          <span>{selected.altitudeDeg.toFixed(1)}° altitude · {starCompassDirection(selected.azimuthDeg)}</span>
+          <small>{pinnedHip === selected.hipparcosId
+            ? 'Pinned · details and catalog link below'
+            : 'Click to pin this star and keep its details'}</small>
+        </div>
+      )}
+      </div>
       <div className="sky-star-explorer">
         <section className="sky-star-inspector" aria-label="Selected star details">
           {selected && starContext ? (
