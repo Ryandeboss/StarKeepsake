@@ -4,6 +4,7 @@ import type { AstronomyResult } from '../api'
 import type { ExplorerLocation } from '../skyExplorerData'
 import { SkyCityHorizon } from './SkyCityHorizon'
 import { getObserverScene } from '../skyLandscapeData'
+import { SkyStreetView } from './SkyStreetView'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, suggestedObserverHeading,
@@ -24,6 +25,7 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [activePattern, setActivePattern] = useState<string | null>(null)
   const [showLines, setShowLines] = useState(true)
   const [showScenery, setShowScenery] = useState(true)
+  const [groundView, setGroundView] = useState(false)
   const [showHint, setShowHint] = useState(true)
   const [demoRun, setDemoRun] = useState(0)
   const [touring, setTouring] = useState(false)
@@ -181,20 +183,26 @@ export function SkyImmersiveView({ result, location }: Props) {
           <small>First-person view · Drag or swipe the sky, or use the glowing arrows</small>
         </div>
         <div className="immersive-toolbar-options">
-          <label className="immersive-toggle">
+          <div className="immersive-view-tabs" role="group" aria-label="Choose sky or street-level scenery">
+            <button type="button" aria-pressed={!groundView} className={!groundView ? 'is-selected' : ''}
+              onClick={() => setGroundView(false)}>✦ Calculated night sky</button>
+            <button type="button" aria-pressed={groundView} className={groundView ? 'is-selected' : ''}
+              onClick={() => { interruptTour(); setGroundView(true) }}>◉ Real Street View</button>
+          </div>
+          {!groundView && <label className="immersive-toggle">
             <input type="checkbox" checked={showLines} onChange={event => setShowLines(event.target.checked)}/>
             Constellations
-          </label>
-          <label className="immersive-toggle">
+          </label>}
+          {!groundView && <label className="immersive-toggle">
             <input type="checkbox" checked={showScenery} onChange={event => setShowScenery(event.target.checked)}/>
             City scenery
-          </label>
-          <button type="button" className="immersive-replay-button" onClick={replayTour}>
+          </label>}
+          {!groundView && <button type="button" className="immersive-replay-button" onClick={replayTour}>
             ↻ Show me how to look around
-          </button>
+          </button>}
         </div>
       </div>
-      <div ref={skyWindowRef} className="immersive-sky-window" tabIndex={0}
+      <div ref={skyWindowRef} className="immersive-sky-window" tabIndex={groundView ? -1 : 0}
         aria-label="First-person sky view. Use arrow keys to pan left, right, up or down."
         onKeyDown={event => {
           if (event.key === 'ArrowLeft') { event.preventDefault(); nudge(-10, 0) }
@@ -202,6 +210,10 @@ export function SkyImmersiveView({ result, location }: Props) {
           if (event.key === 'ArrowUp') { event.preventDefault(); nudge(0, 8) }
           if (event.key === 'ArrowDown') { event.preventDefault(); nudge(0, -8) }
         }}>
+        {groundView
+          ? <SkyStreetView location={location} camera={{ heading, pitch }}
+              onCameraChange={(camera) => { setHeading(wrapBearing(camera.heading)); setPitch(clampPitch(camera.pitch)) }}/>
+          : <>
         <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice"
           role="img" aria-label="Perspective view of real calculated stars, with optional constellation guide lines"
           onPointerDown={startDrag} onPointerMove={moveDrag}
@@ -296,8 +308,9 @@ export function SkyImmersiveView({ result, location }: Props) {
           </div>
         )}
         {!result && <div className="immersive-waiting" role="status">Calculating this sky…</div>}
+          </>}
       </div>
-      <div className="immersive-view-controls">
+      {!groundView && <div className="immersive-view-controls">
         <button type="button" onClick={() => nudge(-18, 0)}>← Turn left</button>
         <button type="button" onClick={() => nudge(18, 0)}>Turn right →</button>
         <button type="button" onClick={() => nudge(0, 12)}>↑ Look up</button>
@@ -305,7 +318,8 @@ export function SkyImmersiveView({ result, location }: Props) {
         <label>Field of view <input type="range" min="65" max="120" step="5" value={fov}
           onChange={event => { interruptTour(); setFov(Number(event.target.value)) }} aria-label="Sky field of view"/></label>
         <button type="button" onClick={() => { interruptTour(); setHeading(suggestedObserverHeading(result?.stars ?? [])); setPitch(15); setFov(105); setActivePattern(null) }}>Reset view</button>
-      </div>
+      </div>}
+      {groundView && <div className="immersive-ground-message">Google's real panoramas are captured at a different time from your selected sky date. The camera's heading and pitch carry back into the star view, but building occlusion and the panorama's zoom are not calibrated as a historical night reconstruction.</div>}
       <div className="immersive-educational-note">
         <span className="immersive-legend-star immersive-blue"/> Hot blue-white
         <span className="immersive-legend-star immersive-white"/> White
