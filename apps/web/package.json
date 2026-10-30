@@ -12,7 +12,8 @@
     "test:stars": "node --experimental-strip-types --test tests/star-details.test.mjs",
     "test:sky-blend": "node --experimental-strip-types --test tests/sky-blend.test.mjs",
     "test:frame": "node --experimental-strip-types --test tests/frame-layout.test.mjs",
-    "test:globe": "node --experimental-strip-types --test tests/globe-projection.test.mjs"
+    "test:globe": "node --experimental-strip-types --test tests/globe-projection.test.mjs",
+    "test:observer": "node --experimental-strip-types --test tests/sky-immersive.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

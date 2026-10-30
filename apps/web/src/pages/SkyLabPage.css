@@ -14,7 +14,7 @@
  radial-gradient(circle at 50% 52%, #174159 0%, #071827 43%, #030b19 77%);
  box-shadow: 0 24px 60px rgba(24,42,43,.19);
 }
-.earth-globe-zoom { width: 100%; transition: transform 820ms cubic-bezier(.22,.61,.27,1); }
+.earth-globe-zoom { width: 100%; transition: transform 1150ms cubic-bezier(.17,.62,.21,1); transform-origin: 50% 50%; }
 .earth-globe-canvas { display: block; width: 100%; height: auto; touch-action: none; cursor: grab; }
 .earth-globe-canvas:active { cursor: grabbing; }
 .globe-axis-label { position: absolute; top: 18px; left: 17px; color: #e4d6b9; letter-spacing: .13em; font: 10px ui-monospace,monospace; pointer-events: none; }
@@ -198,3 +198,16 @@
 @media (prefers-reduced-motion: reduce) {
   .sky-panorama-star circle { transition: none; }
 }
+
+/* Globe arrival is an illustrative travel transition, not satellite imagery. */
+.globe-arrival-screen { position: absolute; inset: 0; z-index: 3; display: flex; justify-content: center; align-items: center; flex-direction: column; text-align: center; gap: 10px; background: radial-gradient(circle at 50% 50%, rgba(7,25,38,.26), rgba(1,10,24,.82)); pointer-events: none; animation: sky-arrival-fade 1150ms ease both; }
+.globe-arrival-screen span { color: #e5c390; font: 10px ui-monospace,monospace; letter-spacing: .2em; }
+.globe-arrival-screen strong { font: 500 clamp(27px,4vw,53px) Georgia,serif; color: #fff1d9; text-shadow: 0 4px 25px #071825; }
+.globe-arrival-screen small { font-size: 12px; color: #d6e3db; }
+@keyframes sky-arrival-fade { 0% { opacity: 0; } 28% { opacity: 1; } 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .earth-globe-zoom { transition: none; }
+  .globe-arrival-screen { animation: none; }
+}
+
+.sky-observer-awaiting { min-height: 340px; display: grid; place-items: center; text-align: center; padding: 26px; color: #f6e6c4; border-radius: 8px; background: radial-gradient(ellipse at 50% 20%,#234758,#07162b); font: 500 clamp(18px,2.5vw,26px) Georgia,serif; }
