@@ -87,3 +87,8 @@
 @media (prefers-reduced-motion: reduce) {
   .immersive-constellation-line { transition: none; }
 }
+
+/* Fade into the observer's viewpoint after the globe descent. */
+.immersive-observatory { animation: immersive-arrival 700ms ease both; }
+@keyframes immersive-arrival { from { opacity: .15; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .immersive-observatory { animation: none; } }
