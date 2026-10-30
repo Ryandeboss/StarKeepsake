@@ -1,4 +1,4 @@
-import { projectObserverStar } from './skyImmersiveData'
+import { projectObserverStar } from './skyImmersiveData.ts'
 
 // An original geographic *impression* of each city, not a measured skyline,
 // precise viewing bearing, night photograph, or promise of landmark visibility.
