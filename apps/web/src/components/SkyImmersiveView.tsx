@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { AstronomyResult } from '../api'
 import {
@@ -9,40 +9,28 @@ import { getStarContext, starCatalogUrl, starCompassDirection, starDisplayName, 
 import './SkyImmersiveView.css'
 
 type Props = { result: AstronomyResult | null }
-type SkyPoint = { x: number; y: number; inFront: boolean }
 const wrapBearing = (value: number) => ((value % 360) + 360) % 360
 const clampPitch = (value: number) => Math.max(-8, Math.min(88, value))
 
 export function SkyImmersiveView({ result }: Props) {
-  const [heading, setHeading] = useState(180)
-  const [pitch, setPitch] = useState(24)
+  const [heading, setHeading] = useState(() => suggestedObserverHeading(result?.stars ?? []))
+  const [pitch, setPitch] = useState(() => clampPitch(result?.stars.find(star => NAMED_STAR_COLORS[star.hipparcosId])?.altitudeDeg ?? 24))
   const [fov, setFov] = useState(105)
   const [hoveredHip, setHoveredHip] = useState<number | null>(null)
   const [pinnedHip, setPinnedHip] = useState<number | null>(null)
   const [activePattern, setActivePattern] = useState<string | null>(null)
   const [showLines, setShowLines] = useState(true)
-  const firstSky = useRef(false)
   const drag = useRef<{ x: number; y: number; heading: number; pitch: number; moved: boolean } | null>(null)
 
-  useEffect(() => {
-    if (!result || firstSky.current) return
-    firstSky.current = true
-    const face = result.stars
-      .filter(star => NAMED_STAR_COLORS[star.hipparcosId])
-      .sort((a, b) => a.magnitude - b.magnitude)[0]
-    setHeading(suggestedObserverHeading(result.stars))
-    setPitch(clampPitch(face?.altitudeDeg ?? 24))
-  }, [result])
-
   const starByHip = useMemo(
-    () => new Map(result?.stars.map(star => [star.hipparcosId, star]) ?? []),
+    () => new Map<number, AstronomyResult['stars'][number]>(result?.stars.map(star => [star.hipparcosId, star] as const) ?? []),
     [result],
   )
   const visible = useMemo(() => result?.stars.map(star => ({
     star, point: projectObserverStar(star.azimuthDeg, star.altitudeDeg, heading, pitch, fov),
     appearance: starAppearance(star),
   })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov])
-  const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point])), [visible])
+  const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point] as const)), [visible])
   const chosen = starByHip.get(hoveredHip ?? pinnedHip ?? -1)
   const chosenPoint = chosen ? pointsByHip.get(chosen.hipparcosId) : undefined
   const named = result?.stars.filter(star => NAMED_STAR_COLORS[star.hipparcosId])
