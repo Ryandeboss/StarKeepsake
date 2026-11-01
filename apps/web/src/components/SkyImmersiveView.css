@@ -186,3 +186,27 @@
   .immersive-photo-setup { padding: 12px; gap: 12px; }
   .immersive-photo-setup label { width: 100%; }
 }
+
+/* This supplied Chicago skyline is a flat plate, NOT a spherical 360 panorama.
+   Keep it at the bottom and never apply the camera's vertical projection to it. */
+.immersive-sky-window > .immersive-photo-horizon {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  height: auto;
+  max-width: none;
+  transform: translateX(-50%);
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  image-rendering: auto;
+  z-index: 1;
+}
+.immersive-view-tabs button:disabled { opacity: .45; cursor: not-allowed; }
+.immersive-photo-setup input[type=file]:disabled { opacity: .6; }
+.immersive-photo-setup label { min-width: 0; }
+@media (max-width: 620px) {
+  .immersive-sky-window > .immersive-photo-horizon {
+    min-width: 100%;
+  }
+}

@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { AstronomyResult } from '../api'
 import type { ExplorerLocation } from '../skyExplorerData'
 import { SkyCityHorizon } from './SkyCityHorizon'
-import { SkyPhotoForeground } from './SkyPhotoForeground'
+import { createSkylineCutout } from '../skyCutout'
 import { getObserverScene } from '../skyLandscapeData'
 import { SkyStreetView } from './SkyStreetView'
 import {
@@ -29,8 +29,8 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [photoMode, setPhotoMode] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState('')
-  const [photoNorth, setPhotoNorth] = useState(0)
-  const [photoHorizon, setPhotoHorizon] = useState(.10)
+  const [photoScale, setPhotoScale] = useState(100)
+  const [photoBusy, setPhotoBusy] = useState(false)
   const photoUpload = useRef<HTMLInputElement | null>(null)
   const imageObjectUrl = useRef<string | null>(null)
   useEffect(() => () => {
@@ -107,20 +107,30 @@ export function SkyImmersiveView({ result, location }: Props) {
     setShowHint(true)
     setDemoRun(run => run + 1)
   }
-  function receivePhoto(file: File | undefined) {
+  async function receivePhoto(file: File | undefined) {
     if (!file) return
-    if (!['image/webp', 'image/png'].includes(file.type) || file.size > 12000000) {
-      setPhotoError('Choose a transparent WebP or PNG under 12 MB.')
+    if (!['image/jpeg', 'image/webp', 'image/png'].includes(file.type) || file.size > 12000000) {
+      setPhotoError('Choose a JPG, PNG, or WebP image under 12 MB.')
       return
     }
-    if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
-    const url = URL.createObjectURL(file)
-    imageObjectUrl.current = url
-    setPhotoUrl(url)
+    setPhotoBusy(true)
     setPhotoError('')
-    setPhotoMode(true)
-    setGroundView(false)
-    interruptTour()
+    try {
+      // A normal flat image is intentionally NOT mapped as a 360° texture.
+      const transparent = await createSkylineCutout(file)
+      const url = URL.createObjectURL(transparent)
+      if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+      imageObjectUrl.current = url
+      setPhotoUrl(url)
+      setPhotoMode(true)
+      setGroundView(false)
+      setPhotoScale(100)
+      interruptTour()
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : 'Unable to prepare this skyline.')
+    } finally {
+      setPhotoBusy(false)
+    }
   }
   function nudge(dx: number, dy: number) {
     interruptTour()
@@ -208,11 +218,11 @@ export function SkyImmersiveView({ result, location }: Props) {
         <div>
           <span className="immersive-eyebrow">Live calculated observer's view</span>
           <strong>Look around the night sky</strong>
-          <small>First-person view · Drag or swipe the sky, or use the glowing arrows</small>
+          <small>Drag or swipe to explore · Keyboard arrows also work</small>
         </div>
         <div className="immersive-toolbar-options">
           <div className="immersive-view-tabs" role="group" aria-label="Choose sky or street-level scenery">
-            <button type="button" aria-pressed={!groundView} className={!groundView ? 'is-selected' : ''}
+            <button type="button" aria-pressed={!groundView && !photoMode} className={!groundView && !photoMode ? 'is-selected' : ''}
               onClick={() => { setGroundView(false); setPhotoMode(false) }}>✦ Calculated night sky</button>
             <button type="button" aria-pressed={groundView} className={groundView ? 'is-selected' : ''}
               onClick={() => { interruptTour(); setGroundView(true) }}>◉ Real Street View</button>
@@ -224,7 +234,7 @@ export function SkyImmersiveView({ result, location }: Props) {
                 if (location.id !== 'chicago') return
                 if (!photoUrl) photoUpload.current?.click()
                 else { interruptTour(); setGroundView(false); setPhotoMode(true) }
-              }}>◈ Chicago photo experiment</button>
+              }}>◈ Chicago skyline photo</button>
           </div>
           {!groundView && <label className="immersive-toggle">
             <input type="checkbox" checked={showLines} onChange={event => setShowLines(event.target.checked)}/>
@@ -239,31 +249,32 @@ export function SkyImmersiveView({ result, location }: Props) {
           </button>}
         </div>
       </div>
-      <div className="immersive-photo-setup">
+      {location.id === 'chicago' && !groundView && <div className="immersive-photo-setup">
         <label>
-          <span>Transparent 360° skyline (Chicago prototype)</span>
-          <input ref={photoUpload} type="file" accept="image/webp,image/png"
-            onChange={event => receivePhoto(event.target.files?.[0])}/>
+          <span>Chicago skyline photo (white sky removed automatically)</span>
+          <input ref={photoUpload} type="file" accept="image/jpeg,image/webp,image/png"
+            disabled={photoBusy}
+            onChange={event => {
+              void receivePhoto(event.currentTarget.files?.[0])
+              event.currentTarget.value = ''
+            }}/>
         </label>
-        {photoUrl && !groundView && <>
-          <button type="button" aria-pressed={photoMode} onClick={() => { interruptTour(); setPhotoMode(mode => !mode) }}>
-            {photoMode ? 'Hide photo' : 'Show photo'}
+        {photoBusy && <span role="status">Preparing transparent skyline…</span>}
+        {photoUrl && <>
+          <button type="button" aria-pressed={photoMode}
+            onClick={() => { interruptTour(); setPhotoMode(mode => !mode) }}>
+            {photoMode ? 'Hide skyline' : 'Show skyline'}
           </button>
-          {photoMode && <>
-            <label>Panorama center compass bearing <strong>{photoNorth}°</strong>
-              <input type="range" min="0" max="359" step="1" value={photoNorth}
-                onChange={event => setPhotoNorth(Number(event.target.value))}/>
-            </label>
-            <label>Horizon alignment <strong>{Math.round(photoHorizon*100)}%</strong>
-              <input type="range" min="-.2" max=".2" step=".005" value={photoHorizon}
-                onChange={event => setPhotoHorizon(Number(event.target.value))}/>
-            </label>
-          </>}
+          {photoMode && <label>Skyline size <strong>{photoScale}%</strong>
+            <input type="range" min="100" max="160" step="5" value={photoScale}
+              onChange={event => setPhotoScale(Number(event.target.value))}/>
+          </label>}
         </>}
         {photoError && <span role="alert" className="immersive-photo-error">{photoError}</span>}
-        <small>Local browser-only preview · no Google key · AI-generated scene, not a measured Chicago location.
-          Stars are calculated for the selected coordinates, but compass alignment is provisional until calibrated.</small>
-      </div>
+        <small>Upload the Chicago JPG you provided. We remove its white sky in your browser and
+          anchor the photograph to the bottom. This is a flat scenic plate, not a 360° panorama;
+          the photograph is illustrative and its alignment to true north is unverified.</small>
+      </div>}
       <div ref={skyWindowRef} className="immersive-sky-window" tabIndex={groundView ? -1 : 0}
         aria-label="First-person sky view. Use arrow keys to pan left, right, up or down."
         onKeyDown={event => {
@@ -345,24 +356,21 @@ export function SkyImmersiveView({ result, location }: Props) {
             d={`M0 ${projectObserverStar(heading, 0, heading, pitch, fov).y} H1000 V600 H0Z`}
             fill="#061624" pointerEvents="none"/>}
         </svg>
-        {photoMode && photoUrl && <SkyPhotoForeground
-          source={photoUrl} heading={heading} pitch={pitch} fov={fov}
-          centerBearing={photoNorth} horizonShift={photoHorizon}
-          onError={setPhotoError}/>}
+        {photoMode && photoUrl && <img
+          src={photoUrl} alt="" aria-hidden="true"
+          className="immersive-photo-horizon"
+          style={{ width: photoScale + '%' }}/>}
+        
         <div className="immersive-crosshair" aria-hidden="true">+</div>
         {showHint && <div className="immersive-look-hint" role="status">
           <span className="immersive-look-hint-eyebrow">{touring ? 'Watch the camera turn' : 'YOUR VIEW IS INTERACTIVE'}</span>
-          <strong>↔ Drag to look around ↕</strong>
-          <span>Swipe anywhere in the sky, or tap a direction arrow.</span>
+          <strong>Drag to look around</strong>
+          <span>Swipe or drag across the sky; you can also use the keyboard.</span>
           <button type="button" onClick={() => { interruptTour(); skyWindowRef.current?.focus() }}>Got it</button>
         </div>}
-        <button type="button" aria-label="Look left" className="immersive-nudge immersive-nudge-left" onClick={() => nudge(-22, 0)}>‹</button>
-        <button type="button" aria-label="Look right" className="immersive-nudge immersive-nudge-right" onClick={() => nudge(22, 0)}>›</button>
-        <button type="button" aria-label="Look higher" className="immersive-nudge immersive-nudge-up" onClick={() => nudge(0, 12)}>⌃</button>
-        <button type="button" aria-label="Look lower" className="immersive-nudge immersive-nudge-down" onClick={() => nudge(0, -12)}>⌄</button>
         <div className="immersive-location-readout">
           <strong>{location.name}</strong>
-          <small>{photoMode ? 'AI-generated foreground · calibration required' : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
+          <small>{photoMode ? 'Static Chicago photo foreground · not geographically calibrated' : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
         </div>
         <div className="immersive-view-readout">LOOK {Math.round(heading)}° · UP {Math.round(pitch)}° · FOV {fov}°</div>
         {chosen && chosenPoint && (
@@ -377,12 +385,8 @@ export function SkyImmersiveView({ result, location }: Props) {
           </>}
       </div>
       {!groundView && <div className="immersive-view-controls">
-        <button type="button" onClick={() => nudge(-18, 0)}>← Turn left</button>
-        <button type="button" onClick={() => nudge(18, 0)}>Turn right →</button>
-        <button type="button" onClick={() => nudge(0, 12)}>↑ Look up</button>
-        <button type="button" onClick={() => nudge(0, -12)}>↓ Look down</button>
-        <label>Field of view <input type="range" min="65" max="120" step="5" value={fov}
-          onChange={event => { interruptTour(); setFov(Number(event.target.value)) }} aria-label="Sky field of view"/></label>
+        {!photoMode && <label>Field of view <input type="range" min="65" max="120" step="5" value={fov}
+          onChange={event => { interruptTour(); setFov(Number(event.target.value)) }} aria-label="Sky field of view"/></label>}
         <button type="button" onClick={() => { interruptTour(); setHeading(suggestedObserverHeading(result?.stars ?? [])); setPitch(15); setFov(105); setActivePattern(null) }}>Reset view</button>
       </div>}
       {groundView && <div className="immersive-ground-message">Google's real panoramas are captured at a different time from your selected sky date. The camera's heading and pitch carry back into the star view, but building occlusion and the panorama's zoom are not calibrated as a historical night reconstruction.</div>}
@@ -394,7 +398,7 @@ export function SkyImmersiveView({ result, location }: Props) {
         <p>Color is shown for a curated group of identified stars; neutral white is used when our data has no verified color.
           Dot size follows apparent magnitude (brightness as seen from Earth), <strong>not physical star size</strong>.
           Lines are modern illustrative guides, not objects in space or official constellation boundaries.
-          {photoMode ? ' The photo prototype uses a masked AI-generated skyline and requires compass calibration; its landscape is not georeferenced.' :
+          {photoMode ? ' This flat photo plate was generated separately from the astronomical sky and has no verified compass bearing. Camera motion affects only the stars in this mode.' :
             ' The local skylines are original, geographically inspired artwork, not photographs or landmark-accurate bearings.'}</p>
       </div>
       <div className="immersive-below">
