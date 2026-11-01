@@ -88,7 +88,9 @@ export async function createSkylineCutout(file: File): Promise<Blob> {
     const input = ctx.getImageData(0, 0, canvas.width, canvas.height)
     if (!hasTransparentSky(input.data)) {
       const masked = maskWhiteSkyPixels(input.data, canvas.width, canvas.height)
-      ctx.putImageData(new ImageData(masked, canvas.width, canvas.height), 0, 0)
+      const output = ctx.createImageData(canvas.width, canvas.height)
+      output.data.set(masked)
+      ctx.putImageData(output, 0, 0)
     }
     return await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Could not export the skyline cutout.')), 'image/png'))
