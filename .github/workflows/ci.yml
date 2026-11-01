@@ -27,6 +27,7 @@ jobs:
       - run: npm run test:globe
       - run: npm run test:observer
       - run: npm run test:landscapes
+      - run: npm run test:photo-panorama
       - run: npm run build
 
   api:
