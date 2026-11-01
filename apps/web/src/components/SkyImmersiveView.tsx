@@ -364,7 +364,7 @@ export function SkyImmersiveView({ result, location }: Props) {
         <div className="immersive-crosshair" aria-hidden="true">+</div>
         {showHint && <div className="immersive-look-hint" role="status">
           <span className="immersive-look-hint-eyebrow">{touring ? 'Watch the camera turn' : 'YOUR VIEW IS INTERACTIVE'}</span>
-          <strong>↔ Drag to look around ↕</strong>
+          <strong>Drag to look around</strong>
           <span>Swipe or drag across the sky; you can also use the keyboard.</span>
           <button type="button" onClick={() => { interruptTour(); skyWindowRef.current?.focus() }}>Got it</button>
         </div>}
