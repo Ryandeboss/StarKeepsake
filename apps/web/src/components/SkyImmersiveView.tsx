@@ -119,6 +119,7 @@ export function SkyImmersiveView({ result, location }: Props) {
     setPhotoUrl(url)
     setPhotoError('')
     setPhotoMode(true)
+    setGroundView(false)
     interruptTour()
   }
   function nudge(dx: number, dy: number) {
@@ -212,12 +213,15 @@ export function SkyImmersiveView({ result, location }: Props) {
         <div className="immersive-toolbar-options">
           <div className="immersive-view-tabs" role="group" aria-label="Choose sky or street-level scenery">
             <button type="button" aria-pressed={!groundView} className={!groundView ? 'is-selected' : ''}
-              onClick={() => setGroundView(false)}>✦ Calculated night sky</button>
+              onClick={() => { setGroundView(false); setPhotoMode(false) }}>✦ Calculated night sky</button>
             <button type="button" aria-pressed={groundView} className={groundView ? 'is-selected' : ''}
               onClick={() => { interruptTour(); setGroundView(true) }}>◉ Real Street View</button>
             <button type="button" aria-pressed={!groundView && photoMode}
+              disabled={location.id !== 'chicago'}
+              title={location.id !== 'chicago' ? 'The photographic prototype is available for Chicago only' : undefined}
               className={!groundView && photoMode ? 'is-selected' : ''}
               onClick={() => {
+                if (location.id !== 'chicago') return
                 if (!photoUrl) photoUpload.current?.click()
                 else { interruptTour(); setGroundView(false); setPhotoMode(true) }
               }}>◈ Chicago photo experiment</button>
