@@ -15,7 +15,8 @@
     "test:globe": "node --experimental-strip-types --test tests/globe-projection.test.mjs",
     "test:observer": "node --experimental-strip-types --test tests/sky-immersive.test.mjs",
     "test:landscapes": "node --experimental-strip-types --test tests/sky-landscapes.test.mjs",
-    "test:photo-panorama": "node --experimental-strip-types --test tests/photo-panorama.test.mjs"
+    "test:photo-panorama": "node --experimental-strip-types --test tests/photo-panorama.test.mjs",
+    "test:sky-cutout": "node --experimental-strip-types --test tests/sky-cutout.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
