@@ -149,7 +149,6 @@ export function SkyImmersiveView({ result, location }: Props) {
     appearance: starAppearance(star),
     twinkle: starTwinkleSettings(star.hipparcosId, star.magnitude),
   })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov])
-  const horizonY = projectObserverStar(heading, 0, heading, pitch, fov).y
   const atmosphere = useMemo(() => atmosphereRows(pitch, fov), [pitch, fov])
   const photoBottom = photoHorizonBottomPercent(pitch, fov)
   const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point] as const)), [visible])
