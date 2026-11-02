@@ -73,3 +73,10 @@
   display: inline-flex; align-items: center; gap: 7px;
 }
 .sky-ai-refinement p { margin: 0; color: #bacfce; font-size: 11px; line-height: 1.6; }
+.sky-ai-refinement .sky-ai-reset {
+  background: transparent; color: #f2d9a6; border: 1px solid #7d948e;
+  border-radius: 7px; padding: 8px 12px; font-size: 11px; font-weight: 650;
+  cursor: pointer;
+}
+.sky-ai-refinement .sky-ai-reset:hover { background: #244754; }
+.sky-ai-refinement .sky-ai-reset:disabled { opacity: .45; cursor: not-allowed; }
