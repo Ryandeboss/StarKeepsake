@@ -352,3 +352,19 @@
 @media (prefers-reduced-motion: reduce) {
  .photo-studio-ratios button,.photo-studio-placements button,.photo-studio-upload { transition: none; }
 }
+
+
+/* Keep the actual sky visible through a transparent AI cutout. In photo
+   overlay modes, dim the source photo only under the intentionally overlaid
+   stars, preserving the chosen lower region in upper-half mode. */
+.immersive-framed-photo--cutout { background: transparent; }
+.immersive-framed-photo--upper::before,
+.immersive-framed-photo--whole::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+}
+.immersive-framed-photo--upper::before {
+  background: linear-gradient(to bottom, rgba(1,13,35,.42) 0%, rgba(4,24,48,.31) 52%, transparent 52.1%);
+}
+.immersive-framed-photo--whole::before { background: rgba(4,18,38,.32); }
+.immersive-framed-photo-image { position: relative; z-index: 0; }
+.immersive-framed-stars { z-index: 2; }
