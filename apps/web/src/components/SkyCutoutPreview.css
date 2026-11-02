@@ -45,9 +45,31 @@
   .sky-ai-backdrop { padding: 7px; }
   .sky-ai-header { padding: 15px; }
   .sky-ai-actions { padding: 12px 15px; }
+  .sky-ai-refinement { padding: 12px 15px; }
   .sky-ai-images { grid-template-columns: 1fr; gap: 12px; padding: 14px; }
   .sky-ai-photo-shell { height: min(37vh,350px); min-height: 150px; }
   .sky-ai-footer { padding: 13px 15px; }
   .sky-ai-footer > div { width: 100%; }
   .sky-ai-footer button { flex: 1; }
 }
+
+/* Local edge-matte controls. No additional paid inference when these change. */
+.sky-ai-refinement {
+  background: #183440; border-bottom: 1px solid #41616b;
+  padding: 14px 26px 16px; display: grid; gap: 9px;
+}
+.sky-ai-refinement-header { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 15px; }
+.sky-ai-refinement-header strong { color: #f9dba5; font-size: 13px; }
+.sky-ai-refinement-header span { color: #c1d9d7; font-size: 11px; }
+.sky-ai-refinement-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 15px; }
+.sky-ai-refinement-controls label { color: #f1e9d9; font-size: 12px; }
+.sky-ai-refinement-controls input[type="range"] {
+  width: min(220px, 42vw); accent-color: #efc982; cursor: pointer;
+}
+.sky-ai-refinement-controls input[type="checkbox"] {
+  accent-color: #efc982; width: 17px; height: 17px;
+}
+.sky-ai-refinement-controls .sky-ai-fringe-toggle {
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.sky-ai-refinement p { margin: 0; color: #bacfce; font-size: 11px; line-height: 1.6; }
