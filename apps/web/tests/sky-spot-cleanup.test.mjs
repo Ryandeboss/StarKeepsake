@@ -19,6 +19,9 @@ function fixture(width, height) {
 
 test('click removes white tree holes but preserves thin black branches',()=>{
   const f=fixture(20,18)
+  // A dark enclosing silhouette keeps both white pockets disconnected from
+  // the already-segmented exterior sky, like a tree canopy branch loop.
+  for(let y=1;y<=10;y++) for(let x=1;x<=12;x++) f.pixel(x,y,[32,38,41],0)
   for(let y=2;y<10;y++) for(let x=2;x<12;x++) f.pixel(x,y,[245,245,246],0)
   for(let y=2;y<10;y++) f.pixel(7,y,[33,35,36],0)
   const originalCopy=new Uint8ClampedArray(f.rgb)
@@ -36,6 +39,7 @@ test('click removes white tree holes but preserves thin black branches',()=>{
 
 test('second click resolves a disconnected bright tree gap without further model calls',()=>{
   const f=fixture(20,18)
+  for(let y=1;y<=10;y++) for(let x=1;x<=12;x++) f.pixel(x,y,[29,36,40],0)
   for(let y=2;y<10;y++) for(let x=2;x<12;x++) f.pixel(x,y,[245,245,245],0)
   for(let y=2;y<10;y++) f.pixel(7,y,[29,36,40],0)
   const one=removeSkySpots(f.rgb,f.mask,false,20,18,[{x:3,y:5}])
