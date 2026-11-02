@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { projectObserverStar, starAppearance, SKY_PATTERNS, suggestedObserverHeading } from '../src/skyImmersiveData.ts'
+import { projectObserverStar, starAppearance, starTwinkleSettings, SKY_PATTERNS, suggestedObserverHeading } from '../src/skyImmersiveData.ts'
 
 test('first-person perspective puts the center bearing and altitude at screen center', () => {
   const point = projectObserverStar(180, 30, 180, 30)
@@ -49,4 +49,17 @@ test('curated guide segments connect only known Hipparcos anchor IDs', () => {
   }
   assert.equal(SKY_PATTERNS.find(pattern => pattern.id === 'dipper')?.kind, 'asterism')
   assert.equal(SKY_PATTERNS.find(pattern => pattern.id === 'orion')?.kind, 'constellation')
+})
+
+test('star animation parameters are stable and gentle for visible bright stars', () => {
+  const a=starTwinkleSettings(27989, .4)
+  const b=starTwinkleSettings(27989, .4)
+  const c=starTwinkleSettings(24436, .2)
+  assert.deepEqual(a,b)
+  assert.equal(a.animate,true)
+  assert.equal(starTwinkleSettings(1234,4.8).animate,false)
+  assert.ok(a.minimumOpacity>=.9)
+  assert.ok(a.minimumOpacity<1)
+  assert.ok(a.duration>=3)
+  assert.notEqual(a.delay,c.delay)
 })
