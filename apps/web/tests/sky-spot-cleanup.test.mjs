@@ -81,3 +81,19 @@ test('rejects inconsistent pixel dimensions',()=>{
   const f=fixture(10,10)
   assert.throws(()=>removeSkySpots(f.rgb,f.mask,false,11,10,[]),/dimensions/)
 })
+
+test('manual spot can reach the bottom half when lower-image protection is off',()=>{
+  const f=fixture(24,30)
+  // Simulate a portrait canopy where a bright sky pocket lies near the bottom.
+  for(let y=23;y<28;y++) for(let x=4;x<10;x++)
+    f.pixel(x,y,[247,247,249],0)
+  for(let y=23;y<28;y++) f.pixel(7,y,[31,37,40],0)
+  const seed=[{x:5,y:25}]
+  const guarded=removeSkySpots(f.rgb,f.mask,false,24,30,seed)
+  const full=removeSkySpots(f.rgb,f.mask,false,24,30,seed,false)
+  assert.equal(f.sky(guarded,5,25),0,'default protects lower portrait area')
+  assert.equal(f.sky(full,5,25),255,'manual override removes lower sky gap')
+  assert.equal(f.sky(full,7,25),0,'dark branch in lower image is protected')
+  const restored=removeSkySpots(f.rgb,f.mask,false,24,30,[],false)
+  assert.equal(f.sky(restored,5,25),0,'removing edits restores original mask')
+})
