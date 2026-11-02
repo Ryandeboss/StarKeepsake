@@ -10,6 +10,7 @@ import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
 import { SkyAtmosphereCanvas } from './SkyAtmosphereCanvas'
 import { starOptics } from '../skyPhotographicMath'
 import { photoHorizonBottomPercent } from '../skyAtmosphereMath'
+import { fitAbovePhotoLayout } from '../photoSkyLayout'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, starTwinkleSettings, suggestedObserverHeading,
@@ -33,6 +34,10 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [showScenery, setShowScenery] = useState(true)
   const [photoMode, setPhotoMode] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoSkyLayout, setPhotoSkyLayout] = useState<'within' | 'above'>('within')
+  const [originalPhotoUrl, setOriginalPhotoUrl] = useState<string | null>(null)
+  const [originalPhotoSize, setOriginalPhotoSize] = useState({ width: 0, height: 0 })
+  const [skyWindowSize, setSkyWindowSize] = useState({ width: 0, height: 0 })
   const [photoError, setPhotoError] = useState('')
   const [photoScale, setPhotoScale] = useState(100)
   const [editingPhoto, setEditingPhoto] = useState<File | null>(null)
@@ -40,14 +45,30 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [cutoutSession, setCutoutSession] = useState(0)
   const photoUpload = useRef<HTMLInputElement | null>(null)
   const imageObjectUrl = useRef<string | null>(null)
+  const originalObjectUrl = useRef<string | null>(null)
+  const decodeId = useRef(0)
   useEffect(() => () => {
     if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+    if (originalObjectUrl.current) URL.revokeObjectURL(originalObjectUrl.current)
+    decodeId.current += 1
   }, [])
   const [groundView, setGroundView] = useState(false)
   const [showHint, setShowHint] = useState(true)
   const [demoRun, setDemoRun] = useState(0)
   const [touring, setTouring] = useState(false)
   const skyWindowRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const target = skyWindowRef.current
+    if (!target) return
+    const update = () => {
+      const bounds = target.getBoundingClientRect()
+      setSkyWindowSize({ width: bounds.width, height: bounds.height })
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [])
   const drag = useRef<{ x: number; y: number; heading: number; pitch: number; moved: boolean } | null>(null)
   const ignoreClick = useRef(false)
   const tourCamera = useRef({ heading: suggestedObserverHeading(result?.stars ?? []), pitch: 15 })
@@ -122,9 +143,35 @@ export function SkyImmersiveView({ result, location }: Props) {
     }
     setPhotoError('')
     interruptTour()
+    // A new upload starts a new composition, never displaying a stale cutout.
+    if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+    imageObjectUrl.current = null
+    setPhotoUrl(null)
+    setPhotoScale(100)
+    const originalUrl = URL.createObjectURL(file)
+    if (originalObjectUrl.current) URL.revokeObjectURL(originalObjectUrl.current)
+    originalObjectUrl.current = originalUrl
+    setOriginalPhotoUrl(originalUrl)
+    setOriginalPhotoSize({ width: 0, height: 0 })
+    const currentId = ++decodeId.current
+    void createImageBitmap(file).then(image => {
+      if (currentId === decodeId.current)
+        setOriginalPhotoSize({ width: image.width, height: image.height })
+      image.close()
+    }).catch(() => {
+      if (currentId === decodeId.current)
+        setPhotoError('The photo dimensions could not be read.')
+    })
     setEditingPhoto(file)
     setCutoutSession(version => version + 1)
-    setCutoutEditorOpen(true)
+    if (photoSkyLayout === 'within') {
+      setPhotoMode(false)
+      setCutoutEditorOpen(true)
+    } else {
+      // The separate-sky option never needs segmentation or another upload.
+      setPhotoMode(true)
+      setCutoutEditorOpen(false)
+    }
   }
   function applyPhotoCutout(cutout: Blob) {
     const url = URL.createObjectURL(cutout)
@@ -133,6 +180,7 @@ export function SkyImmersiveView({ result, location }: Props) {
     setPhotoUrl(url)
     setPhotoMode(true)
     setGroundView(false)
+    setPhotoSkyLayout('within')
     // Keep the source photo and SkyCutoutPreview mounted after applying.
     // Returning to the editor preserves the Fal mask and all local edits.
     setCutoutEditorOpen(false)
@@ -154,6 +202,11 @@ export function SkyImmersiveView({ result, location }: Props) {
     optics: starOptics(star.magnitude, star.altitudeDeg, Boolean(NAMED_STAR_COLORS[star.hipparcosId]), photoExposure),
   })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov, photoExposure])
   const photoBottom = photoHorizonBottomPercent(pitch, fov)
+  const abovePhotoFrame = fitAbovePhotoLayout(
+    skyWindowSize.width, skyWindowSize.height,
+    originalPhotoSize.width, originalPhotoSize.height,
+  )
+  const isAbovePhoto = photoSkyLayout === 'above'
   const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point] as const)), [visible])
   const chosen = starByHip.get(hoveredHip ?? pinnedHip ?? -1)
   const chosenPoint = chosen ? pointsByHip.get(chosen.hipparcosId) : undefined
@@ -240,7 +293,7 @@ export function SkyImmersiveView({ result, location }: Props) {
               className={!groundView && photoMode ? 'is-selected' : ''}
               onClick={() => {
                 if (location.id !== 'chicago') return
-                if (!photoUrl) photoUpload.current?.click()
+                if (!photoUrl && !originalPhotoUrl) photoUpload.current?.click()
                 else { interruptTour(); setGroundView(false); setPhotoMode(true) }
               }}>◈ Chicago skyline photo</button>
           </div>
