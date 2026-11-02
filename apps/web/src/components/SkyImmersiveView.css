@@ -375,3 +375,12 @@
   display: block; position: absolute; transform: translate(-50%,-50%);
   border-radius: 50%; opacity: .94; pointer-events: none;
 }
+
+.photo-studio-horizon { display: grid; gap: 8px; background: rgba(6,26,40,.48);
+ border: 1px solid #507180; border-radius: 11px; padding: 10px 13px; color: #e8e8db; }
+.photo-studio-horizon span { display: flex; justify-content: space-between; font-size: 11px; }
+.photo-studio-horizon strong { color: #f7d8a0; }
+.photo-studio-horizon input { width: 100%; accent-color: #e9c58c; }
+.photo-studio-horizon small { color: #b2c9ca; font-size: 10px; }
+.immersive-photo-horizon-guide { position: absolute; z-index: 3; left: 0; right: 0;
+ border-top: 1px dashed rgba(255,230,183,.64); pointer-events: none; }
