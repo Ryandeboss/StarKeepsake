@@ -138,3 +138,30 @@ Azure rejected `az acr build` with `TasksOperationsNotAllowed`. Our replacement 
 7. On completion, disable `SkyMask__Enabled`, delete staging and remove the temporary Azure OIDC feature-branch credential to minimize blast radius and costs.
 
 The staging script is deliberately opt-in and the workflow does **not** deploy to Azure. ACR image storage and staging resources may incur costs even at zero replicas.
+
+## Two composition choices (Sky Lab preview)
+
+The Sky Lab photo composer offers only the two distinct compositions:
+- **Within my photo:** the original AI sky-cutout flow. A user with an
+  existing sky/horizon can remove the sky and preserve the foreground
+  (including the full edge cleanup, bright-sky recovery, manual rectangle
+  sweep, lower-image protection, Undo and Edit cutout after Apply).
+  The calculated night sky appears behind the transparent regions.
+- **Above my photo:** the original uploaded photograph is not cut out or
+  overlaid with stars. The entire uncropped photograph remains in a lower
+  panel, with an additional transparent upper panel showing the calculated
+  night sky above it and a clear horizontal division. This is ideal for
+  indoor photos or images without a sky/horizon. No Fal AI request is needed.
+  The overall two-panel composition is fitted into the available viewport
+  while preserving portrait, square or landscape source proportions.
+
+Switching between these layouts retains the original file and an existing
+cutout in browser memory. Returning to **Within my photo** without a cutout
+opens the AI editor; switching to **Above my photo** doesn't submit the image
+to an AI provider. Uploading a different photo resets its edit session.
+
+The earlier experimental Photo Studio (multi-ratio controls, stars over the
+whole photo, and stars only over the photo's upper half) was rolled back.
+These remain illustrative digital photo compositions, not a physical
+fabrication template or camera-calibrated astronomical composite.
+Test frame geometry with `npm run test:photo-sky-layout`.
