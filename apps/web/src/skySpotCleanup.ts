@@ -25,11 +25,11 @@ export function removeSkySpots(
   const output = new Uint8ClampedArray(mask)
   if (!spots.length) return output
   const maxY = Math.min(height, Math.ceil(height * 0.62))
-  // Generation <=16, so a byte per pixel is enough for all click histories.
+  // One byte per pixel supports the 32-operation editor undo history.
   const visited = new Uint8Array(width * maxY)
   const queue = new Int32Array(width * maxY)
 
-  for (let index = 0; index < spots.length && index < 16; index++) {
+  for (let index = 0; index < spots.length && index < 32; index++) {
     const spot = spots[index]
     const sx = Math.floor(spot.x), sy = Math.floor(spot.y)
     if (!Number.isFinite(sx) || !Number.isFinite(sy) ||
