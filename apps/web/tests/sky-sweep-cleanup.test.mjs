@@ -96,3 +96,19 @@ test('invalid dimensions throw; out-of-bounds rectangle is safely clipped',()=>{
   const out=removeSkySweeps(f.original,f.mask,false,10,10,[{x0:-500,y0:-10,x1:4,y1:4}])
   assert.equal(f.get(out,1,1),255)
 })
+
+test('lower-protection toggle enables full-height rectangle sweeps on tall canopy photos',()=>{
+  const f=fixture(24,32)
+  for(let y=23;y<30;y++) for(let x=4;x<18;x++) f.pixel(x,y,[239,242,245])
+  for(let y=23;y<30;y++) f.pixel(11,y,[22,29,35])
+  const box={x0:3,y0:22,x1:19,y1:31}
+  const guarded=removeSkySweeps(f.original,f.mask,false,24,32,[box])
+  const full=removeSkySweeps(f.original,f.mask,false,24,32,[box],false)
+  assert.equal(f.get(guarded,6,25),0,'default protects lower region')
+  assert.equal(f.get(full,6,25),255,'manual sweep can remove lower sky')
+  assert.equal(f.get(full,13,25),255,'multiple sky pockets removed')
+  assert.equal(f.get(full,11,25),0,'lower dark twig remains intact')
+  assert.equal(f.get(full,2,25),0,'pixels outside selection remain intact')
+  assert.equal(f.get(removeSkySweeps(f.original,f.mask,false,24,32,[],false),6,25),0,
+    'undo restores all pixels when edit list is empty')
+})
