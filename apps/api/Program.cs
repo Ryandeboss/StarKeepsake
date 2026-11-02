@@ -408,7 +408,8 @@ app.MapGet("/api/sky/mask/status", (SkyMaskClient client) =>
     Results.Ok(new { available = client.IsConfigured }));
 
 app.MapPost("/api/sky/mask", async (
-    HttpRequest request, SkyMaskClient client, CancellationToken cancellationToken) =>
+    HttpRequest request, SkyMaskClient client, ILogger<Program> logger,
+    CancellationToken cancellationToken) =>
 {
     const long maxBytes = 8L * 1024 * 1024;
     if (!client.IsConfigured)
@@ -460,10 +461,15 @@ app.MapPost("/api/sky/mask", async (
         return Results.Problem(title: "Sky detection unavailable",
             detail: exception.Message, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
-    catch (HttpRequestException)
+    catch (HttpRequestException exception)
     {
-        return Results.Problem(title: "Sky detection unavailable",
-            detail: "The AI service could not be reached.",
+        // Record only structured network failure classifications; do not
+        // log the request, provider response body, uploaded image or API key.
+        logger.LogWarning(
+            "Fal connectivity failed: {ErrorKind} HTTP {StatusCode}",
+            exception.HttpRequestError, exception.StatusCode);
+        return Results.Problem(title: "Sky detection network error",
+            detail: "The staging API could not connect to Fal. Check the staging container logs.",
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
     catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
