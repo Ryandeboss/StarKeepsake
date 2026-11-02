@@ -91,6 +91,8 @@
 
 /* Explicit click-to-recover mode: the original photo never becomes clickable. */
 .sky-ai-spot-target {
+  touch-action: none;
+  user-select: none;
   position: absolute;
   inset: 0;
   border: 0;
@@ -109,4 +111,15 @@
   background: #f2d9a6;
   color: #173843;
   border-color: #f2d9a6;
+}
+
+/* In-progress drag rectangle is purely visual and never intercepts pointers. */
+.sky-ai-drag-rect {
+  position: absolute;
+  z-index: 2;
+  border: 2px dashed #f6d18e;
+  box-sizing: border-box;
+  background: rgba(246, 209, 142, .14);
+  box-shadow: 0 0 0 1px rgba(10, 32, 46, .55), 0 0 16px rgba(0, 0, 0, .35);
+  pointer-events: none;
 }
