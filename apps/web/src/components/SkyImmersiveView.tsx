@@ -9,7 +9,6 @@ import { SkyStreetView } from './SkyStreetView'
 import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
 import { SkyAtmosphereCanvas } from './SkyAtmosphereCanvas'
 import { starOptics } from '../skyPhotographicMath'
-import { photoHorizonBottomPercent } from '../skyAtmosphereMath'
 import { PHOTO_FRAME_RATIOS, containPhotoFrame, photoFrameAspect } from '../photoSkyPresentation'
 import type { PhotoFrameRatio, PhotoStarPlacement } from '../photoSkyPresentation'
 import {
@@ -193,7 +192,6 @@ export function SkyImmersiveView({ result, location }: Props) {
     twinkle: starTwinkleSettings(star.hipparcosId, star.magnitude),
     optics: starOptics(star.magnitude, star.altitudeDeg, Boolean(NAMED_STAR_COLORS[star.hipparcosId]), photoExposure),
   })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov, photoExposure])
-  const photoBottom = photoHorizonBottomPercent(pitch, fov)
   const actualPhotoRatio = photoFrameAspect(
     photoFrameRatio, sourcePhotoSize.width, sourcePhotoSize.height,
   )
@@ -503,7 +501,7 @@ export function SkyImmersiveView({ result, location }: Props) {
             aria-label={`Photo preview with ${photoStarPlacement === 'whole' ? 'stars across the image' :
               photoStarPlacement === 'upper' ? 'stars in the upper half' : 'stars behind its transparent sky'}`}
             style={{ width: photoFrame.width, height: photoFrame.height,
-              bottom: photoStarPlacement === 'cutout' ? photoBottom + '%' : undefined }}>
+ }}>
             <img className="immersive-framed-photo-image"
               src={photoStarPlacement === 'cutout' ? photoUrl : sourcePhotoUrl || photoUrl}
               alt="" aria-hidden="true" draggable={false}/>
