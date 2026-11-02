@@ -536,8 +536,8 @@ export function SkyImmersiveView({ result, location }: Props) {
                       boxShadow: `0 0 ${Math.max(4, optics.haloRadius / 2)}px 2px ${appearance.color}66` }}/>
                 })}
               </div>}
-          </div>}}
-        
+          </div>}
+
         <SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}/>
         <div className="immersive-crosshair" aria-hidden="true">+</div>
         {showHint && <div className="immersive-look-hint" role="status">
