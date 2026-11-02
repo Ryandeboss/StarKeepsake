@@ -8,6 +8,33 @@
 4. Inspect the result over a dark night gradient or a checkerboard. Use **Edge cleanup** (0–8 original-image pixels; default 2 px) to remove thin sky-colored borders. The local cleanup references nearby confident-sky pixels and protects contrasting branches/building edges. Toggle **Remove sky-colored edge glow** for semi-transparent fringe RGB decontamination, or set cleanup to 0 and disable the toggle to see the untouched AI matte. These adjustments reuse the existing downloaded AI mask and never make another Fal request. If mask polarity is reversed, use **Invert AI mask**. Click **Apply to night sky** only after checking.
 5. An already transparent PNG can be applied directly; for images with a plain white sky, a free local white-sky remover is offered explicitly as fallback.
 
+## Local second-pass recovery (no new Fal calls)
+
+After the AI mask is downloaded, the preview applies a second, browser-only
+`recoverMissedSkyMask` pass to remove bright sky around tree canopies that
+SAM sometimes marks as foreground.
+
+- **Recover missed bright sky:** Off / Low / Medium / High (Medium by default).
+  A median color reference is drawn only from bright, high-confidence model sky
+  in the original photo. The browser grows candidate sky through similarly
+  bright/color-matching pixels, seeded by the top image border, upper-left and
+  upper-right edges, and existing confident model-sky pixels.
+- The flood fill cannot cross strongly contrasting dark branches or buildings,
+  and stops at 58% of image height to protect the walkway and water. Opaque
+  original foreground RGB is preserved by the subsequent compositor.
+- This is intentionally conservative. Enclosed sky pockets with no qualifying
+  path to a seed may remain; in those cases, a dedicated alpha-matting model or
+  manual correction may still be needed.
+- Recovery runs **before** the existing edge cleanup and semi-transparent
+  decontamination. Both reuse the same in-memory Fal mask; **no further paid
+  requests** occur when changing presets or sliders.
+- **Show raw AI mask** sets recovery Off, edge cleanup 0, and decontamination
+  false, so users can compare the unmodified model output.
+
+Tests: `npm run test:sky-recovery` in `apps/web` covers missed canopy sky,
+thin branches, dark buildings, enclosed bright windows, lower-image protection,
+preset strengths, invert, and input immutability.
+
 ## Server configuration and costs
 
 - Backend: ASP.NET Core endpoint `POST /api/sky/mask` on the existing Azure API.
