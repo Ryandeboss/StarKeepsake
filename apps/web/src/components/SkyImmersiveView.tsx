@@ -315,36 +315,68 @@ export function SkyImmersiveView({ result, location }: Props) {
         </div>
       </div>
       {location.id === 'chicago' && !groundView && <div className="immersive-photo-setup">
+        <fieldset className="immersive-photo-layout-choices">
+          <legend>Where should the stars go?</legend>
+          <button type="button" className={photoSkyLayout === 'within' ? 'is-chosen' : ''}
+            aria-pressed={photoSkyLayout === 'within'}
+            onClick={() => {
+              setPhotoSkyLayout('within')
+              if (editingPhoto && !photoUrl) { setCutoutEditorOpen(true); setPhotoMode(false) }
+              else if (photoUrl) { setCutoutEditorOpen(false); setPhotoMode(true) }
+            }}>
+            <span className="immersive-layout-thumbnail is-within" aria-hidden="true">
+              <span className="immersive-layout-stars">✧　✦　·</span>
+              <span className="immersive-layout-land"/>
+            </span>
+            <span><strong>Within my photo</strong>
+              <small>My image already has a sky or horizon. Keep foreground detail and replace its sky.</small></span>
+          </button>
+          <button type="button" className={isAbovePhoto ? 'is-chosen' : ''}
+            aria-pressed={isAbovePhoto}
+            onClick={() => {
+              setPhotoSkyLayout('above')
+              setCutoutEditorOpen(false)
+              if (originalPhotoUrl) { setPhotoMode(true); setGroundView(false) }
+            }}>
+            <span className="immersive-layout-thumbnail is-above" aria-hidden="true">
+              <span className="immersive-layout-stars">✧　✦　·</span>
+              <span className="immersive-layout-boundary"/>
+              <span className="immersive-layout-land"/>
+            </span>
+            <span><strong>Above my photo</strong>
+              <small>No visible horizon? Add a new starry sky section above the entire original image.</small></span>
+          </button>
+        </fieldset>
         <label>
-          <span>Chicago skyline photo · preview AI sky removal</span>
+          <span>Choose your photo · JPG, PNG or WebP</span>
           <input ref={photoUpload} type="file" accept="image/jpeg,image/webp,image/png"
             onChange={event => {
               receivePhoto(event.currentTarget.files?.[0])
               event.currentTarget.value = ''
             }}/>
         </label>
-        {editingPhoto && <button type="button" className="immersive-edit-cutout"
+        {editingPhoto && !isAbovePhoto && <button type="button" className="immersive-edit-cutout"
           onClick={() => {
             interruptTour()
             setGroundView(false)
             if (photoUrl) setPhotoMode(true)
             setCutoutEditorOpen(true)
-          }}>{photoUrl ? '✎ Edit cutout' : 'Resume cutout'}</button>}
-        {photoUrl && <>
+          }}>{photoUrl ? '✎ Edit cutout' : 'Prepare sky cutout'}</button>}
+        {(isAbovePhoto ? originalPhotoUrl : photoUrl) && <>
           <button type="button" aria-pressed={photoMode}
             onClick={() => { interruptTour(); setPhotoMode(mode => !mode) }}>
             {photoMode ? 'Hide skyline' : 'Show skyline'}
           </button>
-          {photoMode && <label>Skyline size <strong>{photoScale}%</strong>
+          {photoMode && !isAbovePhoto && <label>Skyline size <strong>{photoScale}%</strong>
             <input type="range" min="100" max="160" step="5" value={photoScale}
               onChange={event => setPhotoScale(Number(event.target.value))}/>
           </label>}
         </>}
         {photoError && <span role="alert" className="immersive-photo-error">{photoError}</span>}
-        <small>Upload a JPG, PNG or WebP. Preview the entire image, optionally remove sky
-          with a dedicated segmentation model, and apply the transparent foreground.
-          You can reopen Edit cutout afterward without another AI request.
-          This is a flat photo plate, not a calibrated 360° panorama.</small>
+        <small>{isAbovePhoto
+          ? 'This layout keeps the entire photo intact, then adds a distinct calculated star-sky area above it. No AI sky removal is required.'
+          : 'This is the original sky-cutout layout: remove the existing sky, preserve your foreground and horizon, and edit the cutout again after applying.'}
+          Stars are calculated for the selected moment, but are not calibrated to the photo camera.</small>
       </div>}
       {editingPhoto && <div hidden={!cutoutEditorOpen}>
         <SkyCutoutPreview key={cutoutSession} file={editingPhoto} active={cutoutEditorOpen}
@@ -442,10 +474,20 @@ export function SkyImmersiveView({ result, location }: Props) {
             d={`M0 ${projectObserverStar(heading, 0, heading, pitch, fov).y} H1000 V600 H0Z`}
             fill="#061624" pointerEvents="none"/>}
         </svg>
-        {photoMode && photoUrl && <img
+        {photoMode && !isAbovePhoto && photoUrl && <img
           src={photoUrl} alt="" aria-hidden="true"
           className="immersive-photo-horizon"
           style={{ width: photoScale + '%', bottom: photoBottom + '%' }}/>}
+        {photoMode && isAbovePhoto && originalPhotoUrl && abovePhotoFrame.width > 0 &&
+          <div className="immersive-sky-above-frame"
+            aria-label="Separate star-sky section above the entire original photo"
+            style={{ width: abovePhotoFrame.width, height: abovePhotoFrame.height }}>
+            <div className="immersive-sky-above-panel"
+              style={{ height: abovePhotoFrame.skyHeight }} aria-hidden="true"/>
+            <img src={originalPhotoUrl} alt="Original photograph beneath a separate star-sky section"
+              className="immersive-sky-above-original" draggable={false}
+              style={{ height: abovePhotoFrame.photoHeight }}/>
+          </div>}
         
         <SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}/>
         <div className="immersive-crosshair" aria-hidden="true">+</div>
@@ -457,7 +499,10 @@ export function SkyImmersiveView({ result, location }: Props) {
         </div>}
         <div className="immersive-location-readout">
           <strong>{location.name}</strong>
-          <small>{photoMode ? 'Chicago foreground follows tilt only · not a 360° panorama' : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
+          <small>{photoMode
+            ? isAbovePhoto ? 'Separate sky above full photo · original image unchanged'
+              : 'Existing horizon and transparent foreground · not a 360° panorama'
+            : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
         </div>
         <div className="immersive-view-readout">LOOK {Math.round(heading)}° · UP {Math.round(pitch)}° · FOV {fov}°</div>
         {chosen && chosenPoint && (
