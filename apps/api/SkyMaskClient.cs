@@ -10,7 +10,9 @@ namespace StarKeepsake.Api;
 /// </summary>
 public sealed class SkyMaskClient(HttpClient http, IConfiguration config)
 {
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(config["Fal:ApiKey"]);
+    // Opt-in gate: adding a Fal key to the live API must NOT enable paid calls.
+    public bool IsConfigured => config.GetValue<bool>("SkyMask:Enabled") &&
+        !string.IsNullOrWhiteSpace(config["Fal:ApiKey"]);
 
     public async Task<byte[]> GetSkyMaskAsync(Stream image, string mimeType, CancellationToken token)
     {
