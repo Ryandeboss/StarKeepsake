@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { generateSkyMask, skyMaskAvailability } from '../api'
 import { applySkyAlpha, maskLooksUsable } from '../skyAiMask'
+import { recoverMissedSkyMask, type MissedSkyStrength } from '../skyMissedSkyRecovery'
 import { createSkylineCutout, hasTransparentSky } from '../skyCutout'
 import './SkyCutoutPreview.css'
 
@@ -24,6 +25,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const [error, setError] = useState('')
   const [invert, setInvert] = useState(false)
   const [edgeCleanup, setEdgeCleanup] = useState(2)
+  const [skyRecovery, setSkyRecovery] = useState<MissedSkyStrength>(2)
   const [reduceHalo, setReduceHalo] = useState(true)
   const [refining, setRefining] = useState(false)
   const [transparentInput, setTransparentInput] = useState(false)
@@ -97,6 +99,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
 
   async function composeFromMask(
     mask: Blob, reversed: boolean, cleanup: number, decontaminate: boolean,
+    recovery: MissedSkyStrength,
   ): Promise<Blob> {
     const [sourceBitmap, skyBitmap] = await Promise.all([createImageBitmap(file), createImageBitmap(mask)])
     try {
@@ -118,7 +121,12 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const maskPixels = maskCtx.getImageData(0, 0, canvas.width, canvas.height).data
       if (!maskLooksUsable(maskPixels))
         throw new Error('AI did not identify a usable sky area. Your original photo is unchanged.')
-      const cutout = applySkyAlpha(original.data, maskPixels, reversed, {
+      // Recover sky only in the original bright image before running the
+      // existing narrow edge and RGB fringe cleanup. No additional AI call.
+      const recoveredMask = recoverMissedSkyMask(original.data, maskPixels, reversed, {
+        width: canvas.width, height: canvas.height, strength: recovery,
+      })
+      const cutout = applySkyAlpha(original.data, recoveredMask, reversed, {
         width: canvas.width, height: canvas.height,
         cleanupPx: cleanup, decontaminate,
       })
@@ -134,10 +142,14 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
 
   // Slider adjustments reuse the last Fal mask, never call Fal again.
   // Debouncing avoids repeatedly allocating full-resolution canvases.
-  function scheduleRefinement(nextInvert: boolean, cleanup: number, decontaminate: boolean) {
+  function scheduleRefinement(
+    nextInvert: boolean, cleanup: number, decontaminate: boolean,
+    recovery: MissedSkyStrength = skyRecovery,
+  ) {
     setInvert(nextInvert)
     setEdgeCleanup(cleanup)
     setReduceHalo(decontaminate)
+    setSkyRecovery(recovery)
     const mask = maskBlob.current
     if (!mask) return
     const version = ++refineVersion.current
@@ -147,7 +159,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       refineTimer.current = null
       void (async () => {
         try {
-          const cutout = await composeFromMask(mask, nextInvert, cleanup, decontaminate)
+          const cutout = await composeFromMask(mask, nextInvert, cleanup, decontaminate, recovery)
           if (version !== refineVersion.current) return
           showResult(cutout, 'ai')
           setError('')
@@ -172,7 +184,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const jpg = await prepareAiUpload(abort.signal)
       const mask = await generateSkyMask(jpg, abort.signal)
       if (abort.signal.aborted) return
-      const cutout = await composeFromMask(mask, false, edgeCleanup, reduceHalo)
+      const cutout = await composeFromMask(mask, false, edgeCleanup, reduceHalo, skyRecovery)
       if (abort.signal.aborted) return
       maskBlob.current = mask
       setInvert(false)
@@ -246,6 +258,16 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
           <span>Free adjustments · no additional AI request</span>
         </div>
         <div className="sky-ai-refinement-controls">
+          <label htmlFor="sky-ai-missed-recovery">Recover missed bright sky</label>
+          <select id="sky-ai-missed-recovery" value={skyRecovery} disabled={processing}
+            onChange={event => scheduleRefinement(
+              invert, edgeCleanup, reduceHalo, Number(event.target.value) as MissedSkyStrength,
+            )}>
+            <option value={0}>Off</option>
+            <option value={1}>Low</option>
+            <option value={2}>Medium</option>
+            <option value={3}>High</option>
+          </select>
           <label htmlFor="sky-ai-edge-cleanup">Edge cleanup: <strong>{edgeCleanup} px</strong></label>
           <input id="sky-ai-edge-cleanup" type="range" min="0" max="8" step="1"
             value={edgeCleanup} disabled={processing}
@@ -256,10 +278,12 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
             Remove sky-colored edge glow
           </label>
           <button type="button" className="sky-ai-reset" disabled={processing}
-            onClick={() => scheduleRefinement(invert, 0, false)}>Show raw AI mask</button>
+            onClick={() => scheduleRefinement(invert, 0, false, 0)}>Show raw AI mask</button>
         </div>
-        <p>Start at 2 px. Increase only if a sky-colored border remains around buildings or trees.
-          Lower the value if fine branches disappear. Use “Show raw AI mask” to compare without edge edits.</p>
+        <p>Missed-sky recovery removes bright white gaps in tree canopies using the original
+          photo, then edge cleanup removes thin halos. Both are free, local adjustments.
+          If branches disappear or buildings are affected, lower the recovery setting.
+          “Show raw AI mask” turns both refinements off.</p>
       </div>}
       {available === null && <p className="sky-ai-status" role="status">Checking AI availability…</p>}
       {available === false && <p className="sky-ai-status" role="status">
