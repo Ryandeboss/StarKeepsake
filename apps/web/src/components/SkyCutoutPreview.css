@@ -63,6 +63,14 @@
 .sky-ai-refinement-header span { color: #c1d9d7; font-size: 11px; }
 .sky-ai-refinement-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 15px; }
 .sky-ai-refinement-controls label { color: #f1e9d9; font-size: 12px; }
+.sky-ai-refinement-controls select {
+  background: #244856; color: #f2f5ed; border: 1px solid #849a9f;
+  border-radius: 7px; padding: 8px 10px; font: inherit; font-size: 12px;
+  min-width: 100px; cursor: pointer;
+}
+.sky-ai-refinement-controls select:focus-visible {
+  outline: 3px solid #f8d793; outline-offset: 2px;
+}
 .sky-ai-refinement-controls input[type="range"] {
   width: min(220px, 42vw); accent-color: #efc982; cursor: pointer;
 }
