@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { generateSkyMask, skyMaskAvailability } from '../api'
 import { applySkyAlpha, maskLooksUsable } from '../skyAiMask'
 import { recoverMissedSkyMask, type MissedSkyStrength } from '../skyMissedSkyRecovery'
+import { removeSkySpots, type SkySpot } from '../skySpotCleanup'
 import { createSkylineCutout, hasTransparentSky } from '../skyCutout'
 import './SkyCutoutPreview.css'
 
@@ -26,12 +27,15 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const [invert, setInvert] = useState(false)
   const [edgeCleanup, setEdgeCleanup] = useState(2)
   const [skyRecovery, setSkyRecovery] = useState<MissedSkyStrength>(2)
+  const [spotMode, setSpotMode] = useState(false)
+  const [spotSeeds, setSpotSeeds] = useState<SkySpot[]>([])
   const [reduceHalo, setReduceHalo] = useState(true)
   const [refining, setRefining] = useState(false)
   const [transparentInput, setTransparentInput] = useState(false)
   const [showCheckerboard, setShowCheckerboard] = useState(false)
   const resultBlob = useRef<Blob | null>(null)
   const maskBlob = useRef<Blob | null>(null)
+  const previewImage = useRef<HTMLImageElement | null>(null)
   const controller = useRef<AbortController | null>(null)
   const initialButton = useRef<HTMLButtonElement>(null)
   const outputUrl = useRef<string | null>(null)
@@ -99,7 +103,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
 
   async function composeFromMask(
     mask: Blob, reversed: boolean, cleanup: number, decontaminate: boolean,
-    recovery: MissedSkyStrength,
+    recovery: MissedSkyStrength, spots: readonly SkySpot[],
   ): Promise<Blob> {
     const [sourceBitmap, skyBitmap] = await Promise.all([createImageBitmap(file), createImageBitmap(mask)])
     try {
@@ -126,7 +130,9 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const recoveredMask = recoverMissedSkyMask(original.data, maskPixels, reversed, {
         width: canvas.width, height: canvas.height, strength: recovery,
       })
-      const cutout = applySkyAlpha(original.data, recoveredMask, reversed, {
+      const spotCorrected = removeSkySpots(original.data, recoveredMask, reversed,
+        canvas.width, canvas.height, spots)
+      const cutout = applySkyAlpha(original.data, spotCorrected, reversed, {
         width: canvas.width, height: canvas.height,
         cleanupPx: cleanup, decontaminate,
       })
@@ -145,11 +151,13 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   function scheduleRefinement(
     nextInvert: boolean, cleanup: number, decontaminate: boolean,
     recovery: MissedSkyStrength = skyRecovery,
+    spots: SkySpot[] = spotSeeds,
   ) {
     setInvert(nextInvert)
     setEdgeCleanup(cleanup)
     setReduceHalo(decontaminate)
     setSkyRecovery(recovery)
+    setSpotSeeds(spots)
     const mask = maskBlob.current
     if (!mask) return
     const version = ++refineVersion.current
@@ -159,7 +167,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       refineTimer.current = null
       void (async () => {
         try {
-          const cutout = await composeFromMask(mask, nextInvert, cleanup, decontaminate, recovery)
+          const cutout = await composeFromMask(mask, nextInvert, cleanup, decontaminate,
+            recovery, spots)
           if (version !== refineVersion.current) return
           showResult(cutout, 'ai')
           setError('')
@@ -174,6 +183,27 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     }, 180)
   }
 
+  function addSkySpot(event: React.MouseEvent<HTMLButtonElement>) {
+    if (!spotMode || busy || !maskBlob.current || resultSource !== 'ai') return
+    const img = previewImage.current
+    if (!img || !img.naturalWidth || !img.naturalHeight) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const scale = Math.min(rect.width / img.naturalWidth, rect.height / img.naturalHeight)
+    const shownWidth = img.naturalWidth * scale
+    const shownHeight = img.naturalHeight * scale
+    const left = rect.left + (rect.width - shownWidth) / 2
+    const top = rect.top + (rect.height - shownHeight) / 2
+    const x = Math.floor((event.clientX - left) / scale)
+    const y = Math.floor((event.clientY - top) / scale)
+    if (x < 0 || y < 0 || x >= img.naturalWidth || y >= img.naturalHeight) return
+    if (spotSeeds.length >= 16) {
+      setError('Maximum of 16 sky touch-ups. Undo a spot before adding another.')
+      return
+    }
+    scheduleRefinement(invert, edgeCleanup, reduceHalo, skyRecovery,
+      [...spotSeeds, { x, y }])
+  }
+
   async function removeSky() {
     if (busy || available !== true) return
     const abort = new AbortController()
@@ -184,9 +214,11 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const jpg = await prepareAiUpload(abort.signal)
       const mask = await generateSkyMask(jpg, abort.signal)
       if (abort.signal.aborted) return
-      const cutout = await composeFromMask(mask, false, edgeCleanup, reduceHalo, skyRecovery)
+      const cutout = await composeFromMask(mask, false, edgeCleanup, reduceHalo, skyRecovery, [])
       if (abort.signal.aborted) return
       maskBlob.current = mask
+      setSpotSeeds([])
+      setSpotMode(false)
       setInvert(false)
       showResult(cutout, 'ai')
     } catch (cause) {
@@ -209,6 +241,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       // fallback, not the default or a claim of semantic segmentation.
       const cutout = await createSkylineCutout(file)
       maskBlob.current = null
+      setSpotSeeds([])
+      setSpotMode(false)
       showResult(cutout, 'local')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Local removal failed.')
@@ -219,6 +253,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     refineVersion.current += 1
     if (refineTimer.current) clearTimeout(refineTimer.current)
     maskBlob.current = null
+    setSpotSeeds([])
+    setSpotMode(false)
     showResult(file, 'original')
   }
 
@@ -268,6 +304,17 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
             <option value={2}>Medium</option>
             <option value={3}>High</option>
           </select>
+          <button type="button" className="sky-ai-reset"
+            aria-pressed={spotMode} disabled={busy}
+            onClick={() => setSpotMode(value => !value)}>
+            {spotMode ? 'Done touching up' : 'Touch up white pockets'}
+          </button>
+          {spotSeeds.length > 0 && <button type="button" className="sky-ai-reset"
+            disabled={processing}
+            onClick={() => scheduleRefinement(invert, edgeCleanup, reduceHalo,
+              skyRecovery, spotSeeds.slice(0, -1))}>
+            Undo spot ({spotSeeds.length})
+          </button>}
           <label htmlFor="sky-ai-edge-cleanup">Edge cleanup: <strong>{edgeCleanup} px</strong></label>
           <input id="sky-ai-edge-cleanup" type="range" min="0" max="8" step="1"
             value={edgeCleanup} disabled={processing}
@@ -278,13 +325,17 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
             Remove sky-colored edge glow
           </label>
           <button type="button" className="sky-ai-reset" disabled={processing}
-            onClick={() => scheduleRefinement(invert, 0, false, 0)}>Show raw AI mask</button>
+            onClick={() => scheduleRefinement(invert, 0, false, 0, [])}>Show raw AI mask</button>
         </div>
         <p>Missed-sky recovery removes bright white gaps in tree canopies using the original
           photo, then edge cleanup removes thin halos. Both are free, local adjustments.
           If branches disappear or buildings are affected, lower the recovery setting.
           “Show raw AI mask” turns both refinements off.</p>
       </div>}
+      {spotMode && resultSource === 'ai' && <p className="sky-ai-status" role="status">
+        Click a remaining white sky area in the RIGHT preview to remove that connected pocket.
+        Each click is local and free. Use Undo spot if it removes too much.
+      </p>}
       {available === null && <p className="sky-ai-status" role="status">Checking AI availability…</p>}
       {available === false && <p className="sky-ai-status" role="status">
         AI removal is not configured yet. A server-side Fal API key is required; the local remover
@@ -303,8 +354,13 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
         <figure>
           <figcaption>{resultSource ? 'Sky removed · review before applying' : 'Your transparent preview'}</figcaption>
           <div className={`sky-ai-photo-shell ${showCheckerboard ? 'sky-ai-checkers' : 'sky-ai-night'}`}>
-            {resultUrl ? <img src={resultUrl} alt="Complete skyline with removed sky shown transparent"/> :
+            {resultUrl ? <img ref={previewImage} src={resultUrl}
+              alt="Complete skyline with removed sky shown transparent"/> :
               <div className="sky-ai-placeholder">The edited photo will appear here at its full aspect ratio.</div>}
+            {spotMode && resultSource === 'ai' && resultUrl && <button
+              type="button" className="sky-ai-spot-target" onClick={addSkySpot}
+              aria-label="Click a bright sky pocket in the preview to remove it"
+              disabled={busy} title="Click a white sky pocket to remove it locally"/>}
           </div>
         </figure>
       </div>
