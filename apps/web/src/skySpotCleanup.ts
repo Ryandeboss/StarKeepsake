@@ -4,7 +4,7 @@
  * growing makes that patch transparent, without a second Fal request.
  *
  * This is deliberately local and reversible. Only bright, low-chroma regions
- * above the foreground horizon can be removed; branches are high contrast.
+ * above the protected horizon by default; manual edits can opt into full-image coverage.
  */
 export type SkySpot = Readonly<{ x: number; y: number }>
 
@@ -17,6 +17,7 @@ export function removeSkySpots(
   width: number,
   height: number,
   spots: readonly SkySpot[],
+  protectLowerImage = true,
 ): Uint8ClampedArray {
   if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) ||
       width < 1 || height < 1 || original.length !== width * height * 4 ||
@@ -24,7 +25,7 @@ export function removeSkySpots(
 
   const output = new Uint8ClampedArray(mask)
   if (!spots.length) return output
-  const maxY = Math.min(height, Math.ceil(height * 0.62))
+  const maxY = protectLowerImage ? Math.min(height, Math.ceil(height * 0.62)) : height
   // One byte per pixel supports the 32-operation editor undo history.
   const visited = new Uint8Array(width * maxY)
   const queue = new Int32Array(width * maxY)
