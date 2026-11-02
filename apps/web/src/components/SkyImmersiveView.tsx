@@ -6,6 +6,8 @@ import { SkyCityHorizon } from './SkyCityHorizon'
 import { createSkylineCutout } from '../skyCutout'
 import { getObserverScene } from '../skyLandscapeData'
 import { SkyStreetView } from './SkyStreetView'
+import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
+import { atmosphereRows, photoHorizonBottomPercent } from '../skyAtmosphereMath'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, starTwinkleSettings, suggestedObserverHeading,
@@ -147,7 +149,8 @@ export function SkyImmersiveView({ result, location }: Props) {
     appearance: starAppearance(star),
     twinkle: starTwinkleSettings(star.hipparcosId, star.magnitude),
   })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov])
-  const horizonY = projectObserverStar(heading, 0, heading, pitch, fov).y
+  const atmosphere = useMemo(() => atmosphereRows(pitch, fov), [pitch, fov])
+  const photoBottom = photoHorizonBottomPercent(pitch, fov)
   const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point] as const)), [visible])
   const chosen = starByHip.get(hoveredHip ?? pinnedHip ?? -1)
   const chosenPoint = chosen ? pointsByHip.get(chosen.hipparcosId) : undefined
@@ -296,20 +299,15 @@ export function SkyImmersiveView({ result, location }: Props) {
           <defs>
             <linearGradient id="immersive-night" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor="#020711"/>
-              <stop offset="45%" stopColor="#071322"/>
-              <stop offset="100%" stopColor="#142c40"/>
+              <stop offset="100%" stopColor="#091829"/>
             </linearGradient>
-            <radialGradient id="immersive-horizon-haze">
-              <stop offset="0%" stopColor="#7499a7" stopOpacity=".38"/>
-              <stop offset="45%" stopColor="#3e6b7d" stopOpacity=".17"/>
-              <stop offset="100%" stopColor="#22374d" stopOpacity="0"/>
-            </radialGradient>
-            <radialGradient id="immersive-citylight">
-              <stop offset="0%" stopColor="#eab577" stopOpacity=".54"/>
-              <stop offset="35%" stopColor="#ad865c" stopOpacity=".28"/>
-              <stop offset="75%" stopColor="#6a5a51" stopOpacity=".07"/>
-              <stop offset="100%" stopColor="#6a5a51" stopOpacity="0"/>
-            </radialGradient>
+            <linearGradient id="immersive-urban-horizontal" x1="0%" x2="100%" y1="0%" y2="0%">
+              <stop offset="0%" stopColor="#d8ab77" stopOpacity=".17"/>
+              <stop offset="30%" stopColor="#d8ab77" stopOpacity=".68"/>
+              <stop offset="50%" stopColor="#f3c385" stopOpacity="1"/>
+              <stop offset="70%" stopColor="#d8ab77" stopOpacity=".68"/>
+              <stop offset="100%" stopColor="#d8ab77" stopOpacity=".17"/>
+            </linearGradient>
             <filter id="immersive-air-texture" x="0" y="0" width="100%" height="100%">
               <feTurbulence type="fractalNoise" baseFrequency=".016" numOctaves="2" seed="9" stitchTiles="stitch"/>
             </filter>
@@ -318,12 +316,21 @@ export function SkyImmersiveView({ result, location }: Props) {
             </filter>
           </defs>
           <rect width="1000" height="600" fill="url(#immersive-night)"/>
-          <ellipse cx="500" cy={horizonY - 34} rx="940" ry="320"
-            fill="url(#immersive-horizon-haze)" pointerEvents="none"/>
-          <ellipse cx="500" cy={horizonY + 20} rx="740" ry="200"
-            fill="url(#immersive-citylight)" opacity={photoMode ? .88 : .58} pointerEvents="none"/>
+          {/* These rows are sampled from the sky camera's altitude rays.
+              They cannot stay at the bottom when the camera tilts upward. */}
+          <g pointerEvents="none" aria-hidden="true">
+            {atmosphere.map(row => (
+              <g key={row.y}>
+                {row.haze > .001 && <rect x="0" y={row.y} width="1000" height={row.height + .4}
+                  fill="#6a96a6" opacity={row.haze}/>}
+                {row.amber > .001 && <rect x="0" y={row.y} width="1000" height={row.height + .4}
+                  fill="url(#immersive-urban-horizontal)"
+                  opacity={row.amber * (photoMode ? .98 : .67)}/>}
+              </g>
+            ))}
+          </g>
           <rect width="1000" height="600" fill="#a7b5bd" filter="url(#immersive-air-texture)"
-            opacity=".035" pointerEvents="none"/>
+            opacity=".026" pointerEvents="none"/>
           {showLines && patterns.map(({ pattern }) => (
             <g key={pattern.id} className={activePattern === pattern.id ? 'is-featured' : ''}>
               {pattern.segments.map(([from, to]) => {
@@ -394,8 +401,9 @@ export function SkyImmersiveView({ result, location }: Props) {
         {photoMode && photoUrl && <img
           src={photoUrl} alt="" aria-hidden="true"
           className="immersive-photo-horizon"
-          style={{ width: photoScale + '%' }}/>}
+          style={{ width: photoScale + '%', bottom: photoBottom + '%' }}/>}
         
+        <SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}/>
         <div className="immersive-crosshair" aria-hidden="true">+</div>
         {showHint && <div className="immersive-look-hint" role="status">
           <span className="immersive-look-hint-eyebrow">{touring ? 'Watch the camera turn' : 'YOUR VIEW IS INTERACTIVE'}</span>
@@ -405,7 +413,7 @@ export function SkyImmersiveView({ result, location }: Props) {
         </div>}
         <div className="immersive-location-readout">
           <strong>{location.name}</strong>
-          <small>{photoMode ? 'Static Chicago photo foreground · not geographically calibrated' : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
+          <small>{photoMode ? 'Chicago foreground follows tilt only · not a 360° panorama' : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
         </div>
         <div className="immersive-view-readout">LOOK {Math.round(heading)}° · UP {Math.round(pitch)}° · FOV {fov}°</div>
         {chosen && chosenPoint && (
@@ -433,7 +441,7 @@ export function SkyImmersiveView({ result, location }: Props) {
         <p>Color is shown for a curated group of identified stars; neutral white is used when our data has no verified color.
           Dot size follows apparent magnitude (brightness as seen from Earth), <strong>not physical star size</strong>. Subtle scintillation and atmospheric city glow are artistic effects, not a reconstruction of historical light pollution or weather.
           Lines are modern illustrative guides, not objects in space or official constellation boundaries.
-          {photoMode ? ' This flat photo plate was generated separately from the astronomical sky and has no verified compass bearing. Camera motion affects only the stars in this mode.' :
+          {photoMode ? ' This AI skyline has no verified compass bearing. The 2D plate follows vertical camera pitch as a visual approximation, but cannot reproduce genuine 3D or 360° parallax.' :
             ' The local skylines are original, geographically inspired artwork, not photographs or landmark-accurate bearings.'}</p>
       </div>
       <div className="immersive-below">
