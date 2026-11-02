@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
 import { generateSkyMask, skyMaskAvailability } from '../api'
 import { applySkyAlpha, maskLooksUsable } from '../skyAiMask'
 import { recoverMissedSkyMask, type MissedSkyStrength } from '../skyMissedSkyRecovery'
 import { removeSkySpots, type SkySpot } from '../skySpotCleanup'
+import { removeSkySweeps, type SkySweepRectangle } from '../skySweepCleanup'
 import { createSkylineCutout, hasTransparentSky } from '../skyCutout'
 import './SkyCutoutPreview.css'
 
@@ -12,6 +13,10 @@ type Props = {
   onCancel: () => void
 }
 type Source = 'ai' | 'local' | 'original'
+type TouchMode = 'off' | 'spot' | 'sweep'
+type TouchUpEdit = { kind: 'spot'; point: SkySpot } | { kind: 'sweep'; rectangle: SkySweepRectangle }
+type DragState = { pointerId: number; start: SkySpot }
+type DragBox = { left: number; top: number; width: number; height: number }
 
 /**
  * No painting, clipping or scrollable zoom canvas. Both columns show the FULL
@@ -27,8 +32,9 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const [invert, setInvert] = useState(false)
   const [edgeCleanup, setEdgeCleanup] = useState(2)
   const [skyRecovery, setSkyRecovery] = useState<MissedSkyStrength>(2)
-  const [spotMode, setSpotMode] = useState(false)
-  const [spotSeeds, setSpotSeeds] = useState<SkySpot[]>([])
+  const [touchMode, setTouchMode] = useState<TouchMode>('off')
+  const [touchEdits, setTouchEdits] = useState<TouchUpEdit[]>([])
+  const [dragBox, setDragBox] = useState<DragBox | null>(null)
   const [reduceHalo, setReduceHalo] = useState(true)
   const [refining, setRefining] = useState(false)
   const [transparentInput, setTransparentInput] = useState(false)
@@ -36,6 +42,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const resultBlob = useRef<Blob | null>(null)
   const maskBlob = useRef<Blob | null>(null)
   const previewImage = useRef<HTMLImageElement | null>(null)
+  const dragState = useRef<DragState | null>(null)
   const controller = useRef<AbortController | null>(null)
   const initialButton = useRef<HTMLButtonElement>(null)
   const outputUrl = useRef<string | null>(null)
@@ -63,6 +70,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     return () => {
       active = false
       controller.current?.abort()
+      dragState.current = null
       refineVersion.current += 1
       if (refineTimer.current) clearTimeout(refineTimer.current)
       URL.revokeObjectURL(originalUrl)
@@ -103,7 +111,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
 
   async function composeFromMask(
     mask: Blob, reversed: boolean, cleanup: number, decontaminate: boolean,
-    recovery: MissedSkyStrength, spots: readonly SkySpot[],
+    recovery: MissedSkyStrength, edits: readonly TouchUpEdit[],
   ): Promise<Blob> {
     const [sourceBitmap, skyBitmap] = await Promise.all([createImageBitmap(file), createImageBitmap(mask)])
     try {
@@ -130,9 +138,15 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const recoveredMask = recoverMissedSkyMask(original.data, maskPixels, reversed, {
         width: canvas.width, height: canvas.height, strength: recovery,
       })
+      const spots = edits.filter((edit): edit is Extract<TouchUpEdit, { kind: 'spot' }> =>
+        edit.kind === 'spot').map(edit => edit.point)
+      const rectangles = edits.filter((edit): edit is Extract<TouchUpEdit, { kind: 'sweep' }> =>
+        edit.kind === 'sweep').map(edit => edit.rectangle)
       const spotCorrected = removeSkySpots(original.data, recoveredMask, reversed,
         canvas.width, canvas.height, spots)
-      const cutout = applySkyAlpha(original.data, spotCorrected, reversed, {
+      const sweepCorrected = removeSkySweeps(original.data, spotCorrected, reversed,
+        canvas.width, canvas.height, rectangles)
+      const cutout = applySkyAlpha(original.data, sweepCorrected, reversed, {
         width: canvas.width, height: canvas.height,
         cleanupPx: cleanup, decontaminate,
       })
@@ -151,13 +165,13 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   function scheduleRefinement(
     nextInvert: boolean, cleanup: number, decontaminate: boolean,
     recovery: MissedSkyStrength = skyRecovery,
-    spots: SkySpot[] = spotSeeds,
+    edits: TouchUpEdit[] = touchEdits,
   ) {
     setInvert(nextInvert)
     setEdgeCleanup(cleanup)
     setReduceHalo(decontaminate)
     setSkyRecovery(recovery)
-    setSpotSeeds(spots)
+    setTouchEdits(edits)
     const mask = maskBlob.current
     if (!mask) return
     const version = ++refineVersion.current
@@ -168,7 +182,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       void (async () => {
         try {
           const cutout = await composeFromMask(mask, nextInvert, cleanup, decontaminate,
-            recovery, spots)
+            recovery, edits)
           if (version !== refineVersion.current) return
           showResult(cutout, 'ai')
           setError('')
@@ -184,7 +198,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   }
 
   function addSkySpot(event: MouseEvent<HTMLButtonElement>) {
-    if (!spotMode || busy || !maskBlob.current || resultSource !== 'ai') return
+    if (touchMode !== 'spot' || busy || !maskBlob.current || resultSource !== 'ai') return
     const img = previewImage.current
     if (!img || !img.naturalWidth || !img.naturalHeight) return
     const rect = event.currentTarget.getBoundingClientRect()
@@ -196,12 +210,90 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     const x = Math.floor((event.clientX - left) / scale)
     const y = Math.floor((event.clientY - top) / scale)
     if (x < 0 || y < 0 || x >= img.naturalWidth || y >= img.naturalHeight) return
-    if (spotSeeds.length >= 16) {
-      setError('Maximum of 16 sky touch-ups. Undo a spot before adding another.')
+    if (touchEdits.length >= 32) {
+      setError('Maximum 32 touch-up operations. Undo an edit to continue.')
       return
     }
     scheduleRefinement(invert, edgeCleanup, reduceHalo, skyRecovery,
-      [...spotSeeds, { x, y }])
+      [...touchEdits, { kind: 'spot', point: { x, y } }])
+  }
+
+  /** Map a pointer to the image pixels, compensating for object-fit: contain. */
+  function imageCoords(event: PointerEvent<HTMLButtonElement>, clamp: boolean) {
+    const image = previewImage.current
+    if (!image || !image.naturalWidth || !image.naturalHeight) return null
+    const rect = event.currentTarget.getBoundingClientRect()
+    const scale = Math.min(rect.width / image.naturalWidth, rect.height / image.naturalHeight)
+    if (scale <= 0) return null
+    const left = (rect.width - image.naturalWidth * scale) / 2
+    const top = (rect.height - image.naturalHeight * scale) / 2
+    const rawX = (event.clientX - rect.left - left) / scale
+    const rawY = (event.clientY - rect.top - top) / scale
+    if (!clamp && (rawX < 0 || rawX >= image.naturalWidth ||
+      rawY < 0 || rawY >= image.naturalHeight)) return null
+    return {
+      x: Math.max(0, Math.min(image.naturalWidth, rawX)),
+      y: Math.max(0, Math.min(image.naturalHeight, rawY)),
+      screenX: Math.max(left, Math.min(left + image.naturalWidth * scale,
+        event.clientX - rect.left)),
+      screenY: Math.max(top, Math.min(top + image.naturalHeight * scale,
+        event.clientY - rect.top)),
+    }
+  }
+
+  function startSweep(event: PointerEvent<HTMLButtonElement>) {
+    if (touchMode !== 'sweep' || busy || !maskBlob.current ||
+        event.button !== 0 || dragState.current) return
+    const pos = imageCoords(event, false)
+    if (!pos) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragState.current = { pointerId: event.pointerId, start: { x: pos.x, y: pos.y } }
+    setDragBox({ left: pos.screenX, top: pos.screenY, width: 0, height: 0 })
+  }
+
+  function moveSweep(event: PointerEvent<HTMLButtonElement>) {
+    const drag = dragState.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    const end = imageCoords(event, true)
+    const image = previewImage.current
+    if (!end || !image) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const scale = Math.min(rect.width / image.naturalWidth, rect.height / image.naturalHeight)
+    const x0 = (rect.width - image.naturalWidth * scale) / 2 + drag.start.x * scale
+    const y0 = (rect.height - image.naturalHeight * scale) / 2 + drag.start.y * scale
+    setDragBox({
+      left: Math.min(x0, end.screenX), top: Math.min(y0, end.screenY),
+      width: Math.abs(end.screenX - x0), height: Math.abs(end.screenY - y0),
+    })
+  }
+
+  function cancelSweep() {
+    dragState.current = null
+    setDragBox(null)
+  }
+
+  function finishSweep(event: PointerEvent<HTMLButtonElement>) {
+    const drag = dragState.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    const end = imageCoords(event, true)
+    dragState.current = null
+    setDragBox(null)
+    if (event.currentTarget.hasPointerCapture(event.pointerId))
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    if (!end || busy || touchMode !== 'sweep') return
+    const rectangle = {
+      x0: Math.floor(Math.min(drag.start.x, end.x)),
+      y0: Math.floor(Math.min(drag.start.y, end.y)),
+      x1: Math.ceil(Math.max(drag.start.x, end.x)),
+      y1: Math.ceil(Math.max(drag.start.y, end.y)),
+    }
+    if (rectangle.x1 - rectangle.x0 < 3 || rectangle.y1 - rectangle.y0 < 3) return
+    if (touchEdits.length >= 32) {
+      setError('Maximum 32 touch-up operations. Undo an edit to continue.')
+      return
+    }
+    scheduleRefinement(invert, edgeCleanup, reduceHalo, skyRecovery,
+      [...touchEdits, { kind: 'sweep', rectangle }])
   }
 
   async function removeSky() {
@@ -217,8 +309,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const cutout = await composeFromMask(mask, false, edgeCleanup, reduceHalo, skyRecovery, [])
       if (abort.signal.aborted) return
       maskBlob.current = mask
-      setSpotSeeds([])
-      setSpotMode(false)
+      setTouchEdits([])
+      setTouchMode('off')
       setInvert(false)
       showResult(cutout, 'ai')
     } catch (cause) {
@@ -253,8 +345,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     refineVersion.current += 1
     if (refineTimer.current) clearTimeout(refineTimer.current)
     maskBlob.current = null
-    setSpotSeeds([])
-    setSpotMode(false)
+    setTouchEdits([])
+    setTouchMode('off')
     showResult(file, 'original')
   }
 
@@ -305,16 +397,21 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
             <option value={3}>High</option>
           </select>
           <button type="button" className="sky-ai-reset"
-            aria-pressed={spotMode} disabled={busy}
-            onClick={() => setSpotMode(value => !value)}>
-            {spotMode ? 'Done touching up' : 'Touch up white pockets'}
+            aria-pressed={touchMode === 'spot'} disabled={busy}
+            onClick={() => { setTouchMode(value => value === 'spot' ? 'off' : 'spot'); setDragBox(null) }}>
+            {touchMode === 'spot' ? 'Done touching up' : 'Touch up white pockets'}
           </button>
-          {spotSeeds.length > 0 && <button type="button" className="sky-ai-reset"
-            disabled={processing}
+          <button type="button" className="sky-ai-reset"
+            aria-pressed={touchMode === 'sweep'} disabled={busy}
+            onClick={() => { setTouchMode(value => value === 'sweep' ? 'off' : 'sweep'); setDragBox(null) }}>
+            {touchMode === 'sweep' ? 'Done sweeping' : 'Sweep white pockets'}
+          </button>
+          {touchEdits.length > 0 && <button type="button" className="sky-ai-reset"
+            disabled={busy}
             onClick={() => scheduleRefinement(invert, edgeCleanup, reduceHalo,
-              skyRecovery, spotSeeds.slice(0, -1))}>
-            Undo spot ({spotSeeds.length})
-          </button>}
+              skyRecovery, touchEdits.slice(0, -1))}>
+            Undo edit ({touchEdits.length})
+          </button>
           <label htmlFor="sky-ai-edge-cleanup">Edge cleanup: <strong>{edgeCleanup} px</strong></label>
           <input id="sky-ai-edge-cleanup" type="range" min="0" max="8" step="1"
             value={edgeCleanup} disabled={processing}
@@ -332,9 +429,13 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
           If branches disappear or buildings are affected, lower the recovery setting.
           “Show raw AI mask” turns both refinements off.</p>
       </div>}
-      {spotMode && resultSource === 'ai' && <p className="sky-ai-status" role="status">
-        Click a remaining white sky area in the RIGHT preview to remove that connected pocket.
-        Each click is local and free. Use Undo spot if it removes too much.
+      {touchMode === 'spot' && resultSource === 'ai' && <p className="sky-ai-status" role="status">
+        Click a leftover white spot in the RIGHT preview. Each click is a free local edit;
+        use Undo edit if you remove too much.
+      </p>}
+      {touchMode === 'sweep' && resultSource === 'ai' && <p className="sky-ai-status" role="status">
+        Drag a rectangle around the tree canopy in the RIGHT preview. All bright sky-like
+        gaps inside the box are cleaned in one free operation. Review pale buildings and use Undo edit if needed.
       </p>}
       {available === null && <p className="sky-ai-status" role="status">Checking AI availability…</p>}
       {available === false && <p className="sky-ai-status" role="status">
@@ -357,10 +458,21 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
             {resultUrl ? <img ref={previewImage} src={resultUrl}
               alt="Complete skyline with removed sky shown transparent"/> :
               <div className="sky-ai-placeholder">The edited photo will appear here at its full aspect ratio.</div>}
-            {spotMode && resultSource === 'ai' && resultUrl && <button
-              type="button" className="sky-ai-spot-target" onClick={addSkySpot}
-              aria-label="Click a bright sky pocket in the preview to remove it"
-              disabled={busy} title="Click a white sky pocket to remove it locally"/>}
+            {touchMode !== 'off' && resultSource === 'ai' && resultUrl && <button
+              type="button" className="sky-ai-spot-target"
+              onClick={touchMode === 'spot' ? addSkySpot : undefined}
+              onPointerDown={touchMode === 'sweep' ? startSweep : undefined}
+              onPointerMove={touchMode === 'sweep' ? moveSweep : undefined}
+              onPointerUp={touchMode === 'sweep' ? finishSweep : undefined}
+              onPointerCancel={cancelSweep}
+              aria-label={touchMode === 'sweep'
+                ? 'Drag to draw a sky-cleanup rectangle on the photo'
+                : 'Click a bright sky pocket to remove it'}
+              disabled={busy} title={touchMode === 'sweep'
+                ? 'Drag a rectangle around remaining white sky pockets'
+                : 'Click a remaining white sky pocket'}/>}
+            {dragBox && touchMode === 'sweep' && <div className="sky-ai-drag-rect"
+              aria-hidden="true" style={dragBox}/>}
           </div>
         </figure>
       </div>
