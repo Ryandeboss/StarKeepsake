@@ -49,8 +49,15 @@ if [[ -z "$ENVIRONMENT" || -z "$PULL_ID" ]]; then
 fi
 IMAGE="$ACR.azurecr.io/starkeepsake-api:sky-ai-${COMMIT:0:12}"
 echo "Building staging image (the existing production app is not changed)."
-az acr build -r "$ACR" -t "starkeepsake-api:sky-ai-${COMMIT:0:12}" \
-  -f Dockerfile apps/api
+# ACR resolves -f relative to the build context. Enter apps/api so the
+# Dockerfile and the root of the uploaded context are unambiguous.
+(
+  cd apps/api
+  test -f Dockerfile
+  test -f StarKeepsake.Api.csproj
+  az acr build -r "$ACR" -t "starkeepsake-api:sky-ai-${COMMIT:0:12}" \
+    --file Dockerfile .
+)
 
 if az containerapp show -g "$RG" -n "$STAGE_APP" -o none >/dev/null 2>&1; then
   echo "Staging app already exists; updating its image."
