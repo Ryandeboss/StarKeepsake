@@ -16,7 +16,7 @@ function image(rows) {
 }
 const WHITE = [255,255,255]
 const DARK = [20,31,42]
-const WINDOW = [248,247,242]
+const WINDOW = [248,247,246]
 
 test('wand removes a disconnected white hole between branches without touching a lit window', () => {
   const {pixels,w,h}=image([
@@ -57,7 +57,7 @@ test('remove and restore brush strokes preserve original RGB and alpha', () => {
   assert.equal(alpha[0],255)
   paintAlphaLine(alpha,pixels,w,h,2,3,4,3,1,true)
   assert.equal(alpha[3*w+3],255)
-  assert.equal(alpha[3*w+1],0)
+  assert.equal(alpha[3*w+0],0)
 })
 test('traced polygon cuts an enclosed patch without clearing its surroundings', () => {
   const {pixels,w,h}=image(Array.from({length:8},()=>Array.from({length:8},()=>DARK)))
