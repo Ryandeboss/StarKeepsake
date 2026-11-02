@@ -35,6 +35,29 @@ Tests: `npm run test:sky-recovery` in `apps/web` covers missed canopy sky,
 thin branches, dark buildings, enclosed bright windows, lower-image protection,
 preset strengths, invert, and input immutability.
 
+### Tree-gap cleanup for enclosed sky pockets
+
+An additional local pass looks for sufficiently large connected regions of
+very bright, nearly neutral cloud RGB in the upper half of the original image.
+These can be entirely enclosed by thin dark branches; a top-edge flood cannot
+reach them. Only pockets within two pixels of model-confirmed sky are recovered
+automatically, reducing the risk of cutting white windows out of buildings.
+
+For isolated patches that still remain, click **Touch up white pockets**,
+then click the white patch itself in the right-hand preview. The browser flood-
+fills only a locally connected, bright, similar-color region above the water/
+foreground portion of the image. Thin dark branches stop the fill. The user can
+click several regions (up to 16), **Undo spot**, and compare with **Show raw AI
+mask**, which also clears local spot fixes. The photo and original model mask
+remain unchanged; touch-ups are non-generative, free, and reversible until
+Apply is selected.
+
+Manual touch-ups are user-directed and are not a perfect semantic guarantee:
+review the result closely before applying, especially on pale buildings.
+
+Tests: `npm run test:sky-spot` checks separate white islands, preserved
+branches, undo behavior, lower-image protection and inverted masks.
+
 ## Server configuration and costs
 
 - Backend: ASP.NET Core endpoint `POST /api/sky/mask` on the existing Azure API.
