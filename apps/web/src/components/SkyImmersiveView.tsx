@@ -3,7 +3,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { AstronomyResult } from '../api'
 import type { ExplorerLocation } from '../skyExplorerData'
 import { SkyCityHorizon } from './SkyCityHorizon'
-import { createSkylineCutout } from '../skyCutout'
+import { SkyCutoutPreview } from './SkyCutoutPreview'
 import { getObserverScene } from '../skyLandscapeData'
 import { SkyStreetView } from './SkyStreetView'
 import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
@@ -35,7 +35,7 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState('')
   const [photoScale, setPhotoScale] = useState(100)
-  const [photoBusy, setPhotoBusy] = useState(false)
+  const [editingPhoto, setEditingPhoto] = useState<File | null>(null)
   const photoUpload = useRef<HTMLInputElement | null>(null)
   const imageObjectUrl = useRef<string | null>(null)
   useEffect(() => () => {
@@ -112,30 +112,25 @@ export function SkyImmersiveView({ result, location }: Props) {
     setShowHint(true)
     setDemoRun(run => run + 1)
   }
-  async function receivePhoto(file: File | undefined) {
+  function receivePhoto(file: File | undefined) {
     if (!file) return
     if (!['image/jpeg', 'image/webp', 'image/png'].includes(file.type) || file.size > 12000000) {
       setPhotoError('Choose a JPG, PNG, or WebP image under 12 MB.')
       return
     }
-    setPhotoBusy(true)
     setPhotoError('')
-    try {
-      // A normal flat image is intentionally NOT mapped as a 360° texture.
-      const transparent = await createSkylineCutout(file)
-      const url = URL.createObjectURL(transparent)
-      if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
-      imageObjectUrl.current = url
-      setPhotoUrl(url)
-      setPhotoMode(true)
-      setGroundView(false)
-      setPhotoScale(100)
-      interruptTour()
-    } catch (error) {
-      setPhotoError(error instanceof Error ? error.message : 'Unable to prepare this skyline.')
-    } finally {
-      setPhotoBusy(false)
-    }
+    interruptTour()
+    setEditingPhoto(file)
+  }
+  function applyPhotoCutout(cutout: Blob) {
+    const url = URL.createObjectURL(cutout)
+    if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+    imageObjectUrl.current = url
+    setPhotoUrl(url)
+    setPhotoMode(true)
+    setGroundView(false)
+    setPhotoScale(100)
+    setEditingPhoto(null)
   }
   function nudge(dx: number, dy: number) {
     interruptTour()
@@ -263,15 +258,13 @@ export function SkyImmersiveView({ result, location }: Props) {
       </div>
       {location.id === 'chicago' && !groundView && <div className="immersive-photo-setup">
         <label>
-          <span>Chicago skyline photo (white sky removed automatically)</span>
+          <span>Chicago skyline photo · preview AI sky removal</span>
           <input ref={photoUpload} type="file" accept="image/jpeg,image/webp,image/png"
-            disabled={photoBusy}
             onChange={event => {
-              void receivePhoto(event.currentTarget.files?.[0])
+              receivePhoto(event.currentTarget.files?.[0])
               event.currentTarget.value = ''
             }}/>
         </label>
-        {photoBusy && <span role="status">Preparing transparent skyline…</span>}
         {photoUrl && <>
           <button type="button" aria-pressed={photoMode}
             onClick={() => { interruptTour(); setPhotoMode(mode => !mode) }}>
@@ -283,10 +276,12 @@ export function SkyImmersiveView({ result, location }: Props) {
           </label>}
         </>}
         {photoError && <span role="alert" className="immersive-photo-error">{photoError}</span>}
-        <small>Upload the Chicago JPG you provided. We remove its white sky in your browser and
-          anchor the photograph to the bottom. This is a flat scenic plate, not a 360° panorama;
-          the photograph is illustrative and its alignment to true north is unverified.</small>
+        <small>Upload a JPG, PNG or WebP. Preview the entire image, optionally remove sky
+          with a dedicated segmentation model, and apply the transparent foreground.
+          This is a flat photo plate, not a calibrated 360° panorama.</small>
       </div>}
+      {editingPhoto && <SkyCutoutPreview file={editingPhoto}
+        onApply={applyPhotoCutout} onCancel={() => setEditingPhoto(null)}/>}
       <div ref={skyWindowRef} className="immersive-sky-window" tabIndex={groundView ? -1 : 0}
         aria-label="First-person sky view. Use arrow keys to pan left, right, up or down."
         onKeyDown={event => {
