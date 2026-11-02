@@ -176,7 +176,10 @@ export function recoverMissedSkyMask(
   const pocketCount = width * pocketRows
   const brightLimit = strength === 1 ? 231 : strength === 2 ? 214 : 195
   const neutralLimit = strength === 1 ? 23 : strength === 2 ? 36 : 48
-  const nearLimit = Math.min(80, Math.max(8, Math.round(width * 0.025)))
+  // Only accept a disconnected pocket if separated from known sky by at most
+  // two pixels (such as a thin twig). This avoids white windows surrounded by
+  // a thick dark building facade.
+  const nearLimit = 2
   const distance = new Uint16Array(pocketCount)
   distance.fill(65535)
   let nearHead = 0
@@ -228,17 +231,15 @@ export function recoverMissedSkyMask(
       const p = component[ch++]
       if (distance[p] <= nearLimit) closeToSky = true
       const x = p % width, y = (p / width) | 0
-      const neighbors = [
-        x > 0 ? p - 1 : -1,
-        x + 1 < width ? p + 1 : -1,
-        y > 0 ? p - width : -1,
-        y + 1 < pocketRows ? p + width : -1,
-      ]
-      for (const q of neighbors) {
-        if (q < 0 || componentVisited[q] || !isBrightPocket(q)) continue
+      const add = (q: number): void => {
+        if (componentVisited[q] || !isBrightPocket(q)) return
         componentVisited[q] = 1
         component[ct++] = q
       }
+      if (x > 0) add(p - 1)
+      if (x + 1 < width) add(p + 1)
+      if (y > 0) add(p - width)
+      if (y + 1 < pocketRows) add(p + width)
     }
 
     if (!closeToSky || ct < minPixels) continue
