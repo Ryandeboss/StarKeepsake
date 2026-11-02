@@ -38,6 +38,7 @@ export function SkyMaskEditor({ file, initialMask, onApply, onClose }: Props) {
   const [tool, setTool] = useState<Tool>('wand')
   const [operation, setOperation] = useState<'remove' | 'restore'>('remove')
   const [preview, setPreview] = useState<Preview>('overlay')
+  const [zoom, setZoom] = useState(100)
   const [tolerance, setTolerance] = useState(22)
   const [contiguous, setContiguous] = useState(true)
   const [brushSize, setBrushSize] = useState(22)
@@ -316,8 +317,18 @@ export function SkyMaskEditor({ file, initialMask, onApply, onClose }: Props) {
               onClick={() => setPreview(item)} className={preview === item ? 'active' : ''}>
               {item === 'overlay' ? 'Mask overlay' : item === 'cutout' ? 'Transparency' : 'Night preview'}
             </button>)}
+          <label className="sky-mask-zoom">Zoom
+            <select value={zoom} onChange={event => setZoom(Number(event.target.value))}>
+              <option value={100}>100%</option>
+              <option value={150}>150%</option>
+              <option value={200}>200%</option>
+              <option value={300}>300%</option>
+            </select>
+          </label>
         </div>
-        <div className={`sky-mask-canvas-shell sky-mask-${preview}`}>
+        <div className="sky-mask-canvas-scroll">
+        <div className={`sky-mask-canvas-shell sky-mask-${preview}`}
+          style={{ width: `${zoom}%` }}>
           {loaded ? <>
             <canvas ref={canvas} width={loaded.width} height={loaded.height}
               aria-label="Skyline image mask editing canvas. Click to select pixels or draw over regions."
@@ -335,8 +346,9 @@ export function SkyMaskEditor({ file, initialMask, onApply, onClose }: Props) {
               </svg>}
           </> : <div className="sky-mask-loading" role="status">{error || 'Preparing full-resolution photo…'}</div>}
         </div>
+        </div>
         <div className="sky-mask-under-preview" role="status">{message}</div>
-        <small className="sky-mask-disclosure">Cyan shows transparent areas. Night preview is illustrative; actual calculated stars remain in Sky Lab. Changes stay in your browser.</small>
+        <small className="sky-mask-disclosure">Cyan shows transparent areas. Zoom in and scroll to reach gaps between branches. Night preview is illustrative; actual calculated stars remain in Sky Lab. Changes stay in your browser.</small>
       </div>
       {error && <p className="sky-mask-error" role="alert">{error}</p>}
       <footer className="sky-mask-footer">
