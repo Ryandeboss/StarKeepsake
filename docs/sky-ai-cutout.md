@@ -26,15 +26,33 @@
 - No true compass bearing, 360° view, historic photographic accuracy, or real sky photometry is implied.
 - Pre-existing production and manufacturing design workflows are unchanged.
 
-## Isolated Azure staging procedure
+## Isolated Azure staging procedure (ACR Tasks workaround)
 
-The Vercel production and preview environments currently share `VITE_API_BASE_URL` pointing at `starkeepsake-api-dev`. **Never deploy this feature to that shared API as an early test.**
+Azure rejected `az acr build` with `TasksOperationsNotAllowed`. Our replacement builds the Docker image on a GitHub-hosted runner and **pushes** it to the same ACR. This does not require ACR Tasks or Docker inside Azure Cloud Shell.
 
-1. In Azure Cloud Shell, clone this feature branch, `cd StarKeepsake`, and run `bash scripts/deploy-sky-mask-staging.sh`. This first run is dry-run, prints only resource metadata and does not create resources.
-2. Review Azure costs. Then run `bash scripts/deploy-sky-mask-staging.sh --deploy`. This builds the feature-branch API in the existing ACR and creates a new, scale-to-zero Container App `starkeepsake-api-sky-staging`. It reads the Fal secret from the existing Container App through Azure and copies it directly to the new app without printing it. The source app remains untouched.
-3. Confirm `GET /health` returns the branch commit and `GET /api/sky/mask/status` returns `{"available":true}` on the new URL. These checks never make a paid model call.
-4. Configure **only** the Vercel branch-specific `VITE_API_BASE_URL` for `feature/sky-only-ai-cutout` to the new staging API URL. Do not replace the shared production/preview variable; the branch override must have precedence.
-5. Open the branch preview and upload the original Chicago JPG. Click the AI action *once*, inspect all tree branches, skyline and water pixels, then cancel or apply. A single request incurs a provider charge.
-6. After testing, disable `SkyMask__Enabled` or delete the isolated test app to stop further inference; keep production unchanged. The staged ACR image persists unless removed.
+1. A GitHub Actions workflow `.github/workflows/build-sky-mask-image.yml` runs only on pushes to `feature/sky-only-ai-cutout`. It signs into Azure with the repository's existing OIDC secrets and runs Docker build/push. It **does not update any Azure Container App**.
+2. The existing Azure deployment identity `id-starkeepsake-github-dev` needs a federated credential authorizing that **exact** feature branch. The repository uses an immutable ID-based OIDC subject, consistent with its existing `github-main` credential. Create it in Cloud Shell once:
+   ```bash
+   az identity federated-credential create \
+     --resource-group rg-starkeepsake-dev \
+     --identity-name id-starkeepsake-github-dev \
+     --name github-sky-mask-feature \
+     --issuer https://token.actions.githubusercontent.com \
+     --subject "repo:Ryandeboss@96958000/StarKeepsake@1409130491:ref:refs/heads/feature/sky-only-ai-cutout" \
+     --audiences api://AzureADTokenExchange \
+     --output none
+   ```
+   Creating a branch credential grants workflows on that branch the Azure identity's current privileges. Remove the credential when the staging experiment ends.
+3. After the new GitHub Actions workflow successfully uploads a matching SHA-tagged image, in Azure Cloud Shell run:
+   ```bash
+   cd ~/StarKeepsake
+   git pull --ff-only
+   bash scripts/deploy-sky-mask-staging.sh --deploy
+   ```
+   This script **never** invokes `az acr build`. It confirms an image tagged with the exact checked-out SHA exists in ACR before creating/updating a separate app `starkeepsake-api-sky-staging` (scale to zero). No existing API is modified.
+4. New staging defaults to `SkyMask__Enabled=false`. Add your Fal key as a secret `fal-api-key` to the **new staging app**, not to the Vercel frontend. Reference it through `Fal__ApiKey=secretref:fal-api-key` and set `SkyMask__Enabled=true` on staging. Do not paste the key in chat.
+5. Confirm staging `GET /api/sky/mask/status` is `{"available":true}`, then configure a Vercel preview **branch-specific override** for `VITE_API_BASE_URL` to the new staging API URL. The shared Vercel default points to the live API and must not be changed.
+6. Test the original Chicago image and examine the mask before merging. This *one* requested AI removal invokes a metered third-party model.
+7. On completion, disable `SkyMask__Enabled`, delete staging and remove the temporary Azure OIDC feature-branch credential to minimize blast radius and costs.
 
-The staging shell script is a deliberately opt-in Azure infrastructure change. It is not executed by GitHub Actions or by this PR, and cloud resources may have charges even at zero replicas (ACR build/storage).
+The staging script is deliberately opt-in and the workflow does **not** deploy to Azure. ACR image storage and staging resources may incur costs even at zero replicas.
