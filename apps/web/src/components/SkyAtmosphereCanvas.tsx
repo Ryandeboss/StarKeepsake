@@ -14,8 +14,9 @@ export function SkyAtmosphereCanvas({ heading, pitch, fov, enhanced }: Props) {
     const canvas = ref.current
     if (!canvas) return
     const frame = window.requestAnimationFrame(() => {
-      const width = 600
-      const height = 360
+      // Limit per-frame CPU work during drag; browser interpolates smooth haze.
+      const width = 400
+      const height = 240
       canvas.width = width
       canvas.height = height
       const ctx = canvas.getContext('2d', { alpha: false })
