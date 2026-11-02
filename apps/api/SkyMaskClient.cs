@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -42,10 +41,23 @@ public sealed class SkyMaskClient(HttpClient http, IConfiguration config)
 
         using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
         if (!response.IsSuccessStatusCode)
-            throw new SkyMaskUnavailableException(
-                response.StatusCode == System.Net.HttpStatusCode.TooManyRequests
-                    ? "The AI provider is busy. Please retry later."
-                    : "The sky segmentation service could not process this image.");
+        {
+            // Do not return upstream response bodies: they can include
+            // sensitive account information, URLs or internal provider data.
+            var message = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.PaymentRequired =>
+                    "Fal account has insufficient credits or requires billing setup.",
+                System.Net.HttpStatusCode.Unauthorized =>
+                    "Fal rejected the API key. Check the staging key and account.",
+                System.Net.HttpStatusCode.Forbidden =>
+                    "Fal denied the request. Check API key permissions and account billing.",
+                System.Net.HttpStatusCode.TooManyRequests =>
+                    "Fal is rate-limiting requests. Please retry later.",
+                _ => "Fal could not process this image (HTTP " + (int)response.StatusCode + ")."
+            };
+            throw new SkyMaskUnavailableException(message);
+        }
 
         await using var responseStream = await response.Content.ReadAsStreamAsync(token);
         using var json = await JsonDocument.ParseAsync(responseStream,
