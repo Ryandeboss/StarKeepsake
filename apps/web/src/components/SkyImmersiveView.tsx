@@ -7,7 +7,9 @@ import { createSkylineCutout } from '../skyCutout'
 import { getObserverScene } from '../skyLandscapeData'
 import { SkyStreetView } from './SkyStreetView'
 import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
-import { atmosphereRows, photoHorizonBottomPercent } from '../skyAtmosphereMath'
+import { SkyAtmosphereCanvas } from './SkyAtmosphereCanvas'
+import { starOptics } from '../skyPhotographicMath'
+import { photoHorizonBottomPercent } from '../skyAtmosphereMath'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, starTwinkleSettings, suggestedObserverHeading,
@@ -27,6 +29,7 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [pinnedHip, setPinnedHip] = useState<number | null>(null)
   const [activePattern, setActivePattern] = useState<string | null>(null)
   const [showLines, setShowLines] = useState(true)
+  const [photoExposure, setPhotoExposure] = useState(true)
   const [showScenery, setShowScenery] = useState(true)
   const [photoMode, setPhotoMode] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -148,8 +151,8 @@ export function SkyImmersiveView({ result, location }: Props) {
     star, point: projectObserverStar(star.azimuthDeg, star.altitudeDeg, heading, pitch, fov),
     appearance: starAppearance(star),
     twinkle: starTwinkleSettings(star.hipparcosId, star.magnitude),
-  })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov])
-  const atmosphere = useMemo(() => atmosphereRows(pitch, fov), [pitch, fov])
+    optics: starOptics(star.magnitude, star.altitudeDeg, Boolean(NAMED_STAR_COLORS[star.hipparcosId]), photoExposure),
+  })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov, photoExposure])
   const photoBottom = photoHorizonBottomPercent(pitch, fov)
   const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point] as const)), [visible])
   const chosen = starByHip.get(hoveredHip ?? pinnedHip ?? -1)
@@ -242,6 +245,10 @@ export function SkyImmersiveView({ result, location }: Props) {
               }}>◈ Chicago skyline photo</button>
           </div>
           {!groundView && <label className="immersive-toggle">
+            <input type="checkbox" checked={photoExposure} onChange={event => setPhotoExposure(event.target.checked)}/>
+            Photographic sky
+          </label>}
+          {!groundView && <label className="immersive-toggle">
             <input type="checkbox" checked={showLines} onChange={event => setShowLines(event.target.checked)}/>
             Constellations
           </label>}
@@ -292,45 +299,13 @@ export function SkyImmersiveView({ result, location }: Props) {
           ? <SkyStreetView location={location} camera={{ heading, pitch }}
               onCameraChange={(camera) => { setHeading(wrapBearing(camera.heading)); setPitch(clampPitch(camera.pitch)) }}/>
           : <>
+        <SkyAtmosphereCanvas heading={heading} pitch={pitch} fov={fov} enhanced={photoExposure}/>
         <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice"
           role="img" aria-label="Perspective view of real calculated stars, with optional constellation guide lines"
           onPointerDown={startDrag} onPointerMove={moveDrag}
           onPointerUp={endDrag} onPointerCancel={endDrag}>
           <defs>
-            <linearGradient id="immersive-night" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#020711"/>
-              <stop offset="100%" stopColor="#091829"/>
-            </linearGradient>
-            <linearGradient id="immersive-urban-horizontal" x1="0%" x2="100%" y1="0%" y2="0%">
-              <stop offset="0%" stopColor="#d8ab77" stopOpacity=".17"/>
-              <stop offset="30%" stopColor="#d8ab77" stopOpacity=".68"/>
-              <stop offset="50%" stopColor="#f3c385" stopOpacity="1"/>
-              <stop offset="70%" stopColor="#d8ab77" stopOpacity=".68"/>
-              <stop offset="100%" stopColor="#d8ab77" stopOpacity=".17"/>
-            </linearGradient>
-            <filter id="immersive-air-texture" x="0" y="0" width="100%" height="100%">
-              <feTurbulence type="fractalNoise" baseFrequency=".016" numOctaves="2" seed="9" stitchTiles="stitch"/>
-            </filter>
-            <filter id="immersive-star-glow" x="-150%" y="-150%" width="400%" height="400%">
-              <feGaussianBlur stdDeviation="2.5"/>
-            </filter>
           </defs>
-          <rect width="1000" height="600" fill="url(#immersive-night)"/>
-          {/* These rows are sampled from the sky camera's altitude rays.
-              They cannot stay at the bottom when the camera tilts upward. */}
-          <g pointerEvents="none" aria-hidden="true">
-            {atmosphere.map(row => (
-              <g key={row.y}>
-                {row.haze > .001 && <rect x="0" y={row.y} width="1000" height={row.height + .4}
-                  fill="#6a96a6" opacity={row.haze}/>}
-                {row.amber > .001 && <rect x="0" y={row.y} width="1000" height={row.height + .4}
-                  fill="url(#immersive-urban-horizontal)"
-                  opacity={row.amber * (photoMode ? .98 : .67)}/>}
-              </g>
-            ))}
-          </g>
-          <rect width="1000" height="600" fill="#a7b5bd" filter="url(#immersive-air-texture)"
-            opacity=".026" pointerEvents="none"/>
           {showLines && patterns.map(({ pattern }) => (
             <g key={pattern.id} className={activePattern === pattern.id ? 'is-featured' : ''}>
               {pattern.segments.map(([from, to]) => {
@@ -350,7 +325,7 @@ export function SkyImmersiveView({ result, location }: Props) {
               })}
             </g>
           ))}
-          {visible.map(({ star, point, appearance, twinkle }) => (
+          {visible.map(({ star, point, appearance, twinkle, optics }) => (
             <g key={star.hipparcosId} role="button" tabIndex={0}
               aria-label={starDescription(star)} aria-pressed={pinnedHip === star.hipparcosId}
               className="immersive-star"
@@ -371,17 +346,23 @@ export function SkyImmersiveView({ result, location }: Props) {
                 style={{ animationDuration: twinkle.duration + 's', animationDelay: twinkle.delay + 's',
                   '--twinkle-low': String(twinkle.minimumOpacity) } as CSSProperties}
                 pointerEvents="none">
-                {appearance.named && <circle cx={point.x} cy={point.y} r={appearance.radius * 4.6}
-                  opacity=".48" fill={appearance.color} filter="url(#immersive-star-glow)"/>}
-                <circle cx={point.x} cy={point.y} r={appearance.radius * (appearance.named ? 2.5 : 1.6)}
-                  opacity={appearance.named ? .13 : .08} fill={appearance.color}/>
-                <circle cx={point.x} cy={point.y} r={appearance.radius}
-                  fill={appearance.color}/>
-                <circle cx={point.x} cy={point.y} r={Math.max(.28, appearance.radius * .37)}
-                  fill="#fffdf6" opacity=".95"/>
-                {star.magnitude < .35 && <g stroke={appearance.color} strokeWidth=".65" opacity=".35">
-                  <path d={`M ${point.x - appearance.radius * 2.8} ${point.y} H ${point.x + appearance.radius * 2.8}`}/>
-                  <path d={`M ${point.x} ${point.y - appearance.radius * 2.8} V ${point.y + appearance.radius * 2.8}`}/>
+                <defs>
+                  <radialGradient id={`immersive-psf-${star.hipparcosId}`}>
+                    <stop offset="0%" stopColor="#fffdfa" stopOpacity={optics.haloOpacity * .96}/>
+                    <stop offset="13%" stopColor={appearance.color} stopOpacity={optics.haloOpacity}/>
+                    <stop offset="48%" stopColor={appearance.color} stopOpacity={optics.haloOpacity * .23}/>
+                    <stop offset="100%" stopColor={appearance.color} stopOpacity="0"/>
+                  </radialGradient>
+                </defs>
+                <circle cx={point.x} cy={point.y} r={optics.haloRadius}
+                  fill={`url(#immersive-psf-${star.hipparcosId})`}/>
+                <circle cx={point.x} cy={point.y} r={optics.coreRadius}
+                  fill={appearance.color} opacity={optics.coreOpacity}/>
+                <circle cx={point.x} cy={point.y} r={Math.max(.25, optics.coreRadius * .36)}
+                  fill="#fffcf6" opacity={optics.coreOpacity}/>
+                {optics.spikes && <g stroke={appearance.color} strokeWidth=".42" opacity=".18">
+                  <path d={`M ${point.x - optics.haloRadius*.77} ${point.y} H ${point.x + optics.haloRadius*.77}`}/>
+                  <path d={`M ${point.x} ${point.y - optics.haloRadius*.77} V ${point.y + optics.haloRadius*.77}`}/>
                 </g>}
               </g>
               {(hoveredHip === star.hipparcosId || pinnedHip === star.hipparcosId) &&
@@ -439,7 +420,7 @@ export function SkyImmersiveView({ result, location }: Props) {
         <span className="immersive-legend-star immersive-orange"/> Cooler orange-red
         <span className="immersive-legend-star immersive-neutral"/> Unclassified here
         <p>Color is shown for a curated group of identified stars; neutral white is used when our data has no verified color.
-          Dot size follows apparent magnitude (brightness as seen from Earth), <strong>not physical star size</strong>. Subtle scintillation and atmospheric city glow are artistic effects, not a reconstruction of historical light pollution or weather.
+          Photographic brightness and bloom follow apparent magnitude (brightness as seen from Earth), <strong>not physical star size</strong>. Subtle scintillation and atmospheric city glow are artistic effects, not a reconstruction of historical light pollution or weather.
           Lines are modern illustrative guides, not objects in space or official constellation boundaries.
           {photoMode ? ' This AI skyline has no verified compass bearing. The 2D plate follows vertical camera pitch as a visual approximation, but cannot reproduce genuine 3D or 360° parallax.' :
             ' The local skylines are original, geographically inspired artwork, not photographs or landmark-accurate bearings.'}</p>

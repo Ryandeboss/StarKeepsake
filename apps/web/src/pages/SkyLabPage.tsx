@@ -120,8 +120,10 @@ export function SkyLabPage() {
         }, {
           ...INITIAL_DESIGN_SPEC.skySettings,
           magnitudeLimit: 6,
-          maxStars: 150,
-          minSeparationMm: 1.5,
+          // Sky Lab is a visual observer, not the manufacturing LED layout.
+          // Use the design-engine's supported limit to retain more real HIP stars.
+          maxStars: 200,
+          minSeparationMm: 1,
         }, '11x14')
         if (!cancelled) setResult(sky)
       } catch (cause) {
