@@ -3,7 +3,7 @@
  * disconnected white/cloud-colored gaps, using ORIGINAL photo RGB.
  *
  * Strict bounds: every changed mask pixel lies inside the dragged rectangle
- * and above the protected lower-photo band. This is intentionally not an
+ * and (by default) above the protected lower-photo band. This is intentionally not
  * unrestricted magic wand; review the result for pale buildings.
  *
  * The function runs entirely in the browser, never re-requests Fal.
@@ -25,6 +25,7 @@ export function removeSkySweeps(
   width: number,
   height: number,
   rectangles: readonly SkySweepRectangle[],
+  protectLowerImage = true,
 ): Uint8ClampedArray {
   if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) ||
       width <= 0 || height <= 0 ||
@@ -33,7 +34,7 @@ export function removeSkySweeps(
   }
 
   const output = new Uint8ClampedArray(mask)
-  const safeBottom = Math.ceil(height * 0.62)
+  const safeBottom = protectLowerImage ? Math.ceil(height * 0.62) : height
   if (!rectangles.length) return output
   // Bulk operations have their own lightweight, independent undo history.
   for (const rect of rectangles.slice(0, 32)) {
