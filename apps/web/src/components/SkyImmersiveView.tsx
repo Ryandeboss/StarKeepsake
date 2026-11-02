@@ -38,6 +38,7 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [photoScale, setPhotoScale] = useState(100)
   const [photoFrameRatio, setPhotoFrameRatio] = useState<PhotoFrameRatio>('original')
   const [photoStarPlacement, setPhotoStarPlacement] = useState<PhotoStarPlacement>('cutout')
+  const [upperSkyPercent, setUpperSkyPercent] = useState(52)
   const [sourcePhotoUrl, setSourcePhotoUrl] = useState<string | null>(null)
   const [sourcePhotoSize, setSourcePhotoSize] = useState({ width: 0, height: 0 })
   const [photoDragOver, setPhotoDragOver] = useState(false)
@@ -388,6 +389,13 @@ export function SkyImmersiveView({ result, location }: Props) {
                 <strong>{option.name}</strong><small>{option.detail}</small>
               </button>)}
             </div>
+            {photoStarPlacement === 'upper' && <label className="photo-studio-horizon">
+              <span>Horizon / star coverage <strong>{upperSkyPercent}%</strong></span>
+              <input type="range" min="25" max="80" step="1" value={upperSkyPercent}
+                aria-label="Percent of photo height with stars"
+                onChange={event => setUpperSkyPercent(Number(event.target.value))}/>
+              <small>Move the dotted boundary to match the scene.</small>
+            </label>}
             <p className="photo-studio-disclaimer">
               {photoStarPlacement === 'cutout'
                 ? 'Uses your transparent AI cutout. Stars remain behind foreground detail.'
@@ -513,8 +521,12 @@ export function SkyImmersiveView({ result, location }: Props) {
             <img className="immersive-framed-photo-image"
               src={photoStarPlacement === 'cutout' ? photoUrl : sourcePhotoUrl || photoUrl}
               alt="" aria-hidden="true" draggable={false}/>
+            {photoStarPlacement === 'upper' && <span className="immersive-photo-horizon-guide"
+              style={{ top: upperSkyPercent + '%' }} aria-hidden="true"/>}
             {photoStarPlacement !== 'cutout' &&
               <div className={`immersive-framed-stars immersive-framed-stars--${photoStarPlacement}`}
+                style={photoStarPlacement === 'upper'
+                  ? { clipPath: `inset(0 0 ${100 - upperSkyPercent}% 0)` } : undefined}
                 aria-hidden="true">
                 {visible.map(({ star, point, appearance, optics }) => {
                   const size = Math.max(1.8, Math.min(5.5, optics.coreRadius * 1.7))
