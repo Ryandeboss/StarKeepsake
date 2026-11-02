@@ -6,6 +6,7 @@ import { SkyCityHorizon } from './SkyCityHorizon'
 import { createSkylineCutout } from '../skyCutout'
 import { getObserverScene } from '../skyLandscapeData'
 import { SkyStreetView } from './SkyStreetView'
+import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, starTwinkleSettings, suggestedObserverHeading,
@@ -296,18 +297,17 @@ export function SkyImmersiveView({ result, location }: Props) {
           <defs>
             <linearGradient id="immersive-night" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor="#020711"/>
-              <stop offset="45%" stopColor="#071322"/>
-              <stop offset="100%" stopColor="#142c40"/>
+              <stop offset="100%" stopColor="#091829"/>
             </linearGradient>
-            <radialGradient id="immersive-horizon-haze">
-              <stop offset="0%" stopColor="#7499a7" stopOpacity=".38"/>
-              <stop offset="45%" stopColor="#3e6b7d" stopOpacity=".17"/>
-              <stop offset="100%" stopColor="#22374d" stopOpacity="0"/>
-            </radialGradient>
+            <linearGradient id="immersive-ground-haze" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#2d526e" stopOpacity="0"/>
+              <stop offset="32%" stopColor="#41677e" stopOpacity=".16"/>
+              <stop offset="72%" stopColor="#638d9b" stopOpacity=".32"/>
+              <stop offset="100%" stopColor="#738b89" stopOpacity=".07"/>
+            </linearGradient>
             <radialGradient id="immersive-citylight">
-              <stop offset="0%" stopColor="#eab577" stopOpacity=".54"/>
-              <stop offset="35%" stopColor="#ad865c" stopOpacity=".28"/>
-              <stop offset="75%" stopColor="#6a5a51" stopOpacity=".07"/>
+              <stop offset="0%" stopColor="#eab577" stopOpacity=".48"/>
+              <stop offset="40%" stopColor="#ad865c" stopOpacity=".22"/>
               <stop offset="100%" stopColor="#6a5a51" stopOpacity="0"/>
             </radialGradient>
             <filter id="immersive-air-texture" x="0" y="0" width="100%" height="100%">
@@ -318,12 +318,17 @@ export function SkyImmersiveView({ result, location }: Props) {
             </filter>
           </defs>
           <rect width="1000" height="600" fill="url(#immersive-night)"/>
-          <ellipse cx="500" cy={horizonY - 34} rx="940" ry="320"
-            fill="url(#immersive-horizon-haze)" pointerEvents="none"/>
-          <ellipse cx="500" cy={horizonY + 20} rx="740" ry="200"
-            fill="url(#immersive-citylight)" opacity={photoMode ? .88 : .58} pointerEvents="none"/>
+          {/* The entire atmospheric band is anchored to the projected 0° altitude.
+              Looking up moves it below the frame; looking down lifts it into view.
+              A static bottom-of-screen gradient made the old glow look stuck. */}
+          <g transform={`translate(0 ${horizonY})`} pointerEvents="none">
+            <rect x="0" y="-220" width="1000" height="285"
+              fill="url(#immersive-ground-haze)"/>
+            <ellipse cx="500" cy="10" rx="770" ry="155"
+              fill="url(#immersive-citylight)" opacity={photoMode ? .86 : .62}/>
+          </g>
           <rect width="1000" height="600" fill="#a7b5bd" filter="url(#immersive-air-texture)"
-            opacity=".035" pointerEvents="none"/>
+            opacity=".026" pointerEvents="none"/>
           {showLines && patterns.map(({ pattern }) => (
             <g key={pattern.id} className={activePattern === pattern.id ? 'is-featured' : ''}>
               {pattern.segments.map(([from, to]) => {
@@ -396,6 +401,7 @@ export function SkyImmersiveView({ result, location }: Props) {
           className="immersive-photo-horizon"
           style={{ width: photoScale + '%' }}/>}
         
+        <SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}/>
         <div className="immersive-crosshair" aria-hidden="true">+</div>
         {showHint && <div className="immersive-look-hint" role="status">
           <span className="immersive-look-hint-eyebrow">{touring ? 'Watch the camera turn' : 'YOUR VIEW IS INTERACTIVE'}</span>
