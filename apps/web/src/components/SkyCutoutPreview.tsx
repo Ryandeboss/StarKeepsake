@@ -23,6 +23,9 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState('')
   const [invert, setInvert] = useState(false)
+  const [edgeCleanup, setEdgeCleanup] = useState(2)
+  const [reduceHalo, setReduceHalo] = useState(true)
+  const [refining, setRefining] = useState(false)
   const [transparentInput, setTransparentInput] = useState(false)
   const [showCheckerboard, setShowCheckerboard] = useState(false)
   const resultBlob = useRef<Blob | null>(null)
@@ -30,6 +33,9 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const controller = useRef<AbortController | null>(null)
   const initialButton = useRef<HTMLButtonElement>(null)
   const outputUrl = useRef<string | null>(null)
+  const refineTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const refineVersion = useRef(0)
+  const busy = processing || refining
 
   useEffect(() => {
     initialButton.current?.focus()
@@ -51,6 +57,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     return () => {
       active = false
       controller.current?.abort()
+      refineVersion.current += 1
+      if (refineTimer.current) clearTimeout(refineTimer.current)
       URL.revokeObjectURL(originalUrl)
       if (outputUrl.current) URL.revokeObjectURL(outputUrl.current)
     }
@@ -87,7 +95,9 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     } finally { bitmap.close() }
   }
 
-  async function composeFromMask(mask: Blob, reversed: boolean): Promise<Blob> {
+  async function composeFromMask(
+    mask: Blob, reversed: boolean, cleanup: number, decontaminate: boolean,
+  ): Promise<Blob> {
     const [sourceBitmap, skyBitmap] = await Promise.all([createImageBitmap(file), createImageBitmap(mask)])
     try {
       if (sourceBitmap.width * sourceBitmap.height > 25_000_000)
@@ -108,7 +118,10 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const maskPixels = maskCtx.getImageData(0, 0, canvas.width, canvas.height).data
       if (!maskLooksUsable(maskPixels))
         throw new Error('AI did not identify a usable sky area. Your original photo is unchanged.')
-      const cutout = applySkyAlpha(original.data, maskPixels, reversed)
+      const cutout = applySkyAlpha(original.data, maskPixels, reversed, {
+        width: canvas.width, height: canvas.height,
+        cleanupPx: cleanup, decontaminate,
+      })
       original.data.set(cutout)
       ctx.putImageData(original, 0, 0)
       return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob =>
@@ -119,8 +132,38 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     }
   }
 
+  // Slider adjustments reuse the last Fal mask, never call Fal again.
+  // Debouncing avoids repeatedly allocating full-resolution canvases.
+  function scheduleRefinement(nextInvert: boolean, cleanup: number, decontaminate: boolean) {
+    setInvert(nextInvert)
+    setEdgeCleanup(cleanup)
+    setReduceHalo(decontaminate)
+    const mask = maskBlob.current
+    if (!mask) return
+    const version = ++refineVersion.current
+    if (refineTimer.current) clearTimeout(refineTimer.current)
+    setRefining(true)
+    refineTimer.current = setTimeout(() => {
+      refineTimer.current = null
+      void (async () => {
+        try {
+          const cutout = await composeFromMask(mask, nextInvert, cleanup, decontaminate)
+          if (version !== refineVersion.current) return
+          showResult(cutout, 'ai')
+          setError('')
+        } catch (cause) {
+          if (version === refineVersion.current) {
+            setError(cause instanceof Error ? cause.message : 'Could not refine the AI mask.')
+          }
+        } finally {
+          if (version === refineVersion.current) setRefining(false)
+        }
+      })()
+    }, 180)
+  }
+
   async function removeSky() {
-    if (processing || available !== true) return
+    if (busy || available !== true) return
     const abort = new AbortController()
     controller.current = abort
     setProcessing(true)
@@ -129,7 +172,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const jpg = await prepareAiUpload(abort.signal)
       const mask = await generateSkyMask(jpg, abort.signal)
       if (abort.signal.aborted) return
-      const cutout = await composeFromMask(mask, false)
+      const cutout = await composeFromMask(mask, false, edgeCleanup, reduceHalo)
       if (abort.signal.aborted) return
       maskBlob.current = mask
       setInvert(false)
@@ -142,21 +185,11 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     }
   }
 
-  async function reverseMask(value: boolean) {
-    if (!maskBlob.current || processing) return
-    setProcessing(true)
-    setError('')
-    try {
-      const cutout = await composeFromMask(maskBlob.current, value)
-      setInvert(value)
-      showResult(cutout, 'ai')
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not invert this mask.')
-    } finally { setProcessing(false) }
-  }
 
   async function localRemoval() {
-    if (processing) return
+    if (busy) return
+    refineVersion.current += 1
+    if (refineTimer.current) clearTimeout(refineTimer.current)
     setProcessing(true)
     setError('')
     try {
@@ -171,6 +204,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   }
 
   function useOriginalTransparency() {
+    refineVersion.current += 1
+    if (refineTimer.current) clearTimeout(refineTimer.current)
     maskBlob.current = null
     showResult(file, 'original')
   }
@@ -192,24 +227,45 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
         <button ref={initialButton} aria-label="Close image preview" type="button" onClick={onCancel}>✕</button>
       </header>
       <div className="sky-ai-actions">
-        <button type="button" className="sky-ai-main" disabled={processing || available !== true}
+        <button type="button" className="sky-ai-main" disabled={busy || available !== true}
           onClick={() => { void removeSky() }}>{processing ? 'Processing image…' : '✦ Remove sky with AI'}</button>
-        <button type="button" onClick={() => { void localRemoval() }} disabled={processing}>Use local white-sky remover</button>
-        {transparentInput && <button type="button" onClick={useOriginalTransparency} disabled={processing}>
+        <button type="button" onClick={() => { void localRemoval() }} disabled={busy}>Use local white-sky remover</button>
+        {transparentInput && <button type="button" onClick={useOriginalTransparency} disabled={busy}>
           Use existing transparency
         </button>}
         {resultSource === 'ai' && <label><input type="checkbox" checked={invert}
-          disabled={processing} onChange={event => { void reverseMask(event.target.checked) }}/>
+          disabled={processing} onChange={event =>
+            scheduleRefinement(event.target.checked, edgeCleanup, reduceHalo)}/>
           Invert AI mask</label>}
         <label><input type="checkbox" checked={showCheckerboard} onChange={event => setShowCheckerboard(event.target.checked)}/>
           Checkerboard background</label>
       </div>
+      {resultSource === 'ai' && <div className="sky-ai-refinement">
+        <div className="sky-ai-refinement-header">
+          <strong>Refine the edges</strong>
+          <span>Free adjustments · no additional AI request</span>
+        </div>
+        <div className="sky-ai-refinement-controls">
+          <label htmlFor="sky-ai-edge-cleanup">Edge cleanup: <strong>{edgeCleanup} px</strong></label>
+          <input id="sky-ai-edge-cleanup" type="range" min="0" max="8" step="1"
+            value={edgeCleanup} disabled={processing}
+            onChange={event => scheduleRefinement(invert, Number(event.target.value), reduceHalo)}/>
+          <label className="sky-ai-fringe-toggle">
+            <input type="checkbox" checked={reduceHalo} disabled={processing}
+              onChange={event => scheduleRefinement(invert, edgeCleanup, event.target.checked)}/>
+            Remove sky-colored edge glow
+          </label>
+        </div>
+        <p>Start at 2 px. Increase only if a sky-colored border remains around buildings or trees.
+          Lower the value if fine branches disappear. At 0 px the AI mask is unchanged.</p>
+      </div>}
       {available === null && <p className="sky-ai-status" role="status">Checking AI availability…</p>}
       {available === false && <p className="sky-ai-status" role="status">
         AI removal is not configured yet. A server-side Fal API key is required; the local remover
         or an already-transparent PNG can still be used.
       </p>}
       {processing && <p className="sky-ai-status" role="status">Identifying sky regions. Original foreground pixels will be preserved.</p>}
+      {refining && <p className="sky-ai-status" role="status">Refining edge pixels locally. No new AI charge.</p>}
       {error && <p className="sky-ai-error" role="alert">{error}</p>}
       <div className="sky-ai-images">
         <figure>
@@ -231,7 +287,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
           Your original photo isn't regenerated. This is an illustrative skyline, not a calibrated 360° view.</small>
         <div>
           <button type="button" onClick={onCancel}>Cancel</button>
-          <button type="button" className="sky-ai-main" disabled={!resultSource || processing}
+          <button type="button" className="sky-ai-main" disabled={!resultSource || busy}
             onClick={() => { if (resultBlob.current) onApply(resultBlob.current) }}>Apply to night sky</button>
         </div>
       </footer>
