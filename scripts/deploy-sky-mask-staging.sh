@@ -33,12 +33,8 @@ if [[ "${1:-}" != "--deploy" ]]; then
   exit 0
 fi
 
-# Fail before building if the owner has not yet added the Fal secret.
-if ! az containerapp secret show -g "$RG" -n "$LIVE_APP" \
-    --secret-name fal-api-key --query name -o tsv >/dev/null; then
-  echo "The secret named fal-api-key was not found on $LIVE_APP."
-  exit 1
-fi
+# Staging is independent of the existing API's credentials.
+# The key is configured only on the new staging app after creation.
 
 ENVIRONMENT="$(az containerapp show -g "$RG" -n "$LIVE_APP" \
   --query properties.managedEnvironmentId -o tsv)"
