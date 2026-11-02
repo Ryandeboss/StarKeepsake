@@ -4,8 +4,8 @@
 
 1. Sky Lab → Chicago → upload a skyline photo (JPG, PNG, WebP).
 2. A full-fit side-by-side dialog shows original photo at its complete aspect ratio. No zoom canvas or nested scrollbars.
-3. Click **Remove sky with AI** to request text-prompted "sky" segmentation. The model produces a mask only; the site applies it to **unchanged original RGB pixels**. No building, tree or waterfront pixels are generated.
-4. Inspect the result over a dark night gradient or a checkerboard. If mask polarity is reversed, use **Invert AI mask**. Click **Apply to night sky** only after checking.
+3. Click **Remove sky with AI** to request text-prompted "sky" segmentation. The model produces a mask only; the site applies it locally to the original photo. A narrow edge-only decontamination option can adjust partially transparent fringe RGB while fully opaque foreground RGB stays unchanged. No building, tree or waterfront pixels are generated.
+4. Inspect the result over a dark night gradient or a checkerboard. Use **Edge cleanup** (0–8 original-image pixels; default 2 px) to remove thin sky-colored borders. The local cleanup references nearby confident-sky pixels and protects contrasting branches/building edges. Toggle **Remove sky-colored edge glow** for semi-transparent fringe RGB decontamination, or set cleanup to 0 and disable the toggle to see the untouched AI matte. These adjustments reuse the existing downloaded AI mask and never make another Fal request. If mask polarity is reversed, use **Invert AI mask**. Click **Apply to night sky** only after checking.
 5. An already transparent PNG can be applied directly; for images with a plain white sky, a free local white-sky remover is offered explicitly as fallback.
 
 ## Server configuration and costs
@@ -52,7 +52,7 @@ Azure rejected `az acr build` with `TasksOperationsNotAllowed`. Our replacement 
    This script **never** invokes `az acr build`. It confirms an image tagged with the exact checked-out SHA exists in ACR before creating/updating a separate app `starkeepsake-api-sky-staging` (scale to zero). No existing API is modified.
 4. New staging defaults to `SkyMask__Enabled=false`. Add your Fal key as a secret `fal-api-key` to the **new staging app**, not to the Vercel frontend. Reference it through `Fal__ApiKey=secretref:fal-api-key` and set `SkyMask__Enabled=true` on staging. Do not paste the key in chat.
 5. Confirm staging `GET /api/sky/mask/status` is `{"available":true}`, then configure a Vercel preview **branch-specific override** for `VITE_API_BASE_URL` to the new staging API URL. The shared Vercel default points to the live API and must not be changed.
-6. Test the original Chicago image and examine the mask before merging. This *one* requested AI removal invokes a metered third-party model.
+6. Test the original Chicago image and examine the mask before merging. This *one* requested AI removal invokes a metered third-party model; all subsequent edge and halo adjustments in the same open preview are local and free.
 7. On completion, disable `SkyMask__Enabled`, delete staging and remove the temporary Azure OIDC feature-branch credential to minimize blast radius and costs.
 
 The staging script is deliberately opt-in and the workflow does **not** deploy to Azure. ACR image storage and staging resources may incur costs even at zero replicas.
