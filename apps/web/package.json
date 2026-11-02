@@ -19,7 +19,8 @@
     "test:sky-cutout": "node --experimental-strip-types --test tests/sky-cutout.test.mjs",
     "test:sky-dome": "node --experimental-strip-types --test tests/sky-dome.test.mjs",
     "test:photographic": "node --experimental-strip-types --test tests/sky-photographic.test.mjs",
-    "test:sky-ai-mask": "node --experimental-strip-types --test tests/sky-ai-mask.test.mjs"
+    "test:sky-ai-mask": "node --experimental-strip-types --test tests/sky-ai-mask.test.mjs",
+    "test:sky-recovery": "node --experimental-strip-types --test tests/sky-missed-sky-recovery.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
