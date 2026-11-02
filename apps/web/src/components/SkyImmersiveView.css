@@ -247,3 +247,77 @@
 .immersive-location-readout, .immersive-view-readout { z-index: 3; }
 .immersive-star-light { isolation: isolate; }
 .immersive-star-label { font-size: 10px; stroke-width: 2.6px; opacity: .88; }
+
+
+/* Two genuine compositions: existing transparent horizon vs. a separate
+   calculated sky panel above the original, uncropped photo. */
+.immersive-photo-layout-choices {
+  flex: 1 0 100%; margin: 0; padding: 0; border: 0; min-width: 0;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+}
+.immersive-photo-layout-choices legend {
+  width: 100%; padding: 0 0 11px; color: #f9dfaf; font-size: 12px;
+  font-weight: 750; letter-spacing: .035em;
+}
+.immersive-photo-setup .immersive-photo-layout-choices > button {
+  display: flex; align-items: center; text-align: left; gap: 14px;
+  background: rgba(7,28,42,.7); color: #f0ecdd; border: 1px solid #597783;
+  border-radius: 14px; padding: 12px 14px; min-height: 104px;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+.immersive-photo-layout-choices > button:hover { transform: translateY(-2px); border-color: #eed4a0; }
+.immersive-photo-setup .immersive-photo-layout-choices > button.is-chosen {
+  border: 2px solid #ffe0ab; background: #29515e;
+  box-shadow: inset 0 0 0 1px rgba(255,217,165,.23), 0 4px 20px rgba(0,0,0,.12);
+}
+.immersive-photo-layout-choices > button > span:last-child { display: grid; flex: 1; gap: 5px; min-width: 0; }
+.immersive-photo-layout-choices strong { font-size: 13px; color: #f9edd9; }
+.immersive-photo-layout-choices small {
+  font-size: 11px; color: #c0d3d4; line-height: 1.5; max-width: 44ch;
+}
+.immersive-layout-thumbnail {
+  width: 88px; height: 76px; flex: 0 0 88px; position: relative;
+  border: 5px solid #775f46; outline: 1px solid #bca07b; border-radius: 4px;
+  box-shadow: 0 5px 15px rgba(0,0,0,.27); overflow: hidden;
+  background: linear-gradient(#0b243d,#24576d 60%,#234640);
+}
+.immersive-layout-stars {
+  position: absolute; left: 0; right: 0; top: 10%; text-align: center;
+  font-size: 15px; color: #ffe7b4; text-shadow: 0 0 6px #f9d7a6;
+}
+.immersive-layout-land {
+  position: absolute; inset: 60% 0 0; background: #315547;
+  clip-path: polygon(0 45%,18% 12%,36% 45%,51% 22%,76% 48%,100% 14%,100% 100%,0 100%);
+}
+.immersive-layout-thumbnail.is-above { background: #0e2947; }
+.immersive-layout-thumbnail.is-above .immersive-layout-stars { top: 4%; }
+.immersive-layout-thumbnail.is-above .immersive-layout-land {
+  inset: 48% 0 0; clip-path: none;
+  background: linear-gradient(#67756e,#24443b);
+}
+.immersive-layout-boundary {
+  position: absolute; z-index: 2; left: 0; right: 0; top: 46%;
+  border-top: 2px dashed #ebd09d;
+}
+.immersive-sky-above-frame {
+  position: absolute; z-index: 1; left: 50%; top: 50%;
+  transform: translate(-50%,-50%); overflow: hidden;
+  outline: 6px solid #71583d; border-radius: 2px;
+  box-shadow: 0 14px 38px rgba(0,0,0,.5);
+  background: transparent; pointer-events: none;
+}
+.immersive-sky-above-panel {
+  width: 100%; background: rgba(5,17,35,.12);
+  border-bottom: 2px solid rgba(232,203,159,.86);
+}
+.immersive-sky-above-original {
+  display: block; width: 100%; object-fit: contain; object-position: center;
+  background: #10202c; max-width: none;
+}
+@media(max-width:650px) {
+  .immersive-photo-layout-choices { grid-template-columns: 1fr; }
+  .immersive-photo-setup .immersive-photo-layout-choices > button { min-height: 90px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .immersive-photo-setup .immersive-photo-layout-choices > button { transition: none; }
+}
