@@ -1,0 +1,53 @@
+.sky-ai-backdrop {
+  position: fixed; inset: 0; z-index: 1050; overflow-y: auto; overflow-x: hidden;
+  background: rgba(3, 13, 22, .82); padding: 18px; box-sizing: border-box;
+  display: block; overscroll-behavior: contain;
+}
+.sky-ai-dialog {
+  width: min(1380px, 100%); margin: auto; box-sizing: border-box;
+  border: 1px solid #61808b; border-radius: 15px; overflow: hidden;
+  background: #132c38; color: #ecf4ef; box-shadow: 0 25px 70px rgba(0,0,0,.5);
+}
+.sky-ai-header { padding: 22px 27px 15px; display: flex; align-items: start; justify-content: space-between; gap: 25px; }
+.sky-ai-header span { text-transform: uppercase; letter-spacing: .14em; color: #dabd89; font: 11px ui-monospace,monospace; }
+.sky-ai-header h2 { font: 500 clamp(24px,3vw,37px) Georgia,serif; color: #ffe0b0; margin: 7px 0; }
+.sky-ai-header p { max-width: 80ch; line-height: 1.5; color: #c7dada; font-size: 13px; margin: 0; }
+.sky-ai-header > button { width: 40px; height: 40px; border-radius: 100%; border: 1px solid #72909a; color: #f4e6ce; background: #29505c; cursor: pointer; flex-shrink: 0; }
+.sky-ai-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 13px; background: #193844; padding: 12px 26px; border-block: 1px solid #3c5c65; }
+.sky-ai-actions button,.sky-ai-footer button { background: #28515d; color: #f2f5ed; padding: 11px 15px; border: 1px solid #75919a; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; }
+.sky-ai-actions button.sky-ai-main,.sky-ai-footer button.sky-ai-main { background: #f2d9a6; color: #183e46; border-color: #f5e5c1; }
+.sky-ai-actions button:disabled,.sky-ai-footer button:disabled { opacity: .45; cursor: not-allowed; }
+.sky-ai-actions label { font-size: 12px; display: flex; align-items: center; gap: 7px; color: #e4eee8; }
+.sky-ai-actions input { width: 18px; height: 18px; accent-color: #efc982; }
+.sky-ai-status { margin: 0; padding: 9px 25px; color: #e4d2aa; background: #1a3540; font-size: 12px; }
+.sky-ai-error { margin: 0; padding: 11px 25px; color: #ffc0b7; font-size: 12px; background: #3a252c; }
+.sky-ai-images { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; padding: 19px 26px 25px; }
+.sky-ai-images figure { margin: 0; min-width: 0; }
+.sky-ai-images figcaption { color: #f7d9a5; margin-bottom: 9px; font-size: 12px; font-weight: 700; }
+.sky-ai-photo-shell { display: flex; align-items: center; justify-content: center; width: 100%; height: min(48vh,525px); min-height: 190px; border-radius: 8px; border: 1px solid #5d7986; overflow: hidden; box-sizing: border-box; }
+.sky-ai-photo-shell img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+.sky-ai-original { background: #56616a; }
+.sky-ai-night { background:
+  radial-gradient(ellipse at 45% 90%,rgba(130,86,53,.7),transparent 45%),
+  linear-gradient(#030912,#061a29 65%,#243b45); }
+.sky-ai-checkers { background-color: #dde3e7; background-image:
+  linear-gradient(45deg,#a6b6be 25%, transparent 25%),
+  linear-gradient(-45deg,#a6b6be 25%, transparent 25%),
+  linear-gradient(45deg,transparent 75%,#a6b6be 75%),
+  linear-gradient(-45deg,transparent 75%,#a6b6be 75%);
+  background-size: 28px 28px; background-position: 0 0,0 14px,14px -14px,-14px 0; }
+.sky-ai-placeholder { color: #b7c7d0; text-align: center; font-size: 13px; max-width: 25ch; line-height: 1.5; padding: 20px; }
+.sky-ai-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 15px 26px; border-top: 1px solid #486571; }
+.sky-ai-footer small { font-size: 10px; line-height: 1.6; max-width: 75ch; color: #baccca; }
+.sky-ai-footer > div { display: flex; gap: 9px; margin-left: auto; }
+.sky-ai-dialog button:focus-visible,.sky-ai-dialog input:focus-visible { outline: 3px solid #f8d793; outline-offset: 2px; }
+@media(max-width:780px) {
+  .sky-ai-backdrop { padding: 7px; }
+  .sky-ai-header { padding: 15px; }
+  .sky-ai-actions { padding: 12px 15px; }
+  .sky-ai-images { grid-template-columns: 1fr; gap: 12px; padding: 14px; }
+  .sky-ai-photo-shell { height: min(37vh,350px); min-height: 150px; }
+  .sky-ai-footer { padding: 13px 15px; }
+  .sky-ai-footer > div { width: 100%; }
+  .sky-ai-footer button { flex: 1; }
+}
