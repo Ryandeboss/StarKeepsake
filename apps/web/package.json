@@ -21,7 +21,8 @@
     "test:photographic": "node --experimental-strip-types --test tests/sky-photographic.test.mjs",
     "test:sky-ai-mask": "node --experimental-strip-types --test tests/sky-ai-mask.test.mjs",
     "test:sky-recovery": "node --experimental-strip-types --test tests/sky-missed-sky-recovery.test.mjs",
-    "test:sky-spot": "node --experimental-strip-types --test tests/sky-spot-cleanup.test.mjs"
+    "test:sky-spot": "node --experimental-strip-types --test tests/sky-spot-cleanup.test.mjs",
+    "test:sky-sweep": "node --experimental-strip-types --test tests/sky-sweep-cleanup.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
