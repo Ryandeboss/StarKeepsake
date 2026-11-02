@@ -9,6 +9,7 @@ import './SkyCutoutPreview.css'
 
 type Props = {
   file: File
+  active: boolean
   onApply: (image: Blob) => void
   onCancel: () => void
 }
@@ -22,7 +23,7 @@ type DragBox = { left: number; top: number; width: number; height: number }
  * No painting, clipping or scrollable zoom canvas. Both columns show the FULL
  * photo with object-fit:contain. AI calls only happen after a deliberate click.
  */
-export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
+export function SkyCutoutPreview({ file, active, onApply, onCancel }: Props) {
   const [originalUrl] = useState(() => URL.createObjectURL(file))
   const [resultUrl, setResultUrl] = useState('')
   const [resultSource, setResultSource] = useState<Source | null>(null)
@@ -36,6 +37,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const [touchEdits, setTouchEdits] = useState<TouchUpEdit[]>([])
   const [dragBox, setDragBox] = useState<DragBox | null>(null)
   const [reduceHalo, setReduceHalo] = useState(true)
+  const [protectLowerImage, setProtectLowerImage] = useState(true)
   const [refining, setRefining] = useState(false)
   const [transparentInput, setTransparentInput] = useState(false)
   const [showCheckerboard, setShowCheckerboard] = useState(false)
@@ -51,11 +53,14 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const busy = processing || refining
 
   useEffect(() => {
-    initialButton.current?.focus()
-    let active = true
-    void skyMaskAvailability().then(value => { if (active) setAvailable(value) })
+    if (active) initialButton.current?.focus()
+  }, [active])
+
+  useEffect(() => {
+    let mounted = true
+    void skyMaskAvailability().then(value => { if (mounted) setAvailable(value) })
     void createImageBitmap(file).then(bitmap => {
-      if (!active) { bitmap.close(); return }
+      if (!mounted) { bitmap.close(); return }
       // A small scan detects if the user supplied an already-masked PNG.
       const canvas = document.createElement('canvas')
       canvas.width = Math.min(bitmap.width, 256)
@@ -68,7 +73,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       bitmap.close()
     }).catch(() => setError('Could not inspect the original image.'))
     return () => {
-      active = false
+      mounted = false
       controller.current?.abort()
       dragState.current = null
       refineVersion.current += 1
@@ -112,6 +117,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   async function composeFromMask(
     mask: Blob, reversed: boolean, cleanup: number, decontaminate: boolean,
     recovery: MissedSkyStrength, edits: readonly TouchUpEdit[],
+    protectLower: boolean,
   ): Promise<Blob> {
     const [sourceBitmap, skyBitmap] = await Promise.all([createImageBitmap(file), createImageBitmap(mask)])
     try {
@@ -143,9 +149,9 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const rectangles = edits.filter((edit): edit is Extract<TouchUpEdit, { kind: 'sweep' }> =>
         edit.kind === 'sweep').map(edit => edit.rectangle)
       const spotCorrected = removeSkySpots(original.data, recoveredMask, reversed,
-        canvas.width, canvas.height, spots)
+        canvas.width, canvas.height, spots, protectLower)
       const sweepCorrected = removeSkySweeps(original.data, spotCorrected, reversed,
-        canvas.width, canvas.height, rectangles)
+        canvas.width, canvas.height, rectangles, protectLower)
       const cutout = applySkyAlpha(original.data, sweepCorrected, reversed, {
         width: canvas.width, height: canvas.height,
         cleanupPx: cleanup, decontaminate,
@@ -166,12 +172,14 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     nextInvert: boolean, cleanup: number, decontaminate: boolean,
     recovery: MissedSkyStrength = skyRecovery,
     edits: TouchUpEdit[] = touchEdits,
+    protectLower: boolean = protectLowerImage,
   ) {
     setInvert(nextInvert)
     setEdgeCleanup(cleanup)
     setReduceHalo(decontaminate)
     setSkyRecovery(recovery)
     setTouchEdits(edits)
+    setProtectLowerImage(protectLower)
     const mask = maskBlob.current
     if (!mask) return
     const version = ++refineVersion.current
@@ -182,7 +190,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       void (async () => {
         try {
           const cutout = await composeFromMask(mask, nextInvert, cleanup, decontaminate,
-            recovery, edits)
+            recovery, edits, protectLower)
           if (version !== refineVersion.current) return
           showResult(cutout, 'ai')
           setError('')
@@ -306,7 +314,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       const jpg = await prepareAiUpload(abort.signal)
       const mask = await generateSkyMask(jpg, abort.signal)
       if (abort.signal.aborted) return
-      const cutout = await composeFromMask(mask, false, edgeCleanup, reduceHalo, skyRecovery, [])
+      const cutout = await composeFromMask(mask, false, edgeCleanup, reduceHalo, skyRecovery, [], protectLowerImage)
       if (abort.signal.aborted) return
       maskBlob.current = mask
       setTouchEdits([])
@@ -406,6 +414,12 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
             onClick={() => { setTouchMode(value => value === 'sweep' ? 'off' : 'sweep'); setDragBox(null) }}>
             {touchMode === 'sweep' ? 'Done sweeping' : 'Sweep white pockets'}
           </button>
+          <label className="sky-ai-fringe-toggle">
+            <input type="checkbox" checked={protectLowerImage} disabled={processing}
+              onChange={event => scheduleRefinement(invert, edgeCleanup, reduceHalo,
+                skyRecovery, touchEdits, event.target.checked)}/>
+            Protect lower image
+          </label>
           {touchEdits.length > 0 && <button type="button" className="sky-ai-reset"
             disabled={busy}
             onClick={() => scheduleRefinement(invert, edgeCleanup, reduceHalo,
@@ -430,12 +444,13 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
           “Show raw AI mask” turns both refinements off.</p>
       </div>}
       {touchMode === 'spot' && resultSource === 'ai' && <p className="sky-ai-status" role="status">
-        Click a leftover white spot in the RIGHT preview. Each click is a free local edit;
-        use Undo edit if you remove too much.
+        Click a leftover white spot in the RIGHT preview. Uncheck Protect lower image
+        when the sky extends into the lower part of the photo. Use Undo edit if needed.
       </p>}
       {touchMode === 'sweep' && resultSource === 'ai' && <p className="sky-ai-status" role="status">
         Drag a rectangle around the tree canopy in the RIGHT preview. All bright sky-like
-        gaps inside the box are cleaned in one free operation. Review pale buildings and use Undo edit if needed.
+        gaps inside the box are cleaned in one free operation. Turn off Protect lower image
+        for upward-looking photos. Review pale objects and use Undo edit if needed.
       </p>}
       {available === null && <p className="sky-ai-status" role="status">Checking AI availability…</p>}
       {available === false && <p className="sky-ai-status" role="status">
@@ -477,7 +492,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
         </figure>
       </div>
       <footer className="sky-ai-footer">
-        <small>AI uses a third-party sky segmentation service only when you click the AI button.
+        <small>Edits remain available after you apply: use Edit cutout from the night-sky view.
+          AI uses a third-party sky segmentation service only when you click the AI button.
           Your original photo isn't regenerated. This is an illustrative skyline, not a calibrated 360° view.</small>
         <div>
           <button type="button" onClick={onCancel}>Cancel</button>
