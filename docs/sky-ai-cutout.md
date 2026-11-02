@@ -61,6 +61,28 @@ Apply is selected.
 Manual touch-ups are user-directed and are not a perfect semantic guarantee:
 review the result closely before applying, especially on pale buildings.
 
+### Full-height manual cleanup and editing after Apply
+
+**Protect lower image** is checked by default. It limits manual spot and
+rectangle-sweep removal to the upper 62% of the original photo (safer for
+skyline water, buildings, and reflections). For an upward-looking leafy-canopy
+or portrait image, uncheck it to let **manual** spot and rectangle tools operate
+across the entire selected photo. Automatic AI-based bright sky recovery
+remains conservative at the original upper-image limit regardless of this
+toggle. The color/brightness tests and rectangle boundaries still apply, so
+review pale objects and Undo if needed.
+
+After **Apply to night sky**, the parent SkyImmersiveView deliberately keeps
+SkyCutoutPreview mounted but hidden, retaining the original File, AI mask Blob,
+edge/recovery settings, spot and sweep edit history, and lower-protection
+setting in browser memory. The skyline toolbar shows **Edit cutout**, reopening
+that exact editor with its last result and edits; reapplying updates the
+displayed foreground without another Fal request. **Resume cutout** is shown
+if the user cancels before the initial Apply. Uploading a different photo
+starts a fresh editor session and resets the previous mask/history. The edits
+remain in memory only for the current page session; reloading does not restore
+them, and uploading a different source replaces the editable photo.
+
 Tests: `npm run test:sky-spot` checks separate white islands, preserved
 branches, undo behavior, lower-image protection and inverted masks.
 `npm run test:sky-sweep` covers multiple islands in one rectangle, strict
