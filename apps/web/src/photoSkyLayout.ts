@@ -1,28 +1,31 @@
 /**
- * Fit a framed, vertically stacked star-sky and original photo into a viewer.
- * The photo retains its full natural aspect ratio. The separate upper sky adds
- * height; it NEVER overlays/crops the photo or requires a sky mask.
+ * The outer digital frame retains a stable aspect ratio as the sky/photo
+ * balance moves. At the default 38% split, the lower photo fits without
+ * cropping. Other splits use the selected fit/crop treatment.
+ *
+ * The calculated sky is a separate panel ABOVE the photo, never an overlay
+ * on the uploaded photo. No AI service is involved in this layout.
  */
+export type AbovePhotoFitMode =
+  | 'fit' | 'center-crop' | 'top-crop' | 'bottom-crop' | 'stretch'
+export const DEFAULT_SKY_PERCENT = 38
+
 export function fitAbovePhotoLayout(
   viewportWidth: number, viewportHeight: number,
   photoWidth: number, photoHeight: number,
-  upperSkyFraction = 0.4,
+  skyPercent = DEFAULT_SKY_PERCENT,
 ): { width: number; height: number; skyHeight: number; photoHeight: number } {
-  if (![viewportWidth, viewportHeight, photoWidth, photoHeight, upperSkyFraction].every(Number.isFinite) ||
-    viewportWidth <= 0 || viewportHeight <= 0 || photoWidth <= 0 || photoHeight <= 0 ||
-    upperSkyFraction <= 0) {
+  if (![viewportWidth, viewportHeight, photoWidth, photoHeight, skyPercent].every(Number.isFinite) ||
+    viewportWidth <= 0 || viewportHeight <= 0 || photoWidth <= 0 || photoHeight <= 0) {
     return { width: 0, height: 0, skyHeight: 0, photoHeight: 0 }
   }
-  const ratio = photoWidth / photoHeight
-  const safeFraction = Math.max(0.15, Math.min(0.8, upperSkyFraction))
-  const availableWidth = viewportWidth * .94
-  const availableHeight = viewportHeight * .94
-  const actualPhotoHeight = Math.min(availableHeight / (1 + safeFraction), availableWidth / ratio)
-  const actualSkyHeight = actualPhotoHeight * safeFraction
-  return {
-    width: actualPhotoHeight * ratio,
-    height: actualPhotoHeight + actualSkyHeight,
-    skyHeight: actualSkyHeight,
-    photoHeight: actualPhotoHeight,
-  }
+
+  const boundedSkyPercent = Math.max(20, Math.min(70, skyPercent))
+  // Fix the outer frame shape using the photo at the default split, so moving
+  // the slider changes the division instead of changing the whole frame size.
+  const frameAspect = (photoWidth / photoHeight) * (1 - DEFAULT_SKY_PERCENT / 100)
+  const height = Math.min(viewportHeight * .94, viewportWidth * .94 / frameAspect)
+  const width = height * frameAspect
+  const skyHeight = height * boundedSkyPercent / 100
+  return { width, height, skyHeight, photoHeight: height - skyHeight }
 }

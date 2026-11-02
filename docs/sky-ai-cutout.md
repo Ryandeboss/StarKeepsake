@@ -165,3 +165,21 @@ whole photo, and stars only over the photo's upper half) was rolled back.
 These remain illustrative digital photo compositions, not a physical
 fabrication template or camera-calibrated astronomical composite.
 Test frame geometry with `npm run test:photo-sky-layout`.
+
+## Above-photo sky balance and fitting
+
+The existing **Within my photo** cutout editor is unchanged. The **Above my
+photo** digital composition now offers a Sky section height slider (20–70%,
+default 38%). This adjusts the split within a *fixed* outer preview frame:
+moving the horizon never stretches or resizes the outer frame. The calculated
+night sky stays in a separate upper section; the uploaded image occupies the
+remaining lower section, unaltered in storage.
+
+The user can choose **Fit full photo** (contain, preserves entire image),
+**Center crop** (default, cover), **Crop top** (favor bottom of image),
+**Crop bottom** (favor top of image), or **Stretch** (fill; distorts proportions).
+Crop and stretch change browser presentation only, not the original bytes.
+A visual balance bar, a range slider and thumbnail fit cards update the
+preview in real time without additional Fal model calls. Drag-and-drop or the
+accessible Browse files control accept JPG/PNG/WebP under 12 MB. The
+two layouts remain the only choices, and the previous cutout tools are kept.
