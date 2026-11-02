@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run from the StarKeepsake repository root on a logged-in Azure Cloud Shell.
-# Deploy PR #48's API to a SEPARATE, scale-to-zero Container App.
+# Deploy a GitHub-built PR #48 image to a SEPARATE, scale-to-zero Container App.
 # Never prints provider credentials or mutates starkeepsake-api-dev.
 set -euo pipefail
 set +x
@@ -29,7 +29,7 @@ az account show --query '{subscription:name,id:id}' -o table
 if [[ "${1:-}" != "--deploy" ]]; then
   echo "Dry run only. Re-run with --deploy to create/update the separate staging app."
   echo "Target: $STAGE_APP in $RG. Existing $LIVE_APP is untouched."
-  echo "Azure ACR builds and staging resources may incur charges."
+  echo "ACR storage and staging resources may incur charges."
   exit 0
 fi
 
@@ -48,16 +48,13 @@ if [[ -z "$ENVIRONMENT" || -z "$PULL_ID" ]]; then
   exit 1
 fi
 IMAGE="$ACR.azurecr.io/starkeepsake-api:sky-ai-${COMMIT:0:12}"
-echo "Building staging image (the existing production app is not changed)."
-# ACR resolves -f relative to the build context. Enter apps/api so the
-# Dockerfile and the root of the uploaded context are unambiguous.
-(
-  cd apps/api
-  test -f Dockerfile
-  test -f StarKeepsake.Api.csproj
-  az acr build -r "$ACR" -t "starkeepsake-api:sky-ai-${COMMIT:0:12}" \
-    --file Dockerfile .
-)
+echo "Checking for a GitHub-built image in the registry..."
+if ! az acr repository show --name "$ACR" --image "starkeepsake-api:sky-ai-${COMMIT:0:12}" --output none 2>/dev/null; then
+  echo "No image for this commit. Check GitHub Actions: Build sky-mask staging image."
+  echo "The registry's remote builds are disabled, so this script never uses az acr build."
+  exit 1
+fi
+echo "The matching prebuilt image exists."
 
 if az containerapp show -g "$RG" -n "$STAGE_APP" -o none >/dev/null 2>&1; then
   echo "Staging app already exists; updating its image."
@@ -65,7 +62,7 @@ if az containerapp show -g "$RG" -n "$STAGE_APP" -o none >/dev/null 2>&1; then
     --image "$IMAGE" --set-env-vars \
     "Deployment__CommitSha=$COMMIT" \
     "DesignEngine__BaseUrl=$ENGINE_URL" \
-    "SkyMask__Enabled=true" \
+    "SkyMask__Enabled=false" \
     --output none
 else
   echo "Creating isolated staging app (scale to zero)."
@@ -80,22 +77,13 @@ else
     --cpu 0.5 --memory 1.0Gi \
     --env-vars "Deployment__CommitSha=$COMMIT" \
     "DesignEngine__BaseUrl=$ENGINE_URL" \
-    "SkyMask__Enabled=true" \
+    "SkyMask__Enabled=false" \
     --output none
 fi
 
-# Copy only the already-set Fal key, without printing its value. No file writes.
-FAL_SECRET="$(az containerapp secret show -g "$RG" -n "$LIVE_APP" \
-  --secret-name fal-api-key --query value -o tsv)"
-if [[ -z "$FAL_SECRET" || "$FAL_SECRET" == "None" ]]; then
-  echo "Could not read fal-api-key from the source app. Add the key to staging manually."
-  exit 1
-fi
-az containerapp secret set -g "$RG" -n "$STAGE_APP" \
-  --secrets "fal-api-key=$FAL_SECRET" --output none
-unset FAL_SECRET
-az containerapp update -g "$RG" -n "$STAGE_APP" \
-  --set-env-vars "Fal__ApiKey=secretref:fal-api-key" --output none
+# Configure the Fal key independently on this isolated staging app.
+# Never copy or print a key from another application as part of deployment.
+echo "Staging created. Set the staging Fal key separately in Azure Secrets."
 
 FQDN="$(az containerapp show -g "$RG" -n "$STAGE_APP" \
   --query properties.configuration.ingress.fqdn -o tsv)"
