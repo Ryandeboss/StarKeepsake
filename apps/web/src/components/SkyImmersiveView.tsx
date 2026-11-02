@@ -36,6 +36,8 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [photoError, setPhotoError] = useState('')
   const [photoScale, setPhotoScale] = useState(100)
   const [editingPhoto, setEditingPhoto] = useState<File | null>(null)
+  const [cutoutEditorOpen, setCutoutEditorOpen] = useState(false)
+  const [cutoutSession, setCutoutSession] = useState(0)
   const photoUpload = useRef<HTMLInputElement | null>(null)
   const imageObjectUrl = useRef<string | null>(null)
   useEffect(() => () => {
@@ -121,6 +123,8 @@ export function SkyImmersiveView({ result, location }: Props) {
     setPhotoError('')
     interruptTour()
     setEditingPhoto(file)
+    setCutoutSession(version => version + 1)
+    setCutoutEditorOpen(true)
   }
   function applyPhotoCutout(cutout: Blob) {
     const url = URL.createObjectURL(cutout)
@@ -129,8 +133,9 @@ export function SkyImmersiveView({ result, location }: Props) {
     setPhotoUrl(url)
     setPhotoMode(true)
     setGroundView(false)
-    setPhotoScale(100)
-    setEditingPhoto(null)
+    // Keep the source photo and SkyCutoutPreview mounted after applying.
+    // Returning to the editor preserves the Fal mask and all local edits.
+    setCutoutEditorOpen(false)
   }
   function nudge(dx: number, dy: number) {
     interruptTour()
@@ -265,6 +270,13 @@ export function SkyImmersiveView({ result, location }: Props) {
               event.currentTarget.value = ''
             }}/>
         </label>
+        {editingPhoto && <button type="button" className="immersive-edit-cutout"
+          onClick={() => {
+            interruptTour()
+            setGroundView(false)
+            if (photoUrl) setPhotoMode(true)
+            setCutoutEditorOpen(true)
+          }}>{photoUrl ? '✎ Edit cutout' : 'Resume cutout'}</button>}
         {photoUrl && <>
           <button type="button" aria-pressed={photoMode}
             onClick={() => { interruptTour(); setPhotoMode(mode => !mode) }}>
@@ -278,10 +290,13 @@ export function SkyImmersiveView({ result, location }: Props) {
         {photoError && <span role="alert" className="immersive-photo-error">{photoError}</span>}
         <small>Upload a JPG, PNG or WebP. Preview the entire image, optionally remove sky
           with a dedicated segmentation model, and apply the transparent foreground.
+          You can reopen Edit cutout afterward without another AI request.
           This is a flat photo plate, not a calibrated 360° panorama.</small>
       </div>}
-      {editingPhoto && <SkyCutoutPreview file={editingPhoto}
-        onApply={applyPhotoCutout} onCancel={() => setEditingPhoto(null)}/>}
+      {editingPhoto && <div hidden={!cutoutEditorOpen}>
+        <SkyCutoutPreview key={cutoutSession} file={editingPhoto} active={cutoutEditorOpen}
+          onApply={applyPhotoCutout} onCancel={() => setCutoutEditorOpen(false)}/>
+      </div>}
       <div ref={skyWindowRef} className="immersive-sky-window" tabIndex={groundView ? -1 : 0}
         aria-label="First-person sky view. Use arrow keys to pan left, right, up or down."
         onKeyDown={event => {
