@@ -8,8 +8,8 @@
 .immersive-toggle input { width: 19px; height: 19px; accent-color: #caa16c; }
 .immersive-sky-window { position: relative; overflow: hidden; background: #030b1c; color: #f4e8d5; min-height: 250px; touch-action: pan-y; outline-offset: 3px; }
 .immersive-sky-window:focus-visible { outline: 3px solid #b98b4c; }
-.immersive-sky-window svg { display: block; width: 100%; aspect-ratio: 5/3; height: auto; touch-action: none; cursor: grab; user-select: none; }
-.immersive-sky-window svg:active { cursor: grabbing; }
+.immersive-sky-window > svg { display: block; width: 100%; aspect-ratio: 5/3; height: auto; touch-action: none; cursor: grab; user-select: none; }
+.immersive-sky-window > svg:active { cursor: grabbing; }
 .immersive-star { cursor: crosshair; outline: none; }
 .immersive-star:focus-visible circle:nth-of-type(3) { stroke: #fff0bd; stroke-width: 3px; }
 .immersive-star-label { font: 12px ui-monospace,monospace; fill: #eff5f2; paint-order: stroke; stroke: #101d2d; stroke-width: 4px; stroke-linejoin: round; }
@@ -75,10 +75,10 @@
   .immersive-below, .immersive-pattern-grid { grid-template-columns: 1fr; }
   .immersive-named-stars { border-left: 0; border-top: 1px solid #39525f; }
   .immersive-toolbar { align-items: start; flex-direction: column; }
-  .immersive-sky-window svg { aspect-ratio: 5/3; }
+  .immersive-sky-window > svg { aspect-ratio: 5/3; }
 }
 @media (max-width: 550px) {
-  .immersive-sky-window svg { aspect-ratio: 4/3; }
+  .immersive-sky-window > svg { aspect-ratio: 4/3; }
   .immersive-view-controls { gap: 7px; }
   .immersive-view-controls button { flex-grow: 1; }
   .immersive-view-readout { font-size: 9px; }
