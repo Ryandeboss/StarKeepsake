@@ -78,6 +78,9 @@ export function maskWhiteSkyPixels(pixels: Uint8ClampedArray, width: number, hei
     // Estimate coverage from the darkest channel, then contract/feather only
     // the 1-pixel boundary. Preserve genuine interior highlights.
     const darkest = Math.min(pixels[offset], pixels[offset + 1], pixels[offset + 2])
+    // Only treat the second ring as matte if it's mid-bright gray.
+    // A fully lit window (near white) or dark facade stays fully opaque.
+    if (depth === 2 && (darkest <= 210 || darkest >= 244)) continue
     const inferredAlpha = Math.max(0.02, Math.min(1, (255 - darkest) / 48))
     const coverage = depth === 1 ? inferredAlpha * 0.76 :
       inferredAlpha < 0.96 ? inferredAlpha : 1
