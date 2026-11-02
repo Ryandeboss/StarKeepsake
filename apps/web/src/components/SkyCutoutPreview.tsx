@@ -411,7 +411,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
             onClick={() => scheduleRefinement(invert, edgeCleanup, reduceHalo,
               skyRecovery, touchEdits.slice(0, -1))}>
             Undo edit ({touchEdits.length})
-          </button>
+          </button>}
           <label htmlFor="sky-ai-edge-cleanup">Edge cleanup: <strong>{edgeCleanup} px</strong></label>
           <input id="sky-ai-edge-cleanup" type="range" min="0" max="8" step="1"
             value={edgeCleanup} disabled={processing}
