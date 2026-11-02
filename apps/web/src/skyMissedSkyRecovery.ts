@@ -166,5 +166,90 @@ export function recoverMissedSkyMask(
       result[i + 2] = Math.max(result[i + 2], target)
     }
   }
+
+  // Pass two: recover isolated bright cloud pockets among branches. A white
+  // region can be completely enclosed by dark twigs, so a top-edge flood
+  // cannot reach it. Identify components of very bright, near-neutral pixels
+  // using the ORIGINAL photo, then require proximity to model-confirmed sky.
+  // This avoids punching arbitrary white holes in distant building facades.
+  const pocketRows = Math.min(maxRows, Math.max(1, Math.ceil(height * 0.50)))
+  const pocketCount = width * pocketRows
+  const brightLimit = strength === 1 ? 231 : strength === 2 ? 214 : 195
+  const neutralLimit = strength === 1 ? 23 : strength === 2 ? 36 : 48
+  const nearLimit = Math.min(80, Math.max(8, Math.round(width * 0.025)))
+  const distance = new Uint16Array(pocketCount)
+  distance.fill(65535)
+  let nearHead = 0
+  let nearTail = 0
+  const nearQueue = new Int32Array(pocketCount)
+  for (let p = 0; p < pocketCount; p++) {
+    if (confSky(p) < 240) continue
+    distance[p] = 0
+    nearQueue[nearTail++] = p
+  }
+  function spreadDistance(p: number, d: number): void {
+    if (p < 0 || p >= pocketCount || distance[p] <= d) return
+    distance[p] = d
+    nearQueue[nearTail++] = p
+  }
+  while (nearHead < nearTail) {
+    const p = nearQueue[nearHead++]
+    const d = distance[p] + 1
+    if (d > nearLimit) continue
+    const x = p % width
+    const y = (p / width) | 0
+    if (x > 0) spreadDistance(p - 1, d)
+    if (x + 1 < width) spreadDistance(p + 1, d)
+    if (y > 0) spreadDistance(p - width, d)
+    if (y + 1 < pocketRows) spreadDistance(p + width, d)
+  }
+
+  // Require a meaningful connected sky-colored pocket rather than isolated
+  // pale facade pixels. The tree branch itself never passes this test.
+  const componentVisited = new Uint8Array(pocketCount)
+  const component = new Int32Array(pocketCount)
+  const minPixels = Math.max(5, Math.ceil(width * height / 300000))
+  function isBrightPocket(p: number): boolean {
+    const i = p * 4
+    if (original[i + 3] < 200 || confSky(p) > 230) return false
+    const r = original[i], g = original[i + 1], b = original[i + 2]
+    if (rgbLuma(r, g, b) < brightLimit) return false
+    const min = Math.min(r, g, b), max = Math.max(r, g, b)
+    return max - min <= neutralLimit
+  }
+  for (let start = 0; start < pocketCount; start++) {
+    if (componentVisited[start] || !isBrightPocket(start)) continue
+    let ch = 0, ct = 0
+    let closeToSky = false
+    componentVisited[start] = 1
+    component[ct++] = start
+
+    while (ch < ct) {
+      const p = component[ch++]
+      if (distance[p] <= nearLimit) closeToSky = true
+      const x = p % width, y = (p / width) | 0
+      const neighbors = [
+        x > 0 ? p - 1 : -1,
+        x + 1 < width ? p + 1 : -1,
+        y > 0 ? p - width : -1,
+        y + 1 < pocketRows ? p + width : -1,
+      ]
+      for (const q of neighbors) {
+        if (q < 0 || componentVisited[q] || !isBrightPocket(q)) continue
+        componentVisited[q] = 1
+        component[ct++] = q
+      }
+    }
+
+    if (!closeToSky || ct < minPixels) continue
+    for (let i = 0; i < ct; i++) {
+      const j = component[i] * 4
+      const target = invert ? 0 : 255
+      result[j] = target
+      result[j + 1] = target
+      result[j + 2] = target
+    }
+  }
+
   return result
 }
