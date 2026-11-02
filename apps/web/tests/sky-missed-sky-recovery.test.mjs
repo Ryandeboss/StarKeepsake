@@ -101,3 +101,17 @@ test('rejects inconsistent dimensions and invalid strength',()=>{
   assert.throws(()=>recoverMissedSkyMask(f.original,f.mask,false,{width:8,height:9,strength:2}),/dimensions/)
   assert.throws(()=>recoverMissedSkyMask(f.original,f.mask,false,{width:8,height:8,strength:5}),/strength/)
 })
+
+test('recovers cloud pocket enclosed by a one-pixel branch where flood fill cannot enter',()=>{
+  const f=fixture(24,20)
+  // Dense dark branch loop, completely separating this cloud from top sky.
+  for(let y=3;y<=10;y++) for(let x=3;x<=13;x++){
+    const border=y===3||y===10||x===3||x===13
+    f.pixel(x,y,border?[36,42,45]:[245,245,246],0)
+  }
+  const before=recoverMissedSkyMask(f.original,f.mask,false,{width:24,height:20,strength:0})
+  const after=recoverMissedSkyMask(f.original,f.mask,false,{width:24,height:20,strength:2})
+  assert.equal(f.get(before,5,5),0,'raw model missed the enclosed cloud')
+  assert.equal(f.get(after,5,5),255,'enclosed bright cloud is recovered')
+  assert.equal(f.get(after,3,5),0,'dark enclosing branch stays foreground')
+})
