@@ -368,3 +368,10 @@
 .immersive-framed-photo--whole::before { background: rgba(4,18,38,.32); }
 .immersive-framed-photo-image { position: relative; z-index: 0; }
 .immersive-framed-stars { z-index: 2; }
+
+/* Keep each actual star circular instead of stretching SVG circles across
+   differing photo aspect ratios. */
+.immersive-photo-star {
+  display: block; position: absolute; transform: translate(-50%,-50%);
+  border-radius: 50%; opacity: .94; pointer-events: none;
+}
