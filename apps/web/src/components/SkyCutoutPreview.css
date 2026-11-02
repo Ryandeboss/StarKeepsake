@@ -24,7 +24,7 @@
 .sky-ai-images { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; padding: 19px 26px 25px; }
 .sky-ai-images figure { margin: 0; min-width: 0; }
 .sky-ai-images figcaption { color: #f7d9a5; margin-bottom: 9px; font-size: 12px; font-weight: 700; }
-.sky-ai-photo-shell { display: flex; align-items: center; justify-content: center; width: 100%; height: min(48vh,525px); min-height: 190px; border-radius: 8px; border: 1px solid #5d7986; overflow: hidden; box-sizing: border-box; }
+.sky-ai-photo-shell { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: min(48vh,525px); min-height: 190px; border-radius: 8px; border: 1px solid #5d7986; overflow: hidden; box-sizing: border-box; }
 .sky-ai-photo-shell img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
 .sky-ai-original { background: #56616a; }
 .sky-ai-night { background:
@@ -88,3 +88,25 @@
 }
 .sky-ai-refinement .sky-ai-reset:hover { background: #244754; }
 .sky-ai-refinement .sky-ai-reset:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Explicit click-to-recover mode: the original photo never becomes clickable. */
+.sky-ai-spot-target {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: crosshair;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.sky-ai-spot-target:focus-visible {
+  outline: 3px solid #f8d793;
+  outline-offset: -4px;
+}
+.sky-ai-refinement .sky-ai-reset[aria-pressed="true"] {
+  background: #f2d9a6;
+  color: #173843;
+  border-color: #f2d9a6;
+}
