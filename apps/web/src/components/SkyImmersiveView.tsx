@@ -514,16 +514,16 @@ export function SkyImmersiveView({ result, location }: Props) {
               src={photoStarPlacement === 'cutout' ? photoUrl : sourcePhotoUrl || photoUrl}
               alt="" aria-hidden="true" draggable={false}/>
             {photoStarPlacement !== 'cutout' &&
-              <svg className={`immersive-framed-stars immersive-framed-stars--${photoStarPlacement}`}
-                viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
-                {visible.map(({ star, point, appearance, optics }) =>
-                  <g key={star.hipparcosId}>
-                    <circle cx={point.x} cy={point.y} r={Math.max(2, optics.haloRadius * 1.3)}
-                      fill={appearance.color} opacity=".19"/>
-                    <circle cx={point.x} cy={point.y} r={Math.max(1.1, optics.coreRadius * 1.4)}
-                      fill={appearance.color} opacity=".92"/>
-                  </g>)}
-              </svg>}
+              <div className={`immersive-framed-stars immersive-framed-stars--${photoStarPlacement}`}
+                aria-hidden="true">
+                {visible.map(({ star, point, appearance, optics }) => {
+                  const size = Math.max(1.8, Math.min(5.5, optics.coreRadius * 1.7))
+                  return <span className="immersive-photo-star" key={star.hipparcosId}
+                    style={{ left: (point.x / 10) + '%', top: (point.y / 6) + '%',
+                      width: size, height: size, backgroundColor: appearance.color,
+                      boxShadow: `0 0 ${Math.max(4, optics.haloRadius / 2)}px 2px ${appearance.color}66` }}/>
+                })}
+              </div>}
           </div>}}
         
         <SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}/>
