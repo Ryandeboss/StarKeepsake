@@ -1,0 +1,26 @@
+.sky-dome {
+  position: absolute; top: 12px; left: 13px; z-index: 3;
+  width: 278px; padding: 10px 10px 8px;
+  border: 1px solid rgba(211,227,218,.45); border-radius: 12px;
+  background: rgba(4,20,34,.86); color: #e9efe8;
+  box-shadow: 0 12px 32px rgba(0,0,0,.29);
+  backdrop-filter: blur(7px);
+  pointer-events: none;
+}
+.sky-dome-title { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0 8px 4px; }
+.sky-dome-title strong { font: 500 14px Georgia,serif; color: #fae5bd; }
+.sky-dome-title span { font: 10px ui-monospace, monospace; color: #b6d0cf; white-space: nowrap; }
+.sky-dome svg { display: block; width: 100%; height: auto; cursor: default !important; touch-action: auto !important; aspect-ratio: auto !important; }
+.sky-dome-cardinal { fill: #f2d9ad; font: 700 12px ui-monospace,monospace; }
+.sky-dome-level { fill: #b7d0ce; font: 9px ui-monospace,monospace; }
+.sky-dome-footnote { fill: #bfd1cf; font: 9px ui-monospace,monospace; }
+@media (max-width: 700px) {
+  .sky-dome { top: 6px; left: 6px; width: 190px; padding: 7px 6px 5px; border-radius: 9px; }
+  .sky-dome-title { margin: 0 5px 0; gap: 5px; }
+  .sky-dome-title strong { font-size: 11px; }
+  .sky-dome-title span { font-size: 8px; }
+}
+@media (max-width: 410px) {
+  .sky-dome { width: 165px; top: 5px; left: 5px; }
+  .sky-dome-title span { font-size: 7px; }
+}
