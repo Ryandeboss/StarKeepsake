@@ -17,7 +17,8 @@
     "test:landscapes": "node --experimental-strip-types --test tests/sky-landscapes.test.mjs",
     "test:photo-panorama": "node --experimental-strip-types --test tests/photo-panorama.test.mjs",
     "test:sky-cutout": "node --experimental-strip-types --test tests/sky-cutout.test.mjs",
-    "test:sky-dome": "node --experimental-strip-types --test tests/sky-dome.test.mjs"
+    "test:sky-dome": "node --experimental-strip-types --test tests/sky-dome.test.mjs",
+    "test:photographic": "node --experimental-strip-types --test tests/sky-photographic.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
