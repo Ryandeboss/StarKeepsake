@@ -138,36 +138,3 @@ Azure rejected `az acr build` with `TasksOperationsNotAllowed`. Our replacement 
 7. On completion, disable `SkyMask__Enabled`, delete staging and remove the temporary Azure OIDC feature-branch credential to minimize blast radius and costs.
 
 The staging script is deliberately opt-in and the workflow does **not** deploy to Azure. ACR image storage and staging resources may incur costs even at zero replicas.
-
-## Portrait photo studio and visual star placement
-
-The Sky Lab's Chicago photo experiment now has a polished, responsive
-photo-upload studio with drop-to-upload and keyboard-accessible Browse files,
-illustrated star-placement choices and aspect-ratio thumbnails.
-
-- **Original / 9:16 / 4:5 / 3:4 / 1:1 / 4:3 / 16:9** preview framing shapes.
-  Original aspect is the default; changing preview framing never crops the
-  source photo (`object-fit: contain`). The frame is fit within the measured
-  live sky viewport both vertically and horizontally so portrait uploads stay
-  portrait. These are digital framing shapes, not claims of purchasable sizes.
-- **Behind the scene:** the calculated night sky remains behind the
-  AI-transparent PNG foreground. Cutout RGB is unchanged; a transparent frame
-  background lets the existing calculated star field shine through.
-- **Above the horizon:** uses the unmodified original photo and draws the
-  computed stars over only the upper 52% of the image. This is a graphical
-  crop/placement preference, **not** automatic horizon measurement.
-- **Across the photo:** draws the same calculated stars over the entire
-  original image, with a slight tint for contrast. Both artistic overlays use
-  the calculated positions as a motif, not a camera-matched sky reconstruction.
-- Users may choose **Keep photo unchanged** in the cutout preview for these
-  overlays; a paid AI request is not required. The optional AI cutout, original
-  photo, and applied preview remain separate in memory for re-editing.
-- Replacing the photo resets stale photo and orientation state, while the
-  original source aspect ratio is read from the decoded image. The source
-  object URL is revoked on replacement/unmount.
-- This feature is intentionally scoped to the Sky Lab/photo experiment. It
-  does not change physical frame manufacturing specs, printing, engraving or
-  historical camera calibration.
-
-Test the geometry with `npm run test:photo-presentation`. Browser-level
-visual reviews are still required for vertical portraits and mobile sizes.
