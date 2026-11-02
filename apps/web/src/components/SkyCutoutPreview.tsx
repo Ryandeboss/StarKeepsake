@@ -378,9 +378,9 @@ export function SkyCutoutPreview({ file, active, onApply, onCancel }: Props) {
         <button type="button" className="sky-ai-main" disabled={busy || available !== true}
           onClick={() => { void removeSky() }}>{processing ? 'Processing image…' : '✦ Remove sky with AI'}</button>
         <button type="button" onClick={() => { void localRemoval() }} disabled={busy}>Use local white-sky remover</button>
-        {transparentInput && <button type="button" onClick={useOriginalTransparency} disabled={busy}>
-          Use existing transparency
-        </button>}
+        <button type="button" onClick={useOriginalTransparency} disabled={busy}>
+          {transparentInput ? 'Use existing transparency' : 'Keep photo unchanged'}
+        </button>
         {resultSource === 'ai' && <label><input type="checkbox" checked={invert}
           disabled={processing} onChange={event =>
             scheduleRefinement(event.target.checked, edgeCleanup, reduceHalo)}/>
