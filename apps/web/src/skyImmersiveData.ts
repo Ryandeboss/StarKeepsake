@@ -44,12 +44,25 @@ export function starAppearance(star: Pick<DesignStar, 'hipparcosId' | 'magnitude
   named: boolean
 } {
   const documented = NAMED_STAR_COLORS[star.hipparcosId]
-  const radius = Math.min(7.5, Math.max(1.4, 5.7 - star.magnitude * 0.88))
+  const radius = Math.min(3.5, Math.max(0.72, 2.65 - star.magnitude * 0.32))
   return {
     color: documented?.color ?? '#f3f1eb',
     category: documented?.category ?? 'color not catalogued here',
-    radius: documented ? radius * 1.1 : radius,
+    radius: documented ? radius * 1.08 : radius,
     named: Boolean(documented),
+  }
+}
+
+/** Mild artistic atmospheric scintillation, deterministic per catalogued star. */
+export function starTwinkleSettings(hipparcosId: number, magnitude: number) {
+  const animate = magnitude < 2.5
+  const seed = Math.abs(hipparcosId)
+  return {
+    animate,
+    duration: 3.2 + ((seed * 17) % 47) / 10,
+    delay: -((seed * 13) % 61) / 10,
+    // Fainter points fluctuate less. No star ever blinks out.
+    minimumOpacity: magnitude < 0.5 ? 0.91 : 0.95,
   }
 }
 
