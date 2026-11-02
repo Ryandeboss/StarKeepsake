@@ -16,7 +16,7 @@ type Source = 'ai' | 'local' | 'original'
  * photo with object-fit:contain. AI calls only happen after a deliberate click.
  */
 export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
-  const [originalUrl, setOriginalUrl] = useState('')
+  const [originalUrl] = useState(() => URL.createObjectURL(file))
   const [resultUrl, setResultUrl] = useState('')
   const [resultSource, setResultSource] = useState<Source | null>(null)
   const [available, setAvailable] = useState<boolean | null>(null)
@@ -32,8 +32,6 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
   const outputUrl = useRef<string | null>(null)
 
   useEffect(() => {
-    const url = URL.createObjectURL(file)
-    setOriginalUrl(url)
     initialButton.current?.focus()
     let active = true
     void skyMaskAvailability().then(value => { if (active) setAvailable(value) })
@@ -53,10 +51,10 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     return () => {
       active = false
       controller.current?.abort()
-      URL.revokeObjectURL(url)
+      URL.revokeObjectURL(originalUrl)
       if (outputUrl.current) URL.revokeObjectURL(outputUrl.current)
     }
-  }, [file])
+  }, [file, originalUrl])
 
   function showResult(blob: Blob, source: Source) {
     if (outputUrl.current) URL.revokeObjectURL(outputUrl.current)
@@ -233,7 +231,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
           Your original photo isn't regenerated. This is an illustrative skyline, not a calibrated 360° view.</small>
         <div>
           <button type="button" onClick={onCancel}>Cancel</button>
-          <button type="button" className="sky-ai-main" disabled={!resultBlob.current || processing}
+          <button type="button" className="sky-ai-main" disabled={!resultSource || processing}
             onClick={() => { if (resultBlob.current) onApply(resultBlob.current) }}>Apply to night sky</button>
         </div>
       </footer>
