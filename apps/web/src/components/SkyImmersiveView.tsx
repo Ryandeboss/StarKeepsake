@@ -10,6 +10,8 @@ import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
 import { SkyAtmosphereCanvas } from './SkyAtmosphereCanvas'
 import { starOptics } from '../skyPhotographicMath'
 import { photoHorizonBottomPercent } from '../skyAtmosphereMath'
+import { PHOTO_FRAME_RATIOS, containPhotoFrame, photoFrameAspect } from '../photoSkyPresentation'
+import type { PhotoFrameRatio, PhotoStarPlacement } from '../photoSkyPresentation'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, starTwinkleSettings, suggestedObserverHeading,
@@ -35,13 +37,23 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState('')
   const [photoScale, setPhotoScale] = useState(100)
+  const [photoFrameRatio, setPhotoFrameRatio] = useState<PhotoFrameRatio>('original')
+  const [photoStarPlacement, setPhotoStarPlacement] = useState<PhotoStarPlacement>('cutout')
+  const [sourcePhotoUrl, setSourcePhotoUrl] = useState<string | null>(null)
+  const [sourcePhotoSize, setSourcePhotoSize] = useState({ width: 0, height: 0 })
+  const [photoDragOver, setPhotoDragOver] = useState(false)
+  const [skyWindowSize, setSkyWindowSize] = useState({ width: 0, height: 0 })
   const [editingPhoto, setEditingPhoto] = useState<File | null>(null)
   const [cutoutEditorOpen, setCutoutEditorOpen] = useState(false)
   const [cutoutSession, setCutoutSession] = useState(0)
   const photoUpload = useRef<HTMLInputElement | null>(null)
   const imageObjectUrl = useRef<string | null>(null)
+  const sourceObjectUrl = useRef<string | null>(null)
+  const photoDecodeSequence = useRef(0)
   useEffect(() => () => {
     if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+    if (sourceObjectUrl.current) URL.revokeObjectURL(sourceObjectUrl.current)
+    photoDecodeSequence.current += 1
   }, [])
   const [groundView, setGroundView] = useState(false)
   const [showHint, setShowHint] = useState(true)
@@ -114,6 +126,19 @@ export function SkyImmersiveView({ result, location }: Props) {
     setShowHint(true)
     setDemoRun(run => run + 1)
   }
+  useEffect(() => {
+    const node = skyWindowRef.current
+    if (!node) return
+    const resize = () => {
+      const bounds = node.getBoundingClientRect()
+      setSkyWindowSize({ width: bounds.width, height: bounds.height })
+    }
+    resize()
+    const observer = new ResizeObserver(resize)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [groundView])
+
   function receivePhoto(file: File | undefined) {
     if (!file) return
     if (!['image/jpeg', 'image/webp', 'image/png'].includes(file.type) || file.size > 12000000) {
@@ -122,6 +147,21 @@ export function SkyImmersiveView({ result, location }: Props) {
     }
     setPhotoError('')
     interruptTour()
+    const sourceUrl = URL.createObjectURL(file)
+    if (sourceObjectUrl.current) URL.revokeObjectURL(sourceObjectUrl.current)
+    sourceObjectUrl.current = sourceUrl
+    setSourcePhotoUrl(sourceUrl)
+    setPhotoFrameRatio('original')
+    setPhotoStarPlacement('cutout')
+    const sequence = ++photoDecodeSequence.current
+    void createImageBitmap(file).then(bitmap => {
+      if (sequence === photoDecodeSequence.current) {
+        setSourcePhotoSize({ width: bitmap.width, height: bitmap.height })
+      }
+      bitmap.close()
+    }).catch(() => {
+      if (sequence === photoDecodeSequence.current) setPhotoError('Could not read photo dimensions.')
+    })
     setEditingPhoto(file)
     setCutoutSession(version => version + 1)
     setCutoutEditorOpen(true)
@@ -154,6 +194,13 @@ export function SkyImmersiveView({ result, location }: Props) {
     optics: starOptics(star.magnitude, star.altitudeDeg, Boolean(NAMED_STAR_COLORS[star.hipparcosId]), photoExposure),
   })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov, photoExposure])
   const photoBottom = photoHorizonBottomPercent(pitch, fov)
+  const actualPhotoRatio = photoFrameAspect(
+    photoFrameRatio, sourcePhotoSize.width, sourcePhotoSize.height,
+  )
+  const photoFrame = containPhotoFrame(
+    skyWindowSize.width, skyWindowSize.height, actualPhotoRatio,
+    .94 * photoScale / 100,
+  )
   const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point] as const)), [visible])
   const chosen = starByHip.get(hoveredHip ?? pinnedHip ?? -1)
   const chosenPoint = chosen ? pointsByHip.get(chosen.hipparcosId) : undefined
@@ -261,38 +308,100 @@ export function SkyImmersiveView({ result, location }: Props) {
           </button>}
         </div>
       </div>
-      {location.id === 'chicago' && !groundView && <div className="immersive-photo-setup">
-        <label>
-          <span>Chicago skyline photo · preview AI sky removal</span>
-          <input ref={photoUpload} type="file" accept="image/jpeg,image/webp,image/png"
-            onChange={event => {
-              receivePhoto(event.currentTarget.files?.[0])
-              event.currentTarget.value = ''
-            }}/>
-        </label>
-        {editingPhoto && <button type="button" className="immersive-edit-cutout"
-          onClick={() => {
-            interruptTour()
-            setGroundView(false)
-            if (photoUrl) setPhotoMode(true)
-            setCutoutEditorOpen(true)
-          }}>{photoUrl ? '✎ Edit cutout' : 'Resume cutout'}</button>}
-        {photoUrl && <>
+      {location.id === 'chicago' && !groundView && <section className="immersive-photo-studio" aria-label="Your photo and star presentation">
+        <div className="photo-studio-intro">
+          <div>
+            <span className="immersive-eyebrow">PHOTO STUDIO · DESIGN YOUR VIEW</span>
+            <h3>Give your moment a canvas.</h3>
+            <p>Drop in a photo, choose its shape, then decide where the stars belong.</p>
+          </div>
+          {editingPhoto && <button type="button" className="photo-studio-edit"
+            onClick={() => { interruptTour(); setGroundView(false); if (photoUrl) setPhotoMode(true); setCutoutEditorOpen(true) }}>
+            ✎ {photoUrl ? 'Edit cutout' : 'Continue editing'}
+          </button>}
+        </div>
+        <div className="photo-studio-grid">
+          <div className={`photo-studio-upload ${photoDragOver ? 'is-dragging' : ''}`}
+            onDragOver={event => { event.preventDefault(); setPhotoDragOver(true) }}
+            onDragLeave={event => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPhotoDragOver(false)
+            }}
+            onDrop={event => {
+              event.preventDefault()
+              setPhotoDragOver(false)
+              receivePhoto(event.dataTransfer.files[0])
+            }}>
+            <input ref={photoUpload} id="immersive-photo-file" className="photo-studio-file" type="file"
+              accept="image/jpeg,image/webp,image/png" aria-label="Upload a photograph"
+              onChange={event => {
+                receivePhoto(event.currentTarget.files?.[0])
+                event.currentTarget.value = ''
+              }}/>
+            <div className="photo-studio-upload-art" aria-hidden="true">
+              <svg viewBox="0 0 74 65"><rect x="9" y="13" width="46" height="39" rx="8" fill="#294d5d" stroke="#b9d4cd" strokeWidth="1.5"/>
+                <path d="M15 45l13-14 9 10 8-8 6 9" stroke="#ddc994" strokeWidth="2.5" fill="none" strokeLinejoin="round"/>
+                <circle cx="42" cy="24" r="4" fill="#f7dba4"/><path d="M55 1v15M47 9h16" stroke="#f9dcaa" strokeWidth="2" strokeLinecap="round"/></svg>
+            </div>
+            <strong>{editingPhoto ? editingPhoto.name : 'Drop your photo here'}</strong>
+            <span>or <label htmlFor="immersive-photo-file">Browse files</label></span>
+            <small>JPG, PNG or WebP · up to 12 MB</small>
+          </div>
+          <div className="photo-studio-settings">
+            <div className="photo-studio-choice-heading"><strong>01 · Choose a shape</strong>
+              <span>Photo fits without cropping</span></div>
+            <div className="photo-studio-ratios" role="group" aria-label="Photo frame aspect ratio">
+              {PHOTO_FRAME_RATIOS.map(option => {
+                const ratio = photoFrameAspect(option.id, sourcePhotoSize.width, sourcePhotoSize.height)
+                const miniature = containPhotoFrame(33, 33, ratio)
+                return <button type="button" key={option.id}
+                  aria-pressed={photoFrameRatio === option.id}
+                  className={photoFrameRatio === option.id ? 'is-selected' : ''}
+                  onClick={() => setPhotoFrameRatio(option.id)}>
+                  <span className="photo-ratio-symbol" aria-hidden="true"
+                    style={{ width: Math.max(8, miniature.width), height: Math.max(8, miniature.height) }}/>
+                  <strong>{option.label}</strong><small>{option.description}</small>
+                </button>
+              })}
+            </div>
+            <div className="photo-studio-choice-heading"><strong>02 · Place your stars</strong>
+              <span>Choose the visual treatment</span></div>
+            <div className="photo-studio-placements" role="group" aria-label="Star placement on photo">
+              {([
+                { id: 'cutout', name: 'Behind the scene', detail: 'Sky through transparent cutout' },
+                { id: 'upper', name: 'Above the horizon', detail: 'Stars in the upper half' },
+                { id: 'whole', name: 'Across the photo', detail: 'Stars over the entire image' },
+              ] as const).map(option => <button type="button" key={option.id}
+                aria-pressed={photoStarPlacement === option.id}
+                className={photoStarPlacement === option.id ? 'is-selected' : ''}
+                onClick={() => setPhotoStarPlacement(option.id)}>
+                <span className={`photo-placement-art photo-placement-${option.id}`} aria-hidden="true">
+                  <span className="photo-placement-stars">✦ · ✧ · ✦</span>
+                  <span className="photo-placement-horizon"/>
+                  <span className="photo-placement-land">▰▰▰</span>
+                </span>
+                <strong>{option.name}</strong><small>{option.detail}</small>
+              </button>)}
+            </div>
+            <p className="photo-studio-disclaimer">
+              {photoStarPlacement === 'cutout'
+                ? 'Uses your transparent AI cutout. Stars remain behind foreground detail.'
+                : 'Artistic overlay: star coordinates come from your calculated sky, but are not camera-aligned to the photograph.'}
+            </p>
+          </div>
+        </div>
+        {photoUrl && <div className="photo-studio-footer">
           <button type="button" aria-pressed={photoMode}
-            onClick={() => { interruptTour(); setPhotoMode(mode => !mode) }}>
-            {photoMode ? 'Hide skyline' : 'Show skyline'}
+            onClick={() => { interruptTour(); setPhotoMode(value => !value) }}>
+            {photoMode ? '◉ Photo visible' : '◯ Show photo'}
           </button>
-          {photoMode && <label>Skyline size <strong>{photoScale}%</strong>
-            <input type="range" min="100" max="160" step="5" value={photoScale}
+          <label>Frame scale <strong>{photoScale}%</strong>
+            <input type="range" min="70" max="100" step="5" value={photoScale}
               onChange={event => setPhotoScale(Number(event.target.value))}/>
-          </label>}
-        </>}
-        {photoError && <span role="alert" className="immersive-photo-error">{photoError}</span>}
-        <small>Upload a JPG, PNG or WebP. Preview the entire image, optionally remove sky
-          with a dedicated segmentation model, and apply the transparent foreground.
-          You can reopen Edit cutout afterward without another AI request.
-          This is a flat photo plate, not a calibrated 360° panorama.</small>
-      </div>}
+          </label>
+          <span>{sourcePhotoSize.width} × {sourcePhotoSize.height} px · {photoFrameRatio === 'original' ? 'Natural aspect' : photoFrameRatio}</span>
+        </div>}
+        {photoError && <p role="alert" className="immersive-photo-error">{photoError}</p>}
+      </section>}
       {editingPhoto && <div hidden={!cutoutEditorOpen}>
         <SkyCutoutPreview key={cutoutSession} file={editingPhoto} active={cutoutEditorOpen}
           onApply={applyPhotoCutout} onCancel={() => setCutoutEditorOpen(false)}/>
@@ -389,10 +498,27 @@ export function SkyImmersiveView({ result, location }: Props) {
             d={`M0 ${projectObserverStar(heading, 0, heading, pitch, fov).y} H1000 V600 H0Z`}
             fill="#061624" pointerEvents="none"/>}
         </svg>
-        {photoMode && photoUrl && <img
-          src={photoUrl} alt="" aria-hidden="true"
-          className="immersive-photo-horizon"
-          style={{ width: photoScale + '%', bottom: photoBottom + '%' }}/>}
+        {photoMode && photoUrl && photoFrame.width > 0 && photoFrame.height > 0 &&
+          <div className={`immersive-framed-photo immersive-framed-photo--${photoStarPlacement}`}
+            aria-label={`Photo preview with ${photoStarPlacement === 'whole' ? 'stars across the image' :
+              photoStarPlacement === 'upper' ? 'stars in the upper half' : 'stars behind its transparent sky'}`}
+            style={{ width: photoFrame.width, height: photoFrame.height,
+              bottom: photoStarPlacement === 'cutout' ? photoBottom + '%' : undefined }}>
+            <img className="immersive-framed-photo-image"
+              src={photoStarPlacement === 'cutout' ? photoUrl : sourcePhotoUrl || photoUrl}
+              alt="" aria-hidden="true" draggable={false}/>
+            {photoStarPlacement !== 'cutout' &&
+              <svg className={`immersive-framed-stars immersive-framed-stars--${photoStarPlacement}`}
+                viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+                {visible.map(({ star, point, appearance, optics }) =>
+                  <g key={star.hipparcosId}>
+                    <circle cx={point.x} cy={point.y} r={Math.max(2, optics.haloRadius * 1.3)}
+                      fill={appearance.color} opacity=".19"/>
+                    <circle cx={point.x} cy={point.y} r={Math.max(1.1, optics.coreRadius * 1.4)}
+                      fill={appearance.color} opacity=".92"/>
+                  </g>)}
+              </svg>}
+          </div>}}
         
         <SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}/>
         <div className="immersive-crosshair" aria-hidden="true">+</div>
