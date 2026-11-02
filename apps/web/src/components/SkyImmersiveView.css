@@ -235,6 +235,8 @@
   width: 100%; height: 100%; display: block;
   pointer-events: none;
   image-rendering: auto;
+  object-fit: cover;
+  object-position: center;
 }
 .immersive-sky-window > svg {
   position: relative; z-index: 1;
