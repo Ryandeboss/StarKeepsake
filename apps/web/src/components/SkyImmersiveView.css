@@ -247,3 +247,108 @@
 .immersive-location-readout, .immersive-view-readout { z-index: 3; }
 .immersive-star-light { isolation: isolate; }
 .immersive-star-label { font-size: 10px; stroke-width: 2.6px; opacity: .88; }
+
+
+/* SKY LAB PHOTO STUDIO — photo-first visual configurator. */
+.immersive-photo-studio {
+  background: radial-gradient(ellipse at 10% 0%, #234857 0%, #0d2633 66%);
+  border-top: 1px solid #47616c; color: #f5eee4;
+  padding: clamp(18px,2.8vw,30px); display: grid; gap: 20px;
+}
+.photo-studio-intro { display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
+.photo-studio-intro h3 { font: 500 clamp(22px,3vw,33px) Georgia,serif; letter-spacing: -.02em; margin: 7px 0; color: #ffe6b8; }
+.photo-studio-intro p { margin: 0; color: #c5d9d7; font-size: 12px; line-height: 1.6; }
+.photo-studio-grid { display: grid; grid-template-columns: minmax(220px,.7fr) minmax(0,1.5fr); gap: 22px; }
+.photo-studio-upload {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 235px; text-align: center; padding: 20px; gap: 6px;
+  border: 1.5px dashed #75929b; border-radius: 18px;
+  background: linear-gradient(155deg,rgba(55,93,102,.55),rgba(4,24,37,.5));
+  box-shadow: inset 0 0 35px rgba(218,197,160,.035);
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+.photo-studio-upload.is-dragging { border-color: #ffe5a9; transform: scale(1.012); background: #335666; }
+.photo-studio-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.photo-studio-upload:focus-within { outline: 2px solid #f4d59d; outline-offset: 3px; }
+.photo-studio-upload-art { width: 76px; height: 70px; margin-bottom: 6px; }
+.photo-studio-upload-art svg { width: 100%; height: 100%; filter: drop-shadow(0 8px 14px rgba(0,0,0,.23)); }
+.photo-studio-upload strong { color: #fff2dc; max-width: 24ch; overflow-wrap: anywhere; font-size: 13px; line-height: 1.4; }
+.photo-studio-upload span { color: #bed0d3; font-size: 12px; }
+.photo-studio-upload label { display: inline-flex; padding: 9px 16px; margin-top: 6px;
+  border-radius: 99px; background: #eacb95; color: #153a46; font-size: 12px;
+  font-weight: 750; cursor: pointer; box-shadow: 0 5px 18px rgba(0,0,0,.20); }
+.photo-studio-upload label:hover { background: #f9e5bc; }
+.photo-studio-upload small { color: #9fb7bc; font-size: 10px; margin-top: 7px; }
+.photo-studio-settings { display: grid; gap: 11px; align-content: start; min-width: 0; }
+.photo-studio-choice-heading { display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: baseline; }
+.photo-studio-choice-heading strong { color: #ffe3b7; font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+.photo-studio-choice-heading span { color: #9fb8bc; font-size: 10px; }
+.photo-studio-ratios { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 7px; margin-bottom: 8px; }
+.photo-studio-ratios button { display: grid; justify-items: center; align-content: center; gap: 5px;
+  min-width: 0; min-height: 86px; padding: 9px 3px; border: 1px solid #4a6c78;
+  border-radius: 11px; background: rgba(14,38,52,.8); color: #edf1ec; cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease; }
+.photo-studio-ratios button:hover { border-color: #e1c28a; transform: translateY(-2px); }
+.photo-studio-ratios button.is-selected { border-color: #f9dda7; background: #2e5360;
+  box-shadow: 0 0 0 1px rgba(249,221,167,.6) inset, 0 0 18px rgba(245,202,130,.1); }
+.photo-ratio-symbol { display: block; border: 2px solid #e4cfaa; border-radius: 2px; background: linear-gradient(165deg,#487487 0%,#183b4a 65%); box-shadow: 0 2px 5px rgba(0,0,0,.3); }
+.photo-studio-ratios strong { font-size: 11px; }
+.photo-studio-ratios small { font-size: 9px; color: #a9c1c2; white-space: nowrap; }
+.photo-studio-placements { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+.photo-studio-placements button { min-width: 0; text-align: left; border: 1px solid #4b7079;
+  border-radius: 13px; padding: 10px; background: rgba(12,36,49,.77); color: #f2ede4;
+  display: flex; flex-direction: column; gap: 6px; cursor: pointer; transition: border-color 170ms,transform 170ms,background 170ms; }
+.photo-studio-placements button:hover { border-color: #edc889; transform: translateY(-2px); }
+.photo-studio-placements button.is-selected { border-color: #ffe0a4; background: #2b5261;
+  box-shadow: inset 0 0 0 1px rgba(255,221,161,.4); }
+.photo-studio-placements strong { font-size: 11px; color: #fff2d9; }
+.photo-studio-placements small { font-size: 10px; color: #bfd0d0; line-height: 1.35; }
+.photo-placement-art { display: block; height: 74px; width: 100%; max-width: 190px; align-self: center;
+  position: relative; border: 5px solid #604c38; border-radius: 5px; overflow: hidden;
+  background: linear-gradient(#081d38,#204a60 52%,#29473e 53%,#182f30); 
+  box-shadow: 0 2px 9px rgba(0,0,0,.35), inset 0 0 0 2px #c0a27a; }
+.photo-placement-stars { position: absolute; inset: 15% 7% auto; color: #fff0c6;
+  letter-spacing: .12em; text-shadow: 0 0 6px #f6db98; font-size: 16px; text-align: center; }
+.photo-placement-horizon { position: absolute; top: 52%; left: 0; right: 0; border-top: 1.5px dashed #f7dda6; }
+.photo-placement-land { position: absolute; bottom: -8px; left: -5px; right: -5px; color: #8eaa9e;
+  text-shadow: 0 -8px 0 #163a40,18px -13px 0 #163a40; font-size: 40px; letter-spacing: -12px; text-align: center; }
+.photo-placement-whole { background: linear-gradient(135deg,#536b72,#395767 52%,#224e45); }
+.photo-placement-whole .photo-placement-stars { inset: 7% 5% 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }
+.photo-placement-whole .photo-placement-horizon { display: none; }
+.photo-placement-upper { background: linear-gradient(#102944 0%,#285774 51%,#617d6f 52%,#203e36 100%); }
+.photo-placement-cutout .photo-placement-horizon { border-top-style: dotted; }
+.photo-studio-disclaimer { color: #b8ccce; font-size: 10px; line-height: 1.6; margin: 3px 0; }
+.photo-studio-edit, .photo-studio-footer button { border: 1px solid #e5c58d; background: #efd5a5;
+  color: #183b45; border-radius: 99px; padding: 10px 16px; font-weight: 750;
+  font-size: 11px; cursor: pointer; }
+.photo-studio-edit:hover, .photo-studio-footer button:hover { background: #fff0c5; }
+.photo-studio-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; border-top: 1px solid #3b5c65; padding-top: 15px; }
+.photo-studio-footer label { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+.photo-studio-footer label input { accent-color: #eacb95; width: min(130px,24vw); }
+.photo-studio-footer span { color: #acc7c9; font-size: 10px; }
+.immersive-framed-photo {
+  position: absolute; z-index: 1; top: 50%; left: 50%;
+  transform: translate(-50%,-50%); overflow: hidden;
+  pointer-events: none; border: 7px solid #584938; outline: 2px solid #d2b68a;
+  border-radius: 3px; background: #061b2b; box-shadow: 0 12px 38px rgba(0,0,0,.75),inset 0 0 0 2px #e1be88;
+}
+.immersive-framed-photo-image { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+.immersive-framed-photo--upper .immersive-framed-photo-image,
+.immersive-framed-photo--whole .immersive-framed-photo-image { filter: brightness(.76) saturate(.83); }
+.immersive-framed-stars { display: block; position: absolute; width: 100%; height: 100%; inset: 0; pointer-events: none; }
+.immersive-framed-stars--upper { clip-path: inset(0 0 48% 0); }
+@media(max-width:950px) {
+ .photo-studio-grid { grid-template-columns: 1fr; }
+ .photo-studio-upload { min-height: 150px; flex-direction: column; }
+}
+@media(max-width:650px) {
+ .immersive-photo-studio { padding: 15px; }
+ .photo-studio-ratios { grid-template-columns: repeat(4,minmax(0,1fr)); }
+ .photo-studio-placements { grid-template-columns: 1fr; }
+ .photo-studio-placements button { display: grid; grid-template-columns: 118px 1fr; grid-template-rows: auto auto; gap: 2px 10px; }
+ .photo-placement-art { grid-row: span 2; }
+ .photo-studio-ratios button { min-height: 76px; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .photo-studio-ratios button,.photo-studio-placements button,.photo-studio-upload { transition: none; }
+}
