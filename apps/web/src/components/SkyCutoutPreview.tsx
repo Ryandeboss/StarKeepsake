@@ -255,9 +255,11 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
               onChange={event => scheduleRefinement(invert, edgeCleanup, event.target.checked)}/>
             Remove sky-colored edge glow
           </label>
+          <button type="button" className="sky-ai-reset" disabled={processing}
+            onClick={() => scheduleRefinement(invert, 0, false)}>Show raw AI mask</button>
         </div>
         <p>Start at 2 px. Increase only if a sky-colored border remains around buildings or trees.
-          Lower the value if fine branches disappear. At 0 px the AI mask is unchanged.</p>
+          Lower the value if fine branches disappear. Use “Show raw AI mask” to compare without edge edits.</p>
       </div>}
       {available === null && <p className="sky-ai-status" role="status">Checking AI availability…</p>}
       {available === false && <p className="sky-ai-status" role="status">
