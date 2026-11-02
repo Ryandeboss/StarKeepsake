@@ -58,8 +58,8 @@ if az containerapp show -g "$RG" -n "$STAGE_APP" -o none >/dev/null 2>&1; then
     --image "$IMAGE" --set-env-vars \
     "Deployment__CommitSha=$COMMIT" \
     "DesignEngine__BaseUrl=$ENGINE_URL" \
-    "SkyMask__Enabled=false" \
     --output none
+  # Preserve any operator-configured staging-only Fal key and enabled flag.
 else
   echo "Creating isolated staging app (scale to zero)."
   az containerapp create -g "$RG" -n "$STAGE_APP" \
