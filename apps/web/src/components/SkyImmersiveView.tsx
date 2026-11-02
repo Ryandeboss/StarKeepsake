@@ -325,7 +325,7 @@ export function SkyImmersiveView({ result, location }: Props) {
               else if (photoUrl) { setCutoutEditorOpen(false); setPhotoMode(true) }
             }}>
             <span className="immersive-layout-thumbnail is-within" aria-hidden="true">
-              <span className="immersive-layout-stars">✧　✦　·</span>
+              <span className="immersive-layout-stars">✧ ✦ ·</span>
               <span className="immersive-layout-land"/>
             </span>
             <span><strong>Within my photo</strong>
@@ -339,7 +339,7 @@ export function SkyImmersiveView({ result, location }: Props) {
               if (originalPhotoUrl) { setPhotoMode(true); setGroundView(false) }
             }}>
             <span className="immersive-layout-thumbnail is-above" aria-hidden="true">
-              <span className="immersive-layout-stars">✧　✦　·</span>
+              <span className="immersive-layout-stars">✧ ✦ ·</span>
               <span className="immersive-layout-boundary"/>
               <span className="immersive-layout-land"/>
             </span>
