@@ -34,6 +34,33 @@ export function maskWhiteSkyPixels(pixels: Uint8ClampedArray, width: number, hei
     if (y + 1 < height) enqueue(i + width)
   }
 
+  // Find only the first two foreground rings *touching* the exterior sky.
+  // This keeps bright interior windows unchanged even if they are white.
+  const edgeDepth = new Uint8Array(count)
+  for (let i = 0; i < count; i++) {
+    if (visited[i]) continue
+    const x = i % width
+    const y = (i / width) | 0
+    const nextToSky = (x > 0 && visited[i - 1]) ||
+      (x + 1 < width && visited[i + 1]) ||
+      (y > 0 && visited[i - width]) ||
+      (y + 1 < height && visited[i + width])
+    if (nextToSky) edgeDepth[i] = 1
+  }
+  // Copy first-ring values, then extend to one deeper ring without
+  // accidentally propagating across a whole building.
+  for (let i = 0; i < count; i++) {
+    if (visited[i] || edgeDepth[i]) continue
+    const x = i % width
+    const y = (i / width) | 0
+    if ((x > 0 && edgeDepth[i - 1] === 1) ||
+        (x + 1 < width && edgeDepth[i + 1] === 1) ||
+        (y > 0 && edgeDepth[i - width] === 1) ||
+        (y + 1 < height && edgeDepth[i + width] === 1)) {
+      edgeDepth[i] = 2
+    }
+  }
+
   for (let i = 0; i < count; i++) {
     const offset = i * 4
     if (visited[i]) {
@@ -44,23 +71,26 @@ export function maskWhiteSkyPixels(pixels: Uint8ClampedArray, width: number, hei
       continue
     }
 
-    const x = i % width
-    const y = (i / width) | 0
-    const touchesSky = (x > 0 && visited[i - 1]) ||
-      (x + 1 < width && visited[i + 1]) ||
-      (y > 0 && visited[i - width]) ||
-      (y + 1 < height && visited[i + width])
-    if (!touchesSky) continue
+    const depth = edgeDepth[i]
+    if (!depth) continue
 
-    // Recover a soft anti-aliased boundary from the JPG's white matte.
+    // JPG foreground edges often contain pixels mixed with a white matte.
+    // Estimate coverage from the darkest channel, then contract/feather only
+    // the 1-pixel boundary. Preserve genuine interior highlights.
     const darkest = Math.min(pixels[offset], pixels[offset + 1], pixels[offset + 2])
-    const alpha = Math.max(0.02, Math.min(1, (255 - darkest) / 42))
+    const inferredAlpha = Math.max(0.02, Math.min(1, (255 - darkest) / 48))
+    const coverage = depth === 1 ? inferredAlpha * 0.76 :
+      inferredAlpha < 0.96 ? inferredAlpha : 1
+    const alpha = Math.max(0.02, Math.min(1, coverage))
     result[offset + 3] = Math.round(alpha * 255)
     for (let channel = 0; channel < 3; channel++) {
-      result[offset + channel] = Math.max(0, Math.min(255,
-        Math.round((pixels[offset + channel] - (1 - alpha) * 255) / alpha)))
+      // Recover RGB from its white composite rather than keeping a
+      // nearly-white rim which glows against a dark astronomical sky.
+      const unmatted = (pixels[offset + channel] - 255 * (1 - inferredAlpha)) / inferredAlpha
+      result[offset + channel] = Math.max(0, Math.min(255, Math.round(unmatted)))
     }
   }
+
   return result
 }
 
