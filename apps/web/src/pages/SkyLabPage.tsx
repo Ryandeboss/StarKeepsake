@@ -3,6 +3,7 @@ import { generateAstronomy } from '../api'
 import type { AstronomyResult } from '../api'
 import { EarthGlobe } from '../components/EarthGlobe'
 import { SkyImmersiveView } from '../components/SkyImmersiveView'
+import { SkyLoadingProgress } from '../components/SkyLoadingProgress'
 import { SiteHeader } from '../components/SiteHeader'
 import { INITIAL_DESIGN_SPEC } from '../designSpec'
 import { EXPLORER_LOCATIONS } from '../skyExplorerData'
@@ -188,8 +189,11 @@ export function SkyLabPage() {
               </button>
             </div>
             <div className="sky-current-time">{utcMoment.toLocaleString('en-US', { timeZone:'UTC', dateStyle:'full', timeStyle:'short' })} UTC</div>
-            {result ? <SkyImmersiveView result={result} location={selected}/> : <div className="sky-observer-awaiting" role="status">Calculating the observer's sky and star positions…</div>}
-            <p className="sky-loading-status" role="status">{loading ? 'Calculating the star field from Hipparcos and JPL data…' : dateError || error || (result
+            <div className="sky-stage">
+              {result && <SkyImmersiveView result={result} location={selected}/>}
+              {!error && !dateError && <SkyLoadingProgress active={loading || !result} overlay={Boolean(result)}/>}
+            </div>
+            <p className="sky-loading-status" role="status">{loading ? 'Updating the astronomical sky…' : dateError || error || (result
               ? `${result.calculation.selectedStars} actual plotted HIP stars · ${result.calculation.visibleCatalogStars} catalogue stars above the ideal horizon · exact time basis`
               : 'Choose a date and time to calculate the view.')}</p>
             <div className="sky-explainer-cards">

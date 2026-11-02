@@ -1,0 +1,20 @@
+.sky-stage { position: relative; min-height: 340px; }
+.sky-loading-progress {
+  position: relative; min-height: 340px; display: grid; place-items: center;
+  padding: clamp(24px, 5vw, 55px); background: radial-gradient(ellipse at 50% 75%, #1c3b4d 0%, #081526 65%, #040b17 100%);
+  border-radius: 10px; color: #f6eddf; z-index: 7; box-sizing: border-box;
+  transition: opacity 480ms ease, visibility 480ms ease;
+}
+.sky-loading-progress.is-overlay { position: absolute; inset: 0; background: rgba(4,16,29,.87); backdrop-filter: blur(8px); }
+.sky-loading-progress.is-leaving { opacity: 0; visibility: hidden; pointer-events: none; }
+.sky-loading-inner { width: min(520px, 100%); }
+.sky-loading-kicker { color: #d1ae7e; font: 11px ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; }
+.sky-loading-title { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin: 17px 0 13px; }
+.sky-loading-title strong { color: #fbe4c0; font: 500 clamp(22px, 3vw, 34px) Georgia,serif; }
+.sky-loading-title span { color: #f2d5a4; font: 16px ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.sky-loading-track { width: 100%; height: 9px; background: #2a4153; border: 1px solid #657b80; border-radius: 50px; overflow: hidden; }
+.sky-loading-fill { height: 100%; border-radius: 50px; background: linear-gradient(90deg, #8ab8c5, #f0c790 75%, #fff3cd); box-shadow: 0 0 16px #f2c98b88; transition: width 190ms ease-out; }
+.sky-loading-inner small { display: block; margin-top: 14px; color: #b4c9c7; line-height: 1.6; font-size: 11px; }
+@media (prefers-reduced-motion: reduce) {
+  .sky-loading-progress, .sky-loading-fill { transition: none; }
+}

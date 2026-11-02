@@ -210,3 +210,20 @@
     min-width: 100%;
   }
 }
+
+/* A small luminous core and layered halo are photographic visual treatments,
+   while the positions remain exactly those calculated by the astronomy API. */
+.immersive-star-light { transform-box: fill-box; transform-origin: center; }
+.immersive-star-light.can-twinkle { animation-name: immersive-scintillate; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+@keyframes immersive-scintillate {
+  0%, 100% { opacity: 1; }
+  43% { opacity: var(--twinkle-low, .95); }
+  71% { opacity: .985; }
+}
+.immersive-star-label {
+  font-size: 10.5px; font-weight: 500;
+  fill: #f2f0ec; stroke: rgba(3,12,27,.87); stroke-width: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .immersive-star-light.can-twinkle { animation: none; }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { AstronomyResult } from '../api'
 import type { ExplorerLocation } from '../skyExplorerData'
 import { SkyCityHorizon } from './SkyCityHorizon'
@@ -8,7 +8,7 @@ import { getObserverScene } from '../skyLandscapeData'
 import { SkyStreetView } from './SkyStreetView'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
-  starAppearance, suggestedObserverHeading,
+  starAppearance, starTwinkleSettings, suggestedObserverHeading,
 } from '../skyImmersiveData'
 import { getStarContext, starCatalogUrl, starCompassDirection, starDisplayName, starDescription } from '../starDetails'
 import './SkyImmersiveView.css'
@@ -145,7 +145,9 @@ export function SkyImmersiveView({ result, location }: Props) {
   const visible = useMemo(() => result?.stars.map(star => ({
     star, point: projectObserverStar(star.azimuthDeg, star.altitudeDeg, heading, pitch, fov),
     appearance: starAppearance(star),
+    twinkle: starTwinkleSettings(star.hipparcosId, star.magnitude),
   })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov])
+  const horizonY = projectObserverStar(heading, 0, heading, pitch, fov).y
   const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point] as const)), [visible])
   const chosen = starByHip.get(hoveredHip ?? pinnedHip ?? -1)
   const chosenPoint = chosen ? pointsByHip.get(chosen.hipparcosId) : undefined
@@ -293,20 +295,35 @@ export function SkyImmersiveView({ result, location }: Props) {
           onPointerUp={endDrag} onPointerCancel={endDrag}>
           <defs>
             <linearGradient id="immersive-night" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#030915"/>
-              <stop offset="68%" stopColor="#10243a"/>
-              <stop offset="100%" stopColor="#214954"/>
+              <stop offset="0%" stopColor="#020711"/>
+              <stop offset="45%" stopColor="#071322"/>
+              <stop offset="100%" stopColor="#142c40"/>
             </linearGradient>
-            <radialGradient id="immersive-atmosphere">
-              <stop offset="0%" stopColor="#91a7b0" stopOpacity=".24"/>
-              <stop offset="100%" stopColor="#91a7b0" stopOpacity="0"/>
+            <radialGradient id="immersive-horizon-haze">
+              <stop offset="0%" stopColor="#7499a7" stopOpacity=".38"/>
+              <stop offset="45%" stopColor="#3e6b7d" stopOpacity=".17"/>
+              <stop offset="100%" stopColor="#22374d" stopOpacity="0"/>
             </radialGradient>
-            <filter id="immersive-star-glow" x="-200%" y="-200%" width="500%" height="500%">
-              <feGaussianBlur stdDeviation="5"/>
+            <radialGradient id="immersive-citylight">
+              <stop offset="0%" stopColor="#eab577" stopOpacity=".54"/>
+              <stop offset="35%" stopColor="#ad865c" stopOpacity=".28"/>
+              <stop offset="75%" stopColor="#6a5a51" stopOpacity=".07"/>
+              <stop offset="100%" stopColor="#6a5a51" stopOpacity="0"/>
+            </radialGradient>
+            <filter id="immersive-air-texture" x="0" y="0" width="100%" height="100%">
+              <feTurbulence type="fractalNoise" baseFrequency=".016" numOctaves="2" seed="9" stitchTiles="stitch"/>
+            </filter>
+            <filter id="immersive-star-glow" x="-150%" y="-150%" width="400%" height="400%">
+              <feGaussianBlur stdDeviation="2.5"/>
             </filter>
           </defs>
           <rect width="1000" height="600" fill="url(#immersive-night)"/>
-          <ellipse cx="500" cy="680" rx="800" ry="300" fill="url(#immersive-atmosphere)"/>
+          <ellipse cx="500" cy={horizonY - 34} rx="940" ry="320"
+            fill="url(#immersive-horizon-haze)" pointerEvents="none"/>
+          <ellipse cx="500" cy={horizonY + 20} rx="740" ry="200"
+            fill="url(#immersive-citylight)" opacity={photoMode ? .88 : .58} pointerEvents="none"/>
+          <rect width="1000" height="600" fill="#a7b5bd" filter="url(#immersive-air-texture)"
+            opacity=".035" pointerEvents="none"/>
           {showLines && patterns.map(({ pattern }) => (
             <g key={pattern.id} className={activePattern === pattern.id ? 'is-featured' : ''}>
               {pattern.segments.map(([from, to]) => {
@@ -326,10 +343,11 @@ export function SkyImmersiveView({ result, location }: Props) {
               })}
             </g>
           ))}
-          {visible.map(({ star, point, appearance }) => (
+          {visible.map(({ star, point, appearance, twinkle }) => (
             <g key={star.hipparcosId} role="button" tabIndex={0}
               aria-label={starDescription(star)} aria-pressed={pinnedHip === star.hipparcosId}
-              className="immersive-star" onPointerEnter={() => { if (!drag.current?.moved) setHoveredHip(star.hipparcosId) }}
+              className="immersive-star"
+              onPointerEnter={() => { if (!drag.current?.moved) setHoveredHip(star.hipparcosId) }}
               onPointerLeave={() => setHoveredHip(null)}
               onFocus={() => setHoveredHip(star.hipparcosId)}
               onBlur={() => setHoveredHip(null)}
@@ -340,14 +358,31 @@ export function SkyImmersiveView({ result, location }: Props) {
                   setPinnedHip(star.hipparcosId)
                 }
               }}>
-              <circle cx={point.x} cy={point.y} r={Math.max(13, appearance.radius + 7)} fill="transparent"/>
-              <circle cx={point.x} cy={point.y} r={appearance.radius * 2.9}
-                opacity={appearance.named ? .75 : .24} fill={appearance.color} filter="url(#immersive-star-glow)" pointerEvents="none"/>
-              <circle cx={point.x} cy={point.y} r={appearance.radius} fill={appearance.color} pointerEvents="none"/>
+              <circle cx={point.x} cy={point.y} r={Math.max(12, appearance.radius + 8)}
+                fill="transparent"/>
+              <g className={twinkle.animate ? 'immersive-star-light can-twinkle' : 'immersive-star-light'}
+                style={{ animationDuration: twinkle.duration + 's', animationDelay: twinkle.delay + 's',
+                  '--twinkle-low': String(twinkle.minimumOpacity) } as CSSProperties}
+                pointerEvents="none">
+                {appearance.named && <circle cx={point.x} cy={point.y} r={appearance.radius * 4.6}
+                  opacity=".48" fill={appearance.color} filter="url(#immersive-star-glow)"/>}
+                <circle cx={point.x} cy={point.y} r={appearance.radius * (appearance.named ? 2.5 : 1.6)}
+                  opacity={appearance.named ? .13 : .08} fill={appearance.color}/>
+                <circle cx={point.x} cy={point.y} r={appearance.radius}
+                  fill={appearance.color}/>
+                <circle cx={point.x} cy={point.y} r={Math.max(.28, appearance.radius * .37)}
+                  fill="#fffdf6" opacity=".95"/>
+                {star.magnitude < .35 && <g stroke={appearance.color} strokeWidth=".65" opacity=".35">
+                  <path d={`M ${point.x - appearance.radius * 2.8} ${point.y} H ${point.x + appearance.radius * 2.8}`}/>
+                  <path d={`M ${point.x} ${point.y - appearance.radius * 2.8} V ${point.y + appearance.radius * 2.8}`}/>
+                </g>}
+              </g>
               {(hoveredHip === star.hipparcosId || pinnedHip === star.hipparcosId) &&
-                <circle cx={point.x} cy={point.y} r={appearance.radius + 7} fill="none" stroke="#ffe7b5" strokeWidth="1.5" pointerEvents="none"/>}
-              {appearance.named && appearance.radius >= 3.5 &&
-                <text x={point.x + 11} y={point.y - 12} className="immersive-star-label" pointerEvents="none">{starDisplayName(star)}</text>}
+                <circle cx={point.x} cy={point.y} r={appearance.radius + 7}
+                  fill="none" stroke="#ffe7b5" strokeWidth="1.2" pointerEvents="none"/>}
+              {appearance.named && star.magnitude < 1.35 &&
+                <text x={point.x + 10} y={point.y - 10} className="immersive-star-label"
+                  pointerEvents="none">{starDisplayName(star)}</text>}
               <title>{starDescription(star)}</title>
             </g>
           ))}
@@ -396,7 +431,7 @@ export function SkyImmersiveView({ result, location }: Props) {
         <span className="immersive-legend-star immersive-orange"/> Cooler orange-red
         <span className="immersive-legend-star immersive-neutral"/> Unclassified here
         <p>Color is shown for a curated group of identified stars; neutral white is used when our data has no verified color.
-          Dot size follows apparent magnitude (brightness as seen from Earth), <strong>not physical star size</strong>.
+          Dot size follows apparent magnitude (brightness as seen from Earth), <strong>not physical star size</strong>. Subtle scintillation and atmospheric city glow are artistic effects, not a reconstruction of historical light pollution or weather.
           Lines are modern illustrative guides, not objects in space or official constellation boundaries.
           {photoMode ? ' This flat photo plate was generated separately from the astronomical sky and has no verified compass bearing. Camera motion affects only the stars in this mode.' :
             ' The local skylines are original, geographically inspired artwork, not photographs or landmark-accurate bearings.'}</p>
