@@ -60,9 +60,9 @@ export function recoverMissedSkyMask(
   const result = new Uint8ClampedArray(mask)
   if (strength === 0) return result
 
-  // Intentionally no flood below ~64% of the image: buildings, beach and
+  // Intentionally no flood below ~58% of the image: buildings, beach and
   // water are never considered candidates for recovery.
-  const maxRows = Math.min(height, Math.max(1, Math.ceil(height * 0.64)))
+  const maxRows = Math.min(height, Math.max(1, Math.ceil(height * 0.58)))
   const topBandRows = Math.min(maxRows, Math.max(1,
     Math.floor(options.topBandRows ?? Math.max(2, Math.min(24, height * 0.06)))))
   const maxSamples = Math.min(2048, Math.max(4, Math.floor(options.maxStartSamples ?? 640)))
