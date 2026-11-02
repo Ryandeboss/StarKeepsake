@@ -333,8 +333,8 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
       // fallback, not the default or a claim of semantic segmentation.
       const cutout = await createSkylineCutout(file)
       maskBlob.current = null
-      setSpotSeeds([])
-      setSpotMode(false)
+      setTouchEdits([])
+      setTouchMode('off')
       showResult(cutout, 'local')
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Local removal failed.')
