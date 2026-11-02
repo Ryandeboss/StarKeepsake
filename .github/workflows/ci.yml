@@ -31,6 +31,7 @@ jobs:
       - run: npm run test:sky-cutout
       - run: npm run test:sky-ai-mask
       - run: npm run test:sky-recovery
+      - run: npm run test:sky-spot
       - run: npm run test:sky-dome
       - run: npm run test:photographic
       - run: npm run build
