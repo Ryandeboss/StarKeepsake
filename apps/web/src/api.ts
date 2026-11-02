@@ -110,3 +110,39 @@ export async function generateEngravingPreview(
 
   return response.blob()
 }
+
+/**
+ * Optional, metered sky-only segmentation through the StarKeepsake API.
+ * The photo is transmitted to Fal only after the visitor explicitly clicks
+ * "Remove sky with AI". Never include provider credentials in the browser.
+ */
+export async function generateSkyMask(image: Blob, signal?: AbortSignal): Promise<Blob> {
+  const form = new FormData()
+  form.append('image', image, 'skyline.jpg')
+  const response = await fetch(`${API_BASE_URL}/api/sky/mask`, {
+    method: 'POST',
+    body: form,
+    signal,
+  })
+  if (!response.ok) {
+    let message = 'AI sky removal is unavailable. Your original photo is unchanged.'
+    try {
+      const body = await response.json() as { message?: string; detail?: string; title?: string }
+      message = body.detail ?? body.message ?? body.title ?? message
+    } catch { /* Preserve a safe, non-provider-specific error. */ }
+    throw new Error(message)
+  }
+  if (!response.headers.get('Content-Type')?.includes('image/png')) {
+    throw new Error('Sky detection did not return a PNG mask.')
+  }
+  return response.blob()
+}
+
+export async function skyMaskAvailability(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/sky/mask/status`)
+    if (!response.ok) return false
+    const body = await response.json() as { available?: boolean }
+    return body.available === true
+  } catch { return false }
+}
