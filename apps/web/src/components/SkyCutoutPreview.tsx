@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { generateSkyMask, skyMaskAvailability } from '../api'
 import { applySkyAlpha, maskLooksUsable } from '../skyAiMask'
 import { recoverMissedSkyMask, type MissedSkyStrength } from '../skyMissedSkyRecovery'
@@ -183,7 +183,7 @@ export function SkyCutoutPreview({ file, onApply, onCancel }: Props) {
     }, 180)
   }
 
-  function addSkySpot(event: React.MouseEvent<HTMLButtonElement>) {
+  function addSkySpot(event: MouseEvent<HTMLButtonElement>) {
     if (!spotMode || busy || !maskBlob.current || resultSource !== 'ai') return
     const img = previewImage.current
     if (!img || !img.naturalWidth || !img.naturalHeight) return
