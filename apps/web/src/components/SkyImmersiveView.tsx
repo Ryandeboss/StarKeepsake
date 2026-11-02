@@ -146,6 +146,14 @@ export function SkyImmersiveView({ result, location }: Props) {
     }
     setPhotoError('')
     interruptTour()
+    // A newly selected photo starts a fresh composition; prevent showing
+    // the previous photo while its new preview is being edited.
+    if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+    imageObjectUrl.current = null
+    setPhotoUrl(null)
+    setPhotoMode(false)
+    setSourcePhotoSize({ width: 0, height: 0 })
+    setPhotoScale(100)
     const sourceUrl = URL.createObjectURL(file)
     if (sourceObjectUrl.current) URL.revokeObjectURL(sourceObjectUrl.current)
     sourceObjectUrl.current = sourceUrl
