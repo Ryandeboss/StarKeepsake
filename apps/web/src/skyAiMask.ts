@@ -1,4 +1,4 @@
-import { refineSkyAlpha, type SkyEdgeOptions } from './skyMatteRefinement'
+import { refineSkyAlpha, type SkyEdgeOptions } from './skyMatteRefinement.ts'
 
 /**
  * Composites an AI *sky-only segmentation mask* over original RGB pixels.
