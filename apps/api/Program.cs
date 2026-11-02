@@ -22,6 +22,11 @@ builder.Services.AddHttpClient<DesignEngineClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(45);
 });
 
+builder.Services.AddHttpClient<SkyMaskClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(90);
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("web", policy =>
@@ -65,6 +70,18 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = 12,
                 Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+
+    // Sky segmentation invokes a metered third-party model, so throttle by IP.
+    options.AddPolicy("sky-mask", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 3,
+                Window = TimeSpan.FromMinutes(10),
                 QueueLimit = 0,
                 AutoReplenishment = true,
             }));
@@ -384,6 +401,84 @@ app.MapPost("/api/engraving/preview", async (
 })
 .WithMetadata(new RequestSizeLimitAttribute(11L * 1024 * 1024))
 .RequireRateLimiting("engraving");
+
+// This endpoint is disabled unless Fal:ApiKey is set in Azure's server-side
+// configuration. Never expose that credential through a VITE_ setting.
+app.MapGet("/api/sky/mask/status", (SkyMaskClient client) =>
+    Results.Ok(new { available = client.IsConfigured }));
+
+app.MapPost("/api/sky/mask", async (
+    HttpRequest request, SkyMaskClient client, CancellationToken cancellationToken) =>
+{
+    const long maxBytes = 8L * 1024 * 1024;
+    if (!client.IsConfigured)
+        return Results.Problem(
+            title: "AI sky removal not configured",
+            detail: "The server needs a Fal API key before AI removal can run.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    if (!request.HasFormContentType)
+        return Results.BadRequest(new { message = "Upload a JPG, PNG or WebP image." });
+
+    try
+    {
+        var form = await request.ReadFormAsync(cancellationToken);
+        var image = form.Files.GetFile("image");
+        if (image is null || image.Length == 0 ||
+            image.ContentType is not ("image/jpeg" or "image/png" or "image/webp"))
+            return Results.BadRequest(new { message = "Choose a valid JPG, PNG or WebP photo." });
+
+        if (image.Length > maxBytes)
+            return Results.Problem(title: "Photo too large",
+                detail: "Choose a photo no larger than 8 MB for AI sky detection.",
+                statusCode: StatusCodes.Status413PayloadTooLarge);
+
+        using var stream = image.OpenReadStream();
+        // Do not trust MIME metadata alone.
+        var signature = new byte[12];
+        if (await stream.ReadAsync(signature.AsMemory(), cancellationToken) < 12)
+            return Results.BadRequest(new { message = "The uploaded image is invalid." });
+        stream.Position = 0;
+        var valid = image.ContentType switch
+        {
+            "image/png" => signature.AsSpan(0, 8).SequenceEqual(
+                new byte[] {137,80,78,71,13,10,26,10}),
+            "image/jpeg" => signature[0] == 0xFF && signature[1] == 0xD8 &&
+                signature[2] == 0xFF,
+            "image/webp" => signature.AsSpan(0, 4).SequenceEqual("RIFF"u8) &&
+                signature.AsSpan(8, 4).SequenceEqual("WEBP"u8),
+            _ => false,
+        };
+        if (!valid) return Results.BadRequest(new { message = "The uploaded image is invalid." });
+
+        var skyMask = await client.GetSkyMaskAsync(stream, image.ContentType, cancellationToken);
+        request.HttpContext.Response.Headers.CacheControl = "no-store";
+        return Results.Bytes(skyMask, contentType: "image/png");
+    }
+    catch (SkyMaskUnavailableException exception)
+    {
+        return Results.Problem(title: "Sky detection unavailable",
+            detail: exception.Message, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (HttpRequestException)
+    {
+        return Results.Problem(title: "Sky detection unavailable",
+            detail: "The AI service could not be reached.",
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+    {
+        return Results.Problem(title: "Sky detection timeout",
+            detail: "The AI service took too long. Please try again.",
+            statusCode: StatusCodes.Status504GatewayTimeout);
+    }
+    catch (InvalidDataException)
+    {
+        return Results.BadRequest(new { message = "The uploaded image is invalid." });
+    }
+})
+.WithMetadata(new RequestSizeLimitAttribute(9L * 1024 * 1024))
+.RequireRateLimiting("sky-mask");
 
 app.Run();
 
