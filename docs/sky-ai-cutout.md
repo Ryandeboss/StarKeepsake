@@ -47,8 +47,14 @@ For isolated patches that still remain, click **Touch up white pockets**,
 then click the white patch itself in the right-hand preview. The browser flood-
 fills only a locally connected, bright, similar-color region above the water/
 foreground portion of the image. Thin dark branches stop the fill. The user can
-click several regions (up to 16), **Undo spot**, and compare with **Show raw AI
-mask**, which also clears local spot fixes. The photo and original model mask
+click several regions, or use **Sweep white pockets** to drag a rectangle around a
+cluster of missed sky islands. A sweep scans the original photo within that
+rectangle for bright, low-chroma components and removes all qualifying pockets
+in one browser-only operation. Each drag counts as one Undo step, even if it
+removes hundreds of separate gaps. The selection never edits pixels outside
+its boundaries or below 62% of image height. Both click and sweep edits use a
+unified 32-operation history with **Undo edit**; **Show raw AI mask** clears
+all local edits. The photo and original model mask
 remain unchanged; touch-ups are non-generative, free, and reversible until
 Apply is selected.
 
@@ -57,6 +63,10 @@ review the result closely before applying, especially on pale buildings.
 
 Tests: `npm run test:sky-spot` checks separate white islands, preserved
 branches, undo behavior, lower-image protection and inverted masks.
+`npm run test:sky-sweep` covers multiple islands in one rectangle, strict
+selection boundaries, branch protection, water protection, undo and inversion.
+Drag-sweep cleanup can still remove a pale building within the selected
+rectangle if its pixels resemble bright sky; review and Undo before applying.
 
 ## Server configuration and costs
 
