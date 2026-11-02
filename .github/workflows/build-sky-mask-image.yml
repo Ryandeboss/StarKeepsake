@@ -4,11 +4,6 @@ on:
   push:
     branches:
       - feature/sky-only-ai-cutout
-    paths:
-      - "apps/api/**"
-      - "scripts/deploy-sky-mask-staging.sh"
-      - ".github/workflows/build-sky-mask-image.yml"
-  workflow_dispatch:
 
 permissions:
   contents: read
