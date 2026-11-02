@@ -296,7 +296,7 @@ export function SkyImmersiveView({ result, location }: Props) {
                 if (location.id !== 'chicago') return
                 if (!photoUrl) photoUpload.current?.click()
                 else { interruptTour(); setGroundView(false); setPhotoMode(true) }
-              }}>◈ Chicago skyline photo</button>
+              }}>◈ My photo + stars</button>
           </div>
           {!groundView && <label className="immersive-toggle">
             <input type="checkbox" checked={photoExposure} onChange={event => setPhotoExposure(event.target.checked)}/>
@@ -548,7 +548,7 @@ export function SkyImmersiveView({ result, location }: Props) {
         </div>}
         <div className="immersive-location-readout">
           <strong>{location.name}</strong>
-          <small>{photoMode ? 'Chicago foreground follows tilt only · not a 360° panorama' : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
+          <small>{photoMode ? 'Framed photo · artistic star placement, not camera calibrated' : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
         </div>
         <div className="immersive-view-readout">LOOK {Math.round(heading)}° · UP {Math.round(pitch)}° · FOV {fov}°</div>
         {chosen && chosenPoint && (
