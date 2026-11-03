@@ -36,6 +36,7 @@ jobs:
       - run: npm run test:sky-sweep
       - run: npm run test:photo-sky-layout
       - run: npm run test:experience
+      - run: npm run test:workshop
       - run: npm run test:sky-dome
       - run: npm run test:photographic
       - run: npm run build
