@@ -52,7 +52,7 @@ export function SkyWorkshopPreview({
     look:starAppearance(star),
     twinkle:starTwinkleSettings(star.hipparcosId, star.magnitude),
     optics:starOptics(star.magnitude,star.altitudeDeg,
-      Boolean(NAMED_STAR_COLORS[star.hipparcosId]),glow),
+      Boolean(NAMED_STAR_COLORS[star.hipparcosId]),true),
   })).filter(item => {
     if(!item.point.inFront)return false
     const panel=observerPointInPanel(item.point.x,item.point.y,panelAspect)
@@ -63,7 +63,7 @@ export function SkyWorkshopPreview({
     const x=Math.max(0,Math.min(width-1,Math.floor(panel.x*width)))
     const y=Math.max(0,Math.min(height-1,Math.floor(panel.y*height)))
     return maskAlpha[y*width+x]<110
-  }), [stars, heading, pitch, fov, glow,layout,panelAspect,maskAlpha,maskDimensions])
+  }), [stars, heading, pitch, fov,layout,panelAspect,maskAlpha,maskDimensions])
   const activeStar=visible.find(item=>item.star.hipparcosId===(hoveredHip??focusedHip))
 
   function start(event: ReactPointerEvent<HTMLDivElement>) {
@@ -90,7 +90,7 @@ export function SkyWorkshopPreview({
   // skyRgb paints atmosphere only; every star still comes from Hipparcos.
   const sky = <div className={`skw-star-atmosphere skw-tone-${tone}`}
     aria-label={`${visible.length} catalogue stars projected for your chosen direction`}>
-    <SkyAtmosphereCanvas heading={heading} pitch={pitch} fov={fov} enhanced={glow}/>
+    <SkyAtmosphereCanvas heading={heading} pitch={pitch} fov={fov} enhanced={true} horizonGlow={glow}/>
     <div className="skw-color-grade" aria-hidden="true"/>
     <svg className="skw-catalog-stars" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice"
       role="group" aria-label="Click a glowing star for its astronomical catalogue entry">

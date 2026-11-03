@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   colorRegion, changeRegionAlpha, paintAlphaLine,
   fillMaskPolygon, getAlpha, composeSkyCutout, maskWorkingDimensions,
+  decontaminateWhiteFringe,
 } from '../src/skyMaskMath.ts'
 import { maskWhiteSkyPixels } from '../src/skyCutout.ts'
 
@@ -143,4 +144,50 @@ test('smart rectangle cleans bright sky pockets, not dark tree branches',()=>{
   assert.equal(restored,3)
   assert.equal(mask[0],255)
   assert.equal(mask[1*w+1],255)
+})
+
+test('white fringe cleanup darkens only a pale tree edge, not a real white subject',()=>{
+  const w=7,h=5
+  const input=new Uint8ClampedArray(w*h*4)
+  const a=new Uint8ClampedArray(w*h).fill(255)
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)input.set([40,52,61,255],(y*w+x)*4)
+  // Removed top sky, two pale boundary pixels: one tree halo, one bright building.
+  for(let x=0;x<w;x++)a[x]=0
+  input.set([244,245,243,255],(1*w+2)*4)
+  input.set([248,248,246,255],(1*w+5)*4)
+  for(let y=2;y<h;y++)input.set([241,241,239,255],(y*w+5)*4)
+  const output=new Uint8ClampedArray(input)
+  const result=decontaminateWhiteFringe(input,output,a,w,h)
+  assert.ok(result[(1*w+2)*4]<244,'white halo around tree should darken')
+  assert.equal(result[(1*w+5)*4],248,'bright building should stay white')
+  assert.deepEqual([...input.slice((1*w+2)*4,(1*w+2)*4+3)],[244,245,243],
+    'never overwrite original photo colors')
+})
+
+test('restoring original sky bypasses edge correction',()=>{
+  const w=3,h=3
+  const input=new Uint8ClampedArray(w*h*4)
+  for(let i=0;i<w*h;i++)input.set([30,40,50,255],i*4)
+  input.set([252,251,248,255],(1*w+1)*4)
+  const a=new Uint8ClampedArray(w*h).fill(255)
+  a[0]=0
+  const auto=new Uint8ClampedArray(input)
+  auto[(1*w+1)*4+3]=0 // this light patch used to be auto removed
+  const result=decontaminateWhiteFringe(input,input,a,w,h,auto)
+  assert.equal(result[(1*w+1)*4],252)
+})
+
+test('AI horizon avoids misclassified dark leaves and leaves a safety buffer',()=>{
+  const w=31,h=25
+  const raw=new Uint8Array(w*h).fill(1)
+  const photo=new Uint8ClampedArray(w*h*4)
+  for(let i=0;i<w*h;i++)photo.set([183,207,230,255],i*4)
+  for(let y=8;y<25;y++)for(let x=12;x<18;x++){
+    const i=y*w+x
+    photo.set([31,59,35,255],i*4)
+  }
+  const mask=conservativeSkyMask(raw,w,h,4,photo)
+  assert.equal(mask[18*w+15],0,'AI false positives inside a dark tree stay opaque')
+  assert.equal(mask[11*w+10],0,'a few pixels beside branches stay protected')
+  assert.equal(mask[2*w+4],1,'open sky away from foreground remains clear')
 })

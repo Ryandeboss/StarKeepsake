@@ -217,7 +217,7 @@ export async function detectWorkshopSky(photoUrl: string): Promise<WorkshopDetec
           segmentation.segmentationMap[maskIndex+2] === color[2]) rawSky[index] = 1
     }
   }
-  const safeSky = conservativeSkyMask(rawSky, canvas.width, canvas.height)
+  const safeSky = conservativeSkyMask(rawSky, canvas.width, canvas.height, undefined, photo.data)
   let skyPixels = 0
   for(let index=0; index<safeSky.length; index++){
     if(!safeSky[index]) continue

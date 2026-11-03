@@ -145,24 +145,88 @@ export function getAlpha(pixels: Uint8ClampedArray): Uint8ClampedArray {
   return alpha
 }
 
-/** Retain the existing auto-cutout's white-matte RGB cleanup at its edges. */
+/** Replace pale RGB contamination at the immediate sky/foreground boundary.
+ * Unlike blanket erosion, this preserves dark branches and genuine white
+ * objects: only near-transparent neighbors with a darker interior anchor
+ * are corrected. Restored white sky pixels preserve their original RGB.
+ */
+export function decontaminateWhiteFringe(
+  source: Uint8ClampedArray,
+  result: Uint8ClampedArray,
+  alpha: Uint8ClampedArray,
+  width: number, height: number,
+  autoCutout?: Uint8ClampedArray,
+): Uint8ClampedArray {
+  if(width<=0||height<=0||source.length!==width*height*4||
+     result.length!==source.length||alpha.length!==width*height)
+    throw new Error('Image dimensions do not match')
+
+  const corrected=new Uint8ClampedArray(result)
+  const steps=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]
+  const lum=(j:number)=>(77*source[j]+150*source[j+1]+29*source[j+2])/256
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    const i=y*width+x,j=i*4
+    if(alpha[i]<36)continue
+    // An explicitly restored region should stay bit-identical to its source.
+    if(autoCutout && alpha[i]>autoCutout[j+3])continue
+    const edgeBrightness=lum(j)
+    const chroma=Math.max(source[j],source[j+1],source[j+2])-
+      Math.min(source[j],source[j+1],source[j+2])
+    if(edgeBrightness<145||chroma>80)continue
+
+    let target=-1,closest=Infinity
+    // Inspect the sky-side direction, then sample several pixels inward.
+    for(const [dx,dy] of steps){
+      const sx=x+dx,sy=y+dy
+      if(sx<0||sx>=width||sy<0||sy>=height||alpha[sy*width+sx]>36)continue
+      for(let k=2;k<=5;k++){
+        const ix=x-dx*k,iy=y-dy*k
+        if(ix<0||ix>=width||iy<0||iy>=height)break
+        const ii=iy*width+ix
+        if(alpha[ii]<250)continue
+        const delta=edgeBrightness-lum(ii*4)
+        if(delta<=24)continue
+        if(k<closest){target=ii;closest=k}
+        break
+      }
+    }
+    if(target<0)continue
+    const t=target*4
+    const difference=edgeBrightness-lum(t)
+    // Stronger decontamination for brighter halos; keep real edge texture.
+    const mix=Math.min(.78,Math.max(.25,(difference-16)/110))
+    for(let channel=0;channel<3;channel++){
+      corrected[j+channel]=Math.round(result[j+channel]*(1-mix)+source[t+channel]*mix)
+    }
+  }
+  return corrected
+}
+
+/** Retain previous auto-cutout RGB cleanup and decontaminate the bright
+ * hairline left against the replacement dark sky. The original is never
+ * modified, and manual Restore always uses the original photo pixels.
+ */
 export function composeSkyCutout(
   original: Uint8ClampedArray,
   autoCutout: Uint8ClampedArray,
   alpha: Uint8ClampedArray,
+  width?: number, height?: number,
 ): Uint8ClampedArray {
   if (original.length !== autoCutout.length || original.length !== alpha.length * 4) {
     throw new Error('Image dimensions do not match')
   }
   const output = new Uint8ClampedArray(original)
-  for (let i=0; i<alpha.length; i++) {
-    const offset = i*4
-    if (alpha[i] <= autoCutout[offset+3]) {
-      output[offset] = autoCutout[offset]
-      output[offset+1] = autoCutout[offset+1]
-      output[offset+2] = autoCutout[offset+2]
+  for (let i=0;i<alpha.length;i++){
+    const j=i*4
+    if(alpha[i]<=autoCutout[j+3]){
+      output[j]=autoCutout[j]
+      output[j+1]=autoCutout[j+1]
+      output[j+2]=autoCutout[j+2]
     }
-    output[offset+3] = alpha[i]
+    output[j+3]=alpha[i]
+  }
+  if(width!==undefined && height!==undefined){
+    return decontaminateWhiteFringe(original,output,alpha,width,height,autoCutout)
   }
   return output
 }

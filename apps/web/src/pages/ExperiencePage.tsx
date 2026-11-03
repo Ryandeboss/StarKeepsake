@@ -461,13 +461,13 @@ export function ExperiencePage() {
               <span className="at-kicker">LIGHT & ATMOSPHERE</span>
               <label className="at-glow-choice"><input type="checkbox" checked={atmosphericGlow}
                 onChange={event=>setAtmosphericGlow(event.target.checked)}/>
-                Subtle atmospheric & horizon glow</label>
+                Horizon glow (optional)</label>
               <fieldset className="at-tone-choice"><legend>Night sky tone</legend>
                 {([['natural','Natural darkness'],['indigo','Midnight indigo'],['teal','Deep teal']] as const).map(([value,label])=>
                   <button key={value} type="button" aria-pressed={skyTone===value}
                     onClick={()=>setSkyTone(value)}>{label}</button>)}
               </fieldset>
-              <small>Subtle visual grading only. All visible stars keep their calculated positions and magnitudes.</small>
+              <small>The warm horizon glow follows your viewing angle and disappears when disabled. Stars remain calculated from the same place and moment.</small>
             </div>
             <div className="at-workshop-actions">
               <button type="button" onClick={editMoment}>✎ Change date or location</button>

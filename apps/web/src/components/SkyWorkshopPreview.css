@@ -16,8 +16,8 @@
 .skw-artwork:focus-visible {outline:3px solid #f0d4a2;}
 .skw-star-atmosphere {position:absolute;inset:0;overflow:hidden;pointer-events:none;
   background:radial-gradient(ellipse at 48% 130%,#41627b 0%,#19334f 42%,#060e22 100%);}
-.skw-horizon-haze {position:absolute;inset:auto 0 0;height:35%;pointer-events:none;
-  background:linear-gradient(transparent,rgba(178,129,105,.22));}
+/* Horizon illumination is drawn by SkyAtmosphereCanvas from the camera ray altitude.
+   Do not add a fixed bottom-of-screen CSS haze, even as a fallback. */
 .skw-point {position:absolute;display:block;border-radius:50%;
   transform:translate(-50%,-50%);pointer-events:none;}
 @keyframes skw-glimmer {0%,100%{filter:brightness(.94)}50%{filter:brightness(1.26)}}

@@ -121,7 +121,7 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
         output.data[j+3] = 255
       }
     } else {
-      output.data.set(composeSkyCutout(original, auto, mask))
+      output.data.set(composeSkyCutout(original, auto, mask, loaded.width, loaded.height))
     }
     ctx.putImageData(output, 0, 0)
   }, [loaded, preview])
@@ -282,7 +282,7 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
       const ctx = output.getContext('2d')
       if (!ctx) throw new Error('Could not export the edited mask.')
       const pixels = ctx.createImageData(loaded.width, loaded.height)
-      pixels.data.set(composeSkyCutout(photo.current, automatic.current, alpha.current))
+      pixels.data.set(composeSkyCutout(photo.current, automatic.current, alpha.current, loaded.width, loaded.height))
       ctx.putImageData(pixels, 0, 0)
       const blob = await new Promise<Blob>((resolve, reject) => {
         output.toBlob(value => value ? resolve(value) : reject(new Error('PNG export failed.')), 'image/png')
