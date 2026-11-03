@@ -113,3 +113,29 @@ option. Both modes continue to use the calculated star field once applied.
 
 Regression tests: `npm run test:sky-mask-editor` and the existing
 `test:sky-cutout`; GitHub CI runs both. Do not merge until browser review.
+
+## Restored original "Detect sky in my photo" browser AI
+
+The unified builder's **Within my photo** mode once again exposes the old
+`Detect sky in my photo (AI)` action from CreatePage's Horizon Blend.
+This is the *free browser-only* TensorFlow.js 4.22.0 + DeepLab 0.2.2 ADE20K
+semantic detector in `skyBlend.ts`, not the separate Fal-backed cutout tool.
+Clicking this action after astronomical generation downloads the model scripts
+and weights, classifies the photo's sky locally, and artistically combines
+catalog stars into only that visible sky. The original user photo is not
+uploaded to the model provider. Photos lacking recognizable sky return an
+explicit message without replacing the current frame.
+
+The within-photo preview displays that generated full-image artistic composite,
+without simultaneously drawing the separate star-layer (no duplicate stars).
+The existing free manual cutout editor and optional cloud AI cutout remain
+available as distinct alternatives. Applying a manual/cloud cutout clears the
+artistic composite; updating the date, time, location, or photo invalidates it.
+An in-flight detection from a previous photo or astronomical moment cannot
+replace the newer result. Temporary browser URLs are revoked on replacement.
+No backend changes or paid calls are required for this restored feature.
+
+Like the previous Horizon Blend, the result is illustrative: camera azimuth,
+field of view and historic perspective are not inferred from the uploaded
+photograph. Test on mobile and desktop with a visible sky and a photo lacking
+sky, and confirm editing modes still work before merging.

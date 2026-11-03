@@ -5,6 +5,7 @@ import type { AstronomyResult, LocationCandidate } from '../api'
 import { SkyImmersiveView } from '../components/SkyImmersiveView'
 import { SkyCutoutPreview } from '../components/SkyCutoutPreview'
 import { SkyMaskEditor } from '../components/SkyMaskEditor'
+import { generateHorizonBlend } from '../skyBlend'
 import { StarKeepsakePreview } from '../components/StarKeepsakePreview'
 import { FULL_PHOTO_CROP } from '../photoCrop'
 import { getFrameLayout, INITIAL_DESIGN_SPEC, toRect } from '../designSpec'
@@ -68,6 +69,9 @@ export function ExperiencePage() {
   const [cutoutEditorMounted, setCutoutEditorMounted] = useState(false)
   const [manualEditorOpen, setManualEditorOpen] = useState(false)
   const [manualMask, setManualMask] = useState<Uint8ClampedArray | null>(null)
+  const [horizonBlendUrl, setHorizonBlendUrl] = useState('')
+  const [horizonBlendStatus, setHorizonBlendStatus] = useState('')
+  const [isDetectingHorizon, setIsDetectingHorizon] = useState(false)
   const [mapsUnavailable, setMapsUnavailable] = useState(false)
   const [showObservatory, setShowObservatory] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -76,6 +80,8 @@ export function ExperiencePage() {
   const dateInputRef = useRef<HTMLInputElement>(null)
   const photoObjectUrl = useRef('')
   const cutoutObjectUrl = useRef('')
+  const horizonBlendObjectUrl = useRef('')
+  const horizonBlendRequest = useRef(0)
   const revision = useRef(0)
   const activeBuild = useRef(0)
 
@@ -83,6 +89,8 @@ export function ExperiencePage() {
     revision.current += 1
     if (photoObjectUrl.current) URL.revokeObjectURL(photoObjectUrl.current)
     if (cutoutObjectUrl.current) URL.revokeObjectURL(cutoutObjectUrl.current)
+    if (horizonBlendObjectUrl.current) URL.revokeObjectURL(horizonBlendObjectUrl.current)
+    horizonBlendRequest.current += 1
   }, [])
 
   useEffect(() => {
@@ -93,7 +101,17 @@ export function ExperiencePage() {
     return () => window.clearInterval(interval)
   }, [isBuilding])
 
+  function clearHorizonBlend() {
+    horizonBlendRequest.current += 1
+    if (horizonBlendObjectUrl.current) URL.revokeObjectURL(horizonBlendObjectUrl.current)
+    horizonBlendObjectUrl.current = ''
+    setHorizonBlendUrl('')
+    setHorizonBlendStatus('')
+    setIsDetectingHorizon(false)
+  }
+
   function invalidateSky() {
+    clearHorizonBlend()
     revision.current += 1
     setBuilt(false)
     setShowObservatory(false)
@@ -230,6 +248,7 @@ export function ExperiencePage() {
   }
 
   function applyCutout(blob: Blob) {
+    clearHorizonBlend()
     if (cutoutObjectUrl.current) URL.revokeObjectURL(cutoutObjectUrl.current)
     const url = URL.createObjectURL(blob)
     cutoutObjectUrl.current = url
@@ -238,6 +257,47 @@ export function ExperiencePage() {
     setManualEditorOpen(false)
     setComposition('within')
     setDesignSpec(current => ({ ...current, layoutMode: 'horizon-blend' }))
+  }
+
+  async function detectHorizonWithAi() {
+    if (!photoUrl || !built || !designSpec.astronomy || !designSpec.stars.length) {
+      setHorizonBlendStatus('Upload a photograph and generate its calculated sky first.')
+      return
+    }
+    clearHorizonBlend()
+    const requestId = horizonBlendRequest.current
+    const currentRevision = revision.current
+    setIsDetectingHorizon(true)
+    setHorizonBlendStatus('Loading the on-device sky recognition model…')
+    try {
+      // Restored directly from the original CreatePage Horizon Blend workflow.
+      // This is DeepLab semantic segmentation in the browser, not a Fal request.
+      const result = await generateHorizonBlend(photoUrl, designSpec)
+      if (requestId !== horizonBlendRequest.current ||
+          currentRevision !== revision.current) return
+      if (result.kind === 'no-sky') {
+        setHorizonBlendStatus(
+          'No usable sky was recognized. Try an outdoor photo, edit the mask manually, or use AI sky removal.'
+        )
+        return
+      }
+      const url = URL.createObjectURL(result.image)
+      horizonBlendObjectUrl.current = url
+      setHorizonBlendUrl(url)
+      setHorizonBlendStatus(
+        `Detected approximately ${result.skyPercent}% sky; placed ${result.placedStars} real catalog stars in an artistic overlay.`
+      )
+    } catch (cause) {
+      if (requestId === horizonBlendRequest.current &&
+          currentRevision === revision.current) {
+        setHorizonBlendStatus(
+          cause instanceof Error ? cause.message : 'Sky detection failed on this device.'
+        )
+      }
+    } finally {
+      if (requestId === horizonBlendRequest.current &&
+          currentRevision === revision.current) setIsDetectingHorizon(false)
+    }
   }
 
   async function buildFrame() {
@@ -257,6 +317,7 @@ export function ExperiencePage() {
     }
     const requestId = ++activeBuild.current
     const expectedRevision = revision.current
+    clearHorizonBlend()
     setError('')
     setBuilt(false)
     setIsBuilding(true)
@@ -406,7 +467,19 @@ export function ExperiencePage() {
                     ))}
                   </div>
                 </div> : <div className="ex-within-option">
-                  <p>Remove the existing sky to reveal the calculated stars behind your photo, keeping the original foreground.</p>
+                  <p>Detect the sky in your photo and blend in calculated stars, or remove the sky and fine-tune the foreground yourself.</p>
+                  {photoFile && <div className="ex-detect-horizon">
+                    <button type="button" className="ex-detect-horizon-button"
+                      disabled={!built || isDetectingHorizon}
+                      onClick={() => { void detectHorizonWithAi() }}>
+                      {isDetectingHorizon ? '◌ Detecting sky…'
+                        : horizonBlendUrl ? '✦ Re-detect sky in my photo (AI)'
+                        : '✦ Detect sky in my photo (AI)'}
+                    </button>
+                    <small>The original free on-device DeepLab detector. It downloads a model when clicked; your photo stays in your browser. Stars are artistically placed because the camera direction is unknown.</small>
+                    {!built && <small>Generate your keepsake first to calculate the stars for this location and time.</small>}
+                    {horizonBlendStatus && <p role="status" className="ex-horizon-status">{horizonBlendStatus}</p>}
+                  </div>}
                   {photoFile ? <div className="ex-cutout-methods">
                     <button type="button" onClick={openManualEditor} className="ex-cutout-manual">
                       ✎ {cutoutUrl ? 'Edit horizon & sky mask manually' : 'Detect horizon & edit sky manually'}
@@ -415,7 +488,7 @@ export function ExperiencePage() {
                       ✧ {cutoutUrl ? 'Try AI sky removal instead' : 'Remove sky with AI (optional)'}
                     </button>
                   </div> : <small>Upload a photo to enable the free horizon/mask editor.</small>}
-                  <small>Manual tools are free: auto-detect bright sky, click matching colors, remove or restore with a brush, trace regions, undo and redo. AI removal is optional and may incur processing costs.</small>
+                  <small>The separate cutout editor keeps the original foreground and offers manual corrections. Cloud AI sky removal is optional and may incur processing costs.</small>
                 </div>}
               </div>
               <div className="ex-moment-panel">
@@ -547,7 +620,7 @@ export function ExperiencePage() {
                   photoPreview={photoUrl}
                   engravingPreview=""
                   isProcessingPhoto={false}
-                  blendPreview=""
+                  blendPreview={horizonBlendUrl}
                   skyPlacement={composition}
                   withinCutoutUrl={cutoutUrl}
                   photoFitMode={photoFitMode}

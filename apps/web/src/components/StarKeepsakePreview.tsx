@@ -121,7 +121,7 @@ export function StarKeepsakePreview({
           {minimal && skyPlacement === 'within' ? (
             <div className="horizon-blend-scene ex-within-composition"
               style={displayRectStyle(blendDisplayRect)}>
-              <div className="ex-within-starfield" aria-hidden="true">
+              {!blendPreview && <div className="ex-within-starfield" aria-hidden="true">
                 {designSpec.stars.map(star => <span className="ex-within-star"
                   key={star.hipparcosId}
                   style={{
@@ -131,15 +131,20 @@ export function StarKeepsakePreview({
                     height: Math.max(1.2,star.holeSizeMm * 1.8),
                     opacity: Math.max(.38, 1 - star.magnitude * .13),
                   }}/>)}
-              </div>
-              {photoPreview && <img
+              </div>}
+              {blendPreview ? <img
+                src={blendPreview}
+                alt="AI-detected photo sky with artistically overlaid calculated stars"
+                className="ex-within-photo"
+                style={{ width:'100%',height:'100%',objectFit:'contain',position:'absolute',inset:0 }}
+              /> : photoPreview && <img
                 src={withinCutoutUrl || photoPreview}
                 alt={withinCutoutUrl ? 'Photo with its original sky removed to reveal the calculated stars'
                   : 'Original photo; sky removal is available to reveal the calculated stars'}
                 className="ex-within-photo"
                 style={{ width:'100%',height:'100%',objectFit:'contain',position:'absolute',inset:0 }}/>}
-              {!withinCutoutUrl && <span className="ex-within-help">
-                {ready ? 'Select Prepare sky cutout to reveal stars within your image' : 'Add your moment, then prepare the existing sky'}
+              {!withinCutoutUrl && !blendPreview && <span className="ex-within-help">
+                {ready ? 'Choose AI sky detection, manual editing, or AI sky removal to reveal the stars' : 'Add your moment, then prepare the existing sky'}
               </span>}
             </div>
           ) : designSpec.layoutMode === 'classic' ? (

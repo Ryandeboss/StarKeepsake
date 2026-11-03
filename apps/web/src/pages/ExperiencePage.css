@@ -396,3 +396,15 @@
 .ex-within-option .ex-cutout-ai {background:rgba(18,46,60,.9);color:#f5ddae;border-color:#9d865d;}
 .ex-within-option .ex-cutout-manual:hover,.ex-within-option .ex-cutout-ai:hover {filter:brightness(1.12);}
 @media (max-width:490px){.ex-cutout-methods{grid-template-columns:1fr;}}
+
+/* Restore the original free on-device AI sky detection as a distinct workflow.
+   Unlike cloud segmentation it does not send the photograph to the provider. */
+.ex-detect-horizon {display:grid;gap:8px;border:1px solid rgba(229,197,143,.42);
+  border-radius:10px;padding:12px;background:rgba(22,54,65,.68);}
+.ex-detect-horizon .ex-detect-horizon-button {border:1px solid #e5c58f;
+  background:linear-gradient(105deg,#f4dfb6,#d8ae6a);color:#173643;
+  padding:12px 15px;border-radius:9px;font-size:12px;font-weight:750;}
+.ex-detect-horizon .ex-detect-horizon-button:disabled {opacity:.55;cursor:not-allowed;}
+.ex-detect-horizon small {font-size:10px;line-height:1.5;color:#c7d5d0;}
+.ex-horizon-status {margin:0;padding:8px 10px;border-radius:7px;
+  background:rgba(10,31,42,.74);color:#f8e1b3;font-size:11px;line-height:1.5;}
