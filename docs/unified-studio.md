@@ -44,37 +44,48 @@ PR branch until reviewed.
 Respect `prefers-reduced-motion`, label the star field as astronomical where
 calculated and artistic where blended, and avoid NASA affiliation claims.
 
-## Typed location search and Azure Maps recovery
+## Typed location search (Geoapify primary)
 
-The original searchable location field remains in the unified page. When
-the staging Azure Maps key is present, StarKeepsake uses the actual
-`/api/locations/search` and `/api/moments/resolve` endpoints, which support
-cities, addresses, and landmarks. The necessary **server-side** setting
-is `AzureMaps__SubscriptionKey` in the Azure Container App. No key is put
-in Vercel frontend configuration.
+The existing `/api/locations/search` and `/api/moments/resolve` endpoints now
+prefer Geoapify when the ASP.NET API server has `Geoapify__ApiKey` configured.
+This supports cities, typed street addresses, and landmarks without putting
+the key in Vercel or in browser JavaScript. The geocoder normally returns
+coordinates and IANA time-zone ID together in a single result; the existing
+.NET DST validation calculates the selected date/time's real UTC moment.
+For a result without a zone, Geoapify reverse geocoding is used at resolve time.
 
-When Azure Maps returns an error or is unreachable, the page switches to a
-bundled, local GeoNames city gazetteer (32,754 entries, including Bolingbrook,
-Chicago and global capitals). Visitors can still **type the name of a city
-or town**, press Find, choose a result showing its country and coordinates,
-and generate a real astronomical sky. There is no fixed sample-city picker.
-The local database is fetched only on the first fallback search and cached
-by the browser; no additional third-party API request is made per keystroke.
-An offline city record carries its IANA timezone; wall-clock conversion
-checks for invalid and ambiguous DST hours before sending the calculated UTC
-moment to the existing astronomy API.
+If Geoapify is not configured, the backend retains the original Azure Maps
+integration. If the live search request fails, the frontend uses the licensed
+GeoNames gazetteer (32,754 cities). Offline city matches calculate real
+astronomical skies but cannot match precise street addresses or landmarks.
+Geoapify results display required linked attribution next to the location.
 
-**Coverage:** the gazetteer includes cities with about 15,000+ residents and
-national capitals. It is not a street-level or landmark geocoder. Exact
-street addresses and lesser-known places require Azure Maps to be restored;
-the UI explains this rather than silently substituting a nearby city.
+### Staging setup (server-only key, no production changes)
 
-**Attribution:** original data © GeoNames (geonames.org), CC BY 4.0,
-https://creativecommons.org/licenses/by/4.0/ . This bundled, compact JSON
-export was adapted from
-https://github.com/serdarsalim/Time-Zoner-Converter-Chrome-Extension
-and is redistributed with GeoNames attribution. Update the dataset
-periodically when necessary to avoid stale administrative names.
+The new API code must be built and deployed to the separate Container App
+`starkeepsake-api-sky-staging` before frontend testing. The Docker GitHub
+Action only pushes an ACR image; the deployment script
+`scripts/deploy-sky-mask-staging.sh --deploy` updates the staging app after
+the exact branch head has been checked out. Check the reported `/health`
+commit ID. Use a secret reference to set the key on that staging app only:
+
+```bash
+read -rsp "Geoapify API key: " GEOAPIFY_KEY; echo
+az containerapp secret set -g rg-starkeepsake-dev \
+  -n starkeepsake-api-sky-staging \
+  --secrets "geoapify-key=$GEOAPIFY_KEY" --output none
+unset GEOAPIFY_KEY
+az containerapp update -g rg-starkeepsake-dev \
+  -n starkeepsake-api-sky-staging \
+  --set-env-vars "Geoapify__ApiKey=secretref:geoapify-key" --output none
+```
+
+Never commit the key, use `VITE_` variables, or paste a secret in chat.
+Tests after deployment: search Chicago, Paris France, and a complete street
+address; select results and generate a real sky, including a DST transition
+case. Disconnect the provider to check offline city fallback. Avoid
+per-keystroke billing and monitor the free usage quota before public launch.
+Reference: https://www.geoapify.com/pricing/ .
 
 
 The two layout cards **Above my photo** and **Within my photo** now appear before generation. Above has adjustable sky height (20–70%) and five fitting modes (fit, center/top/bottom crop, stretch); the preview-only geometry reprojects display star positions without changing catalog identities or claiming manufacturing-ready artwork. Within preserves the original foreground pixels through the full AI sky-cutout editor (local edge recovery, spot cleanup, rectangle sweep, undo), and never requests a paid Fal mask until explicitly clicked. The cutout remains editable during the current page session. No purchase flow exists.

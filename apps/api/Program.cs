@@ -5,6 +5,14 @@ using StarKeepsake.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Geoapify authenticates via apiKey in the query: never log this HttpClient's URL.
+builder.Logging.AddFilter("System.Net.Http.HttpClient.GeoapifyClient", LogLevel.Warning);
+builder.Services.AddHttpClient<GeoapifyClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api.geoapify.com/");
+    client.Timeout = TimeSpan.FromSeconds(12);
+});
+
 builder.Services.AddHttpClient<AzureMapsClient>(client =>
 {
     client.BaseAddress = new Uri("https://atlas.microsoft.com/");
@@ -113,6 +121,7 @@ app.MapGet("/health", () => Results.Ok(new
 
 app.MapGet("/api/locations/search", async (
     string? q,
+    GeoapifyClient geoapify,
     AzureMapsClient maps,
     CancellationToken cancellationToken) =>
 {
@@ -125,10 +134,29 @@ app.MapGet("/api/locations/search", async (
         });
     }
 
+    if (q.Trim().Length > 200)
+    {
+        return Results.BadRequest(new
+        {
+            code = "location_query_too_long",
+            message = "Keep your location search under 200 characters."
+        });
+    }
+
     try
     {
-        var results = await maps.SearchLocationsAsync(q, cancellationToken);
+        // Prefer Geoapify with a configured server-only key; Azure Maps remains a fallback.
+        var results = geoapify.IsConfigured
+            ? await geoapify.SearchLocationsAsync(q, cancellationToken)
+            : await maps.SearchLocationsAsync(q, cancellationToken);
         return Results.Ok(results);
+    }
+    catch (GeoapifyException exception)
+    {
+        return Results.Problem(
+            title: "Location service unavailable",
+            detail: exception.Message,
+            statusCode: StatusCodes.Status503ServiceUnavailable);
     }
     catch (AzureMapsException exception)
     {
@@ -141,6 +169,7 @@ app.MapGet("/api/locations/search", async (
 
 app.MapPost("/api/moments/resolve", async (
     ResolveMomentRequest request,
+    GeoapifyClient geoapify,
     AzureMapsClient maps,
     CancellationToken cancellationToken) =>
 {
@@ -192,10 +221,16 @@ app.MapPost("/api/moments/resolve", async (
 
     try
     {
-        var timeZoneId = await maps.GetTimeZoneIdAsync(
-            request.Location.Latitude,
-            request.Location.Longitude,
-            cancellationToken);
+        // Geoapify normally returns an IANA zone alongside the geocode.
+        // Only missing zones require a second reverse-geocoding request.
+        var timeZoneId = geoapify.IsConfigured
+            ? request.Location.Source == "geoapify" &&
+              !string.IsNullOrWhiteSpace(request.Location.TimeZoneId)
+                ? request.Location.TimeZoneId
+                : await geoapify.GetTimeZoneIdAsync(
+                    request.Location.Latitude, request.Location.Longitude, cancellationToken)
+            : await maps.GetTimeZoneIdAsync(
+                request.Location.Latitude, request.Location.Longitude, cancellationToken);
 
         string? localDateTime = null;
         string? utcDateTime = null;
@@ -251,6 +286,13 @@ app.MapPost("/api/moments/resolve", async (
             title: "Time zone unavailable",
             detail: "The selected location returned a time zone this server could not resolve.",
             statusCode: StatusCodes.Status502BadGateway);
+    }
+    catch (GeoapifyException exception)
+    {
+        return Results.Problem(
+            title: "Location service unavailable",
+            detail: exception.Message,
+            statusCode: StatusCodes.Status503ServiceUnavailable);
     }
     catch (AzureMapsException exception)
     {

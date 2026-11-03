@@ -182,7 +182,7 @@ export function ExperiencePage() {
         : await searchLocations(locationQuery)
       setLocationCandidates(matches)
       if (!matches.length) setError(mapsUnavailable
-        ? 'No matching city found. Try a nearby city or a different spelling. Precise addresses require Azure Maps.'
+        ? 'No matching city found. Try another spelling. Precise addresses require the live location service.'
         : 'No matching places found. Try a nearby city or a fuller address.')
     } catch (cause) {
       try {
@@ -445,10 +445,15 @@ export function ExperiencePage() {
                     ))}
                   </div>}
                   {mapsUnavailable && <p className="ex-city-source">
-                    City search is available from an offline place database while Azure Maps is unavailable.
-                    Street addresses and landmarks will work once Azure Maps is configured.
+                    City search is available from our offline place database while the live location service is unavailable.
+                    Street addresses and landmarks require the live geocoder.
                     {' '}Data © <a href="https://www.geonames.org/" target="_blank"
                       rel="noopener noreferrer">GeoNames</a> (CC BY 4.0).
+                  </p>}
+                  {(locationCandidates.some(candidate => candidate.source === 'geoapify') ||
+                    selectedLocation?.source === 'geoapify') && <p className="ex-city-source">
+                    Powered by <a href="https://www.geoapify.com/" target="_blank"
+                      rel="noopener noreferrer">Geoapify</a> · OpenStreetMap and other data sources.
                   </p>}
                   {selectedLocation && <div className="ex-location-confirmation">
                     <span aria-hidden="true">✦</span> {selectedLocation.displayName}

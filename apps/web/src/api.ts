@@ -6,6 +6,8 @@ export type LocationCandidate = {
   latitude: number
   longitude: number
   confidence: 'High' | 'Medium' | 'Low' | 'Unknown'
+  timeZoneId?: string | null
+  source?: 'geoapify' | null
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
