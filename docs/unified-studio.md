@@ -43,3 +43,11 @@ PR branch until reviewed.
 
 Respect `prefers-reduced-motion`, label the star field as astronomical where
 calculated and artistic where blended, and avoid NASA affiliation claims.
+
+## Staging location fallback and photo composition controls (November 2026)
+
+The staging API requires the **server-side** `AzureMaps__SubscriptionKey` configuration in Azure Container Apps (ASP.NET config path `AzureMaps:SubscriptionKey`). If it is unset, normal address/city search and the server-based location-to-time-zone resolution return 503. No secret is injected into Vercel or any `VITE_` environment variable.
+
+To unblock visual testing without inventing time zones, the unified page has a visibly labeled **sample cities** row. These cities have known, fixed latitude, longitude, and IANA time zone IDs, and they bypass only the unavailable Azure Maps search/resolve calls. The original astronomy calculation still runs on the backend. Client-side sample resolution validates DST skipped/repeated hours and correct local-to-UTC conversion. Arbitrary address search still requires restoring Azure Maps server configuration; the fallback is not represented as a universal geocoding service.
+
+The two layout cards **Above my photo** and **Within my photo** now appear before generation. Above has adjustable sky height (20–70%) and five fitting modes (fit, center/top/bottom crop, stretch); the preview-only geometry reprojects display star positions without changing catalog identities or claiming manufacturing-ready artwork. Within preserves the original foreground pixels through the full AI sky-cutout editor (local edge recovery, spot cleanup, rectangle sweep, undo), and never requests a paid Fal mask until explicitly clicked. The cutout remains editable during the current page session. No purchase flow exists.

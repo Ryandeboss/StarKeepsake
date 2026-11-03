@@ -23,7 +23,8 @@
     "test:sky-recovery": "node --experimental-strip-types --test tests/sky-missed-sky-recovery.test.mjs",
     "test:sky-spot": "node --experimental-strip-types --test tests/sky-spot-cleanup.test.mjs",
     "test:sky-sweep": "node --experimental-strip-types --test tests/sky-sweep-cleanup.test.mjs",
-    "test:photo-sky-layout": "node --experimental-strip-types --test tests/photo-sky-layout.test.mjs"
+    "test:photo-sky-layout": "node --experimental-strip-types --test tests/photo-sky-layout.test.mjs",
+    "test:experience": "node --experimental-strip-types --test tests/frame-experience.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

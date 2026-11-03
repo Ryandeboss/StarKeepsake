@@ -3,12 +3,15 @@ import type { DragEvent } from 'react'
 import { generateAstronomy, resolveMoment, searchLocations } from '../api'
 import type { AstronomyResult, LocationCandidate } from '../api'
 import { SkyImmersiveView } from '../components/SkyImmersiveView'
+import { SkyCutoutPreview } from '../components/SkyCutoutPreview'
 import { StarKeepsakePreview } from '../components/StarKeepsakePreview'
 import { FULL_PHOTO_CROP } from '../photoCrop'
 import { getFrameLayout, INITIAL_DESIGN_SPEC, toRect } from '../designSpec'
 import type { DesignSpec } from '../designSpec'
 import type { ExplorerLocation } from '../skyExplorerData'
-import { generateHorizonBlend } from '../skyBlend'
+import { SAMPLE_LOCATIONS, isSampleLocation, resolveSampleMoment } from '../sampleLocationFallback'
+import { DEFAULT_PHOTO_FIT, DEFAULT_SKY_SPLIT, withSkyPhotoBalance } from '../frameSkyBalance'
+import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import './ExperiencePage.css'
 
 type Editor = 'moment' | 'photo'
@@ -56,22 +59,26 @@ export function ExperiencePage() {
   const [buildProgress, setBuildProgress] = useState(8)
   const [built, setBuilt] = useState(false)
   const [composition, setComposition] = useState<Composition>('above')
-  const [blendUrl, setBlendUrl] = useState('')
-  const [isBlending, setIsBlending] = useState(false)
+  const [skyHeightPercent, setSkyHeightPercent] = useState(DEFAULT_SKY_SPLIT)
+  const [photoFitMode, setPhotoFitMode] = useState<AbovePhotoFitMode>(DEFAULT_PHOTO_FIT)
+  const [cutoutUrl, setCutoutUrl] = useState('')
+  const [cutoutEditorOpen, setCutoutEditorOpen] = useState(false)
+  const [cutoutEditorMounted, setCutoutEditorMounted] = useState(false)
+  const [mapsUnavailable, setMapsUnavailable] = useState(false)
   const [showObservatory, setShowObservatory] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
   const photoObjectUrl = useRef('')
-  const blendObjectUrl = useRef('')
+  const cutoutObjectUrl = useRef('')
   const revision = useRef(0)
   const activeBuild = useRef(0)
 
   useEffect(() => () => {
     revision.current += 1
     if (photoObjectUrl.current) URL.revokeObjectURL(photoObjectUrl.current)
-    if (blendObjectUrl.current) URL.revokeObjectURL(blendObjectUrl.current)
+    if (cutoutObjectUrl.current) URL.revokeObjectURL(cutoutObjectUrl.current)
   }, [])
 
   useEffect(() => {
@@ -88,11 +95,7 @@ export function ExperiencePage() {
     setShowObservatory(false)
     setError('')
     setDesignSpec(current => ({ ...current, astronomy: null, stars: [] }))
-    if (blendObjectUrl.current) {
-      URL.revokeObjectURL(blendObjectUrl.current)
-      blendObjectUrl.current = ''
-    }
-    setBlendUrl('')
+    // Preserve the photo cutout when only the date/location changes.
   }
 
   function receivePhoto(file?: File) {
@@ -104,6 +107,11 @@ export function ExperiencePage() {
     }
 
     invalidateSky()
+    if (cutoutObjectUrl.current) URL.revokeObjectURL(cutoutObjectUrl.current)
+    cutoutObjectUrl.current = ''
+    setCutoutUrl('')
+    setCutoutEditorOpen(false)
+    setCutoutEditorMounted(false)
     if (photoObjectUrl.current) URL.revokeObjectURL(photoObjectUrl.current)
     const url = URL.createObjectURL(file)
     photoObjectUrl.current = url
@@ -167,13 +175,44 @@ export function ExperiencePage() {
     setLocationCandidates([])
     try {
       const matches = await searchLocations(locationQuery)
+      setMapsUnavailable(false)
       setLocationCandidates(matches)
       if (!matches.length) setError('No matching places found. Try a nearby city or a fuller address.')
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Location search is unavailable.')
+      const message = cause instanceof Error ? cause.message : 'Location search is unavailable.'
+      if (message.includes('Azure Maps is not configured')) {
+        setMapsUnavailable(true)
+        setError('Azure Maps is not configured in staging. Choose a sample city below to test the builder.')
+      } else {
+        setError(message)
+      }
     } finally {
       setIsSearching(false)
     }
+  }
+
+  function chooseSampleLocation(location: typeof SAMPLE_LOCATIONS[number]) {
+    invalidateSky()
+    setSelectedLocation(location)
+    setLocationQuery(location.displayName)
+    setLocationCandidates([])
+    setEditor('moment')
+  }
+
+  function openCutoutEditor() {
+    if (!photoFile) { setError('Upload a photo first.'); return }
+    setCutoutEditorMounted(true)
+    setCutoutEditorOpen(true)
+  }
+
+  function applyCutout(blob: Blob) {
+    if (cutoutObjectUrl.current) URL.revokeObjectURL(cutoutObjectUrl.current)
+    const url = URL.createObjectURL(blob)
+    cutoutObjectUrl.current = url
+    setCutoutUrl(url)
+    setCutoutEditorOpen(false)
+    setComposition('within')
+    setDesignSpec(current => ({ ...current, layoutMode: 'horizon-blend' }))
   }
 
   async function buildFrame() {
@@ -199,10 +238,12 @@ export function ExperiencePage() {
     setBuildProgress(8)
 
     try {
-      const moment = await resolveMoment({
-        date, time: exactTimeUnknown ? null : time,
-        exactTimeUnknown, locationQuery, location: selectedLocation,
-      })
+      const moment = isSampleLocation(selectedLocation)
+        ? resolveSampleMoment(date, exactTimeUnknown ? null : time, exactTimeUnknown, selectedLocation)
+        : await resolveMoment({
+          date, time: exactTimeUnknown ? null : time,
+          exactTimeUnknown, locationQuery, location: selectedLocation,
+        })
       if (requestId !== activeBuild.current || expectedRevision !== revision.current) return
 
       const calculated = await generateAstronomy(
@@ -227,38 +268,17 @@ export function ExperiencePage() {
     }
   }
 
-  async function blendWithinPhoto() {
-    if (!built || !photoUrl || !designSpec.astronomy) return
-    const expectedRevision = revision.current
-    setIsBlending(true)
-    setError('')
-    try {
-      const result = await generateHorizonBlend(photoUrl, designSpec)
-      if (expectedRevision !== revision.current) return
-      if (result.kind === 'no-sky') {
-        setError('No visible sky was detected. Try Stars above photo instead.')
-        return
-      }
-      if (blendObjectUrl.current) URL.revokeObjectURL(blendObjectUrl.current)
-      const url = URL.createObjectURL(result.image)
-      blendObjectUrl.current = url
-      setBlendUrl(url)
-      setDesignSpec(current => ({ ...current, layoutMode: 'horizon-blend' }))
-    } catch (cause) {
-      if (expectedRevision === revision.current) {
-        setError(cause instanceof Error ? cause.message : 'Could not blend this photo.')
-      }
-    } finally {
-      if (expectedRevision === revision.current) setIsBlending(false)
-    }
-  }
-
   function changeComposition(next: Composition) {
     setComposition(next)
+    setCutoutEditorOpen(false)
     setDesignSpec(current => ({
       ...current, layoutMode: next === 'above' ? 'classic' : 'horizon-blend',
     }))
   }
+
+  const displayDesignSpec: DesignSpec = composition === 'above'
+    ? withSkyPhotoBalance({ ...designSpec, layoutMode: 'classic' }, skyHeightPercent)
+    : { ...designSpec, layoutMode: 'horizon-blend' }
 
   const explorerLocation: ExplorerLocation | null = designSpec.moment.location
     ? {
@@ -322,6 +342,52 @@ export function ExperiencePage() {
                 <button type="button" onClick={() => fileInputRef.current?.click()}
                   aria-label={photoFile ? 'Replace photograph' : 'Upload photograph'}>＋</button>
               </div>
+              <div className="ex-composition-panel" aria-label="Choose how the stars appear with your photo">
+                <p className="ex-choice-eyebrow">01 / SKY & PHOTO PLACEMENT</p>
+                <div className="ex-composition-cards" role="group" aria-label="Star placement">
+                  <button type="button" className={composition === 'above' ? 'is-selected' : ''}
+                    aria-pressed={composition === 'above'} onClick={() => changeComposition('above')}>
+                    <span className="ex-composition-illustration ex-composition-above" aria-hidden="true">
+                      <span className="ex-composition-stars">✦ · ✧ ·</span>
+                      <span className="ex-composition-horizon"/><span className="ex-composition-land"/>
+                    </span>
+                    <strong>Above my photo</strong><small>Add a separate sky section above the image</small>
+                  </button>
+                  <button type="button" className={composition === 'within' ? 'is-selected' : ''}
+                    aria-pressed={composition === 'within'} onClick={() => changeComposition('within')}>
+                    <span className="ex-composition-illustration ex-composition-within" aria-hidden="true">
+                      <span className="ex-composition-stars">✦ · ✧ ·</span><span className="ex-composition-land"/>
+                    </span>
+                    <strong>Within my photo</strong><small>Replace the existing sky at its horizon</small>
+                  </button>
+                </div>
+                {composition === 'above' ? <div className="ex-balance-panel">
+                  <div className="ex-balance-title"><label htmlFor="ex-sky-height">Sky section height</label>
+                    <strong>{skyHeightPercent}% stars · {100-skyHeightPercent}% photo</strong></div>
+                  <div className="ex-balance-preview" aria-hidden="true">
+                    <span style={{width:skyHeightPercent+'%'}}>✦ Sky</span><span>▧ Photo</span>
+                  </div>
+                  <input id="ex-sky-height" type="range" min="20" max="70" step="1" value={skyHeightPercent}
+                    onChange={event => setSkyHeightPercent(Number(event.target.value))}/>
+                  <div className="ex-balance-labels"><span>More photo</span><span>More stars</span></div>
+                  <div className="ex-fit-grid" role="group" aria-label="Photo fit in the frame">
+                    {([
+                      ['fit','Fit whole'],['center-crop','Center crop'],
+                      ['top-crop','Crop top'],['bottom-crop','Crop bottom'],['stretch','Stretch'],
+                    ] as const).map(([value,label]) => (
+                      <button type="button" key={value} aria-pressed={photoFitMode === value}
+                        className={photoFitMode === value ? 'is-selected' : ''}
+                        onClick={() => setPhotoFitMode(value)}>{label}</button>
+                    ))}
+                  </div>
+                </div> : <div className="ex-within-option">
+                  <p>Remove the existing sky to reveal stars behind your original foreground.</p>
+                  {photoFile && <button type="button" onClick={openCutoutEditor}>
+                    {cutoutUrl ? '✎ Edit sky cutout' : '✧ Prepare sky cutout'}
+                  </button>}
+                  <small>AI sky removal is optional and may use a paid model. Local touch-ups are free.</small>
+                </div>}
+              </div>
               <div className="ex-moment-panel">
                 <button type="button" className="ex-moment-heading"
                   onClick={() => setEditor(current => current === 'moment' ? 'photo' : 'moment')}
@@ -377,9 +443,15 @@ export function ExperiencePage() {
                       </button>
                     ))}
                   </div>}
+                  <div className="ex-sample-cities" aria-label="Sample locations">
+                    <span>{mapsUnavailable ? 'MAPS UNAVAILABLE · SAMPLE CITIES STILL WORK' : 'QUICK-SELECT A SAMPLE CITY'}</span>
+                    <div>{SAMPLE_LOCATIONS.map(city => <button type="button" key={city.displayName}
+                      className={selectedLocation?.displayName === city.displayName ? 'is-selected' : ''}
+                      onClick={() => chooseSampleLocation(city)}>{city.displayName}</button>)}</div>
+                  </div>
                   {selectedLocation && <div className="ex-location-confirmation">
                     <span aria-hidden="true">✦</span> {selectedLocation.displayName}
-                    <small>Location verified</small>
+                    <small>{isSampleLocation(selectedLocation) ? 'Preset city · time zone supplied locally' : 'Location selected'}</small>
                   </div>}
                   <label className="ex-dedication">OPTIONAL MESSAGE
                     <input type="text" maxLength={80}
@@ -436,11 +508,14 @@ export function ExperiencePage() {
               </div>
               <div className="ex-frame-holder">
                 <StarKeepsakePreview
-                  designSpec={designSpec}
+                  designSpec={displayDesignSpec}
                   photoPreview={photoUrl}
                   engravingPreview=""
                   isProcessingPhoto={false}
-                  blendPreview={blendUrl}
+                  blendPreview=""
+                  skyPlacement={composition}
+                  withinCutoutUrl={cutoutUrl}
+                  photoFitMode={photoFitMode}
                   minimal
                   ready={built}
                   onPhotoAreaClick={() => selectEditor('photo')}
@@ -464,32 +539,6 @@ export function ExperiencePage() {
             </div>}
           </div>
         </section>
-
-        {built && <section className="ex-refine" aria-label="Fine-tune your frame">
-          <div>
-            <p className="ex-eyebrow">THE FINISHING TOUCHES</p>
-            <h2>Make it unmistakably yours.</h2>
-          </div>
-          <div className="ex-refine-tools">
-            <div className="ex-composition-toggle" role="group" aria-label="Choose sky composition">
-              <button type="button" className={composition === 'above' ? 'is-selected' : ''}
-                aria-pressed={composition === 'above'} onClick={() => changeComposition('above')}>
-                ✧ Stars above photo
-              </button>
-              <button type="button" className={composition === 'within' ? 'is-selected' : ''}
-                aria-pressed={composition === 'within'} onClick={() => changeComposition('within')}>
-                ⊹ Stars within photo
-              </button>
-            </div>
-            {composition === 'within' && !blendUrl &&
-              <button type="button" className="ex-refine-action" disabled={isBlending}
-                onClick={() => void blendWithinPhoto()}>
-                {isBlending ? 'Finding open sky…' : 'Find sky in my photo'}
-              </button>}
-            {composition === 'within' && <small>Experimental, artistic blend. Stars are not camera-calibrated;
-              if no sky is visible, use Stars above photo.</small>}
-          </div>
-        </section>}
 
         {built && <section className="ex-observatory" aria-label="Explore the interactive night sky">
           <div className="ex-observatory-intro">
@@ -532,6 +581,12 @@ export function ExperiencePage() {
       </main>
       <footer className="ex-footer"><span>✳ STARKEEP SAKE</span>
         <span>A little piece of forever.</span><span>© {new Date().getFullYear()} STARKEEP SAKE · PREVIEW STUDIO</span></footer>
+      {cutoutEditorMounted && photoFile &&
+        <div hidden={!cutoutEditorOpen}>
+          <SkyCutoutPreview key={photoUrl} file={photoFile}
+            active={cutoutEditorOpen} onApply={applyCutout}
+            onCancel={() => setCutoutEditorOpen(false)}/>
+        </div>}
       <input ref={fileInputRef} className="ex-visually-hidden" type="file"
         accept="image/jpeg,image/png,image/webp" aria-label="Choose an image"
         onChange={event => {

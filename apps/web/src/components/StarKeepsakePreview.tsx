@@ -3,6 +3,8 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { displayRectStyle, millimetersToPixels, pointToDisplayPixels, rectToDisplayPixels } from '../geometry'
 import type { DesignSpec } from '../designSpec'
 import { croppedImageStyle } from '../photoCrop'
+import { photoFitStyle } from '../frameSkyBalance'
+import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { getStarContext, starCatalogUrl, starCompassDirection, starDescription, starDisplayName } from '../starDetails'
 
 type StarKeepsakePreviewProps = {
@@ -16,6 +18,9 @@ type StarKeepsakePreviewProps = {
   ready?: boolean
   onPhotoAreaClick?: () => void
   onSkyAreaClick?: () => void
+  skyPlacement?: 'above' | 'within'
+  withinCutoutUrl?: string
+  photoFitMode?: AbovePhotoFitMode
 }
 
 function formatDate(date: string) {
@@ -32,6 +37,7 @@ function formatDate(date: string) {
 export function StarKeepsakePreview({
   designSpec, photoPreview, engravingPreview, isProcessingPhoto, blendPreview,
   minimal = false, ready = false, onPhotoAreaClick, onSkyAreaClick,
+  skyPlacement = 'above', withinCutoutUrl = '', photoFitMode = 'center-crop',
 }: StarKeepsakePreviewProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [lightsOn, setLightsOn] = useState(true)
@@ -112,7 +118,31 @@ export function StarKeepsakePreview({
           data-frame-size={designSpec.framePresetId}
           data-coordinate-system="top-left-origin-mm"
         >
-          {designSpec.layoutMode === 'classic' ? (
+          {minimal && skyPlacement === 'within' ? (
+            <div className="horizon-blend-scene ex-within-composition"
+              style={displayRectStyle(blendDisplayRect)}>
+              <div className="ex-within-starfield" aria-hidden="true">
+                {designSpec.stars.map(star => <span className="ex-within-star"
+                  key={star.hipparcosId}
+                  style={{
+                    left: ((star.xMm - regions.sky.xMm) / regions.sky.widthMm * 100) + '%',
+                    top: ((star.yMm - regions.sky.yMm) / regions.sky.heightMm * 100) + '%',
+                    width: Math.max(1.2,star.holeSizeMm * 1.8),
+                    height: Math.max(1.2,star.holeSizeMm * 1.8),
+                    opacity: Math.max(.38, 1 - star.magnitude * .13),
+                  }}/>)}
+              </div>
+              {photoPreview && <img
+                src={withinCutoutUrl || photoPreview}
+                alt={withinCutoutUrl ? 'Photo with its original sky removed to reveal the calculated stars'
+                  : 'Original photo; sky removal is available to reveal the calculated stars'}
+                className="ex-within-photo"
+                style={{ width:'100%',height:'100%',objectFit:'contain',position:'absolute',inset:0 }}/>}
+              {!withinCutoutUrl && <span className="ex-within-help">
+                {ready ? 'Select Prepare sky cutout to reveal stars within your image' : 'Add your moment, then prepare the existing sky'}
+              </span>}
+            </div>
+          ) : designSpec.layoutMode === 'classic' ? (
             <>
           <div className="artwork-stars" aria-hidden={!exploreStars} style={displayRectStyle(displaySkyRect)}>
             {designSpec.stars.map((star) => {
@@ -188,9 +218,11 @@ export function StarKeepsakePreview({
                 alt={designSpec.photo.fitMode === 'contain'
                   ? 'Entire original photo fitted inside the panel'
                   : 'Original photo showing the selected crop'}
-                style={designSpec.photo.fitMode === 'contain'
-                  ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }
-                  : croppedImageStyle(designSpec.photo.crop)}
+                style={minimal && skyPlacement === 'above'
+                  ? { position:'absolute',inset:0,width:'100%',height:'100%',...photoFitStyle(photoFitMode) }
+                  : designSpec.photo.fitMode === 'contain'
+                    ? { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain' }
+                    : croppedImageStyle(designSpec.photo.crop)}
               />
             ) : (
               <div className="photo-empty">
@@ -247,7 +279,7 @@ export function StarKeepsakePreview({
               {designSpec.moment.location?.displayName || 'A place worth remembering'}
             </small>
           </div>
-          {minimal && onSkyAreaClick && designSpec.layoutMode === 'classic' &&
+          {minimal && onSkyAreaClick &&
             <div className={`ex-area-shell ex-area-shell--sky ${ready ? 'is-ready' : ''}`}
               style={displayRectStyle(displaySkyRect)}>
               <button type="button" onClick={onSkyAreaClick}
