@@ -10,7 +10,7 @@ import { starDisplayName, starDescription, starCatalogUrl, getStarContext } from
 import { maskWorkingDimensions } from '../skyMaskMath'
 import { photoFitStyle } from '../frameSkyBalance'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
-import { wrapWorkshopHeading, clampWorkshopPitch } from '../skyWorkshopMath'
+import { wrapWorkshopHeading, clampWorkshopPitch, observerPointInPanel } from '../skyWorkshopMath'
 import './SkyWorkshopPreview.css'
 
 type Props = {
@@ -45,6 +45,7 @@ export function SkyWorkshopPreview({
   const drag = useRef<{ x:number; y:number; heading:number; pitch:number } | null>(null)
   const [hoveredHip, setHoveredHip] = useState<number | null>(null)
   const [focusedHip, setFocusedHip] = useState<number | null>(null)
+  const panelAspect = layout==='within'?imageAspect:imageAspect/(skyHeight/100)
   const visible = useMemo(() => stars.map(star => ({
     star,
     point:projectObserverStar(star.azimuthDeg, star.altitudeDeg, heading, pitch, fov),
@@ -54,13 +55,15 @@ export function SkyWorkshopPreview({
       Boolean(NAMED_STAR_COLORS[star.hipparcosId]),glow),
   })).filter(item => {
     if(!item.point.inFront)return false
+    const panel=observerPointInPanel(item.point.x,item.point.y,panelAspect)
+    if(!panel.inside)return false
     if(layout!=='within'||!maskAlpha||!maskDimensions)return true
     const {width,height}=maskWorkingDimensions(maskDimensions.width,maskDimensions.height)
     if(maskAlpha.length!==width*height)return true
-    const x=Math.max(0,Math.min(width-1,Math.floor(item.point.x/1000*width)))
-    const y=Math.max(0,Math.min(height-1,Math.floor(item.point.y/600*height)))
+    const x=Math.max(0,Math.min(width-1,Math.floor(panel.x*width)))
+    const y=Math.max(0,Math.min(height-1,Math.floor(panel.y*height)))
     return maskAlpha[y*width+x]<110
-  }), [stars, heading, pitch, fov, glow,layout,maskAlpha,maskDimensions])
+  }), [stars, heading, pitch, fov, glow,layout,panelAspect,maskAlpha,maskDimensions])
   const activeStar=visible.find(item=>item.star.hipparcosId===(hoveredHip??focusedHip))
 
   function start(event: ReactPointerEvent<HTMLDivElement>) {
@@ -89,7 +92,7 @@ export function SkyWorkshopPreview({
     aria-label={`${visible.length} catalogue stars projected for your chosen direction`}>
     <SkyAtmosphereCanvas heading={heading} pitch={pitch} fov={fov} enhanced={glow}/>
     <div className="skw-color-grade" aria-hidden="true"/>
-    <svg className="skw-catalog-stars" viewBox="0 0 1000 600" preserveAspectRatio="none"
+    <svg className="skw-catalog-stars" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice"
       role="group" aria-label="Click a glowing star for its astronomical catalogue entry">
       {visible.map(({star,point,look,twinkle,optics})=>{
         const isMajor=look.named&&star.magnitude<1.5

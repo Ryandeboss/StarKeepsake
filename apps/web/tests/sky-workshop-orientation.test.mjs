@@ -20,3 +20,14 @@ test('NESW mini dome tracks heading and vertical field of view',()=>{
   assert.ok(b.bottomAltitude>a.bottomAltitude)
   assert.ok(b.topAltitude<=90)
 })
+
+import { observerPointInPanel } from '../src/skyWorkshopMath.ts'
+test('photographic stars stay round while viewport crop tracks portrait frames',()=>{
+  const center=observerPointInPanel(500,300,.75)
+  assert.ok(center.inside)
+  assert.equal(center.x,.5)
+  assert.equal(center.y,.5)
+  assert.equal(observerPointInPanel(10,300,.75).inside,false)
+  assert.equal(observerPointInPanel(500,10,3).inside,false)
+  assert.equal(observerPointInPanel(500,300,3).inside,true)
+})

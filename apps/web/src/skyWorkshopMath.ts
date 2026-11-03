@@ -44,3 +44,20 @@ export function containWorkshopPhoto(
   return {left:(width-photoWidth)/2,top:(height-photoHeight)/2,
     width:photoWidth,height:photoHeight}
 }
+
+/** Convert 1000x600 observer coordinates into the visible photo panel.
+ * CSS/SVG both center-crop a photographic 5:3 viewport, preserving round
+ * star optics instead of stretching them on portrait frames.
+ */
+export function observerPointInPanel(
+  x:number, y:number, panelAspect:number,
+): {x:number;y:number;inside:boolean} {
+  if(!Number.isFinite(panelAspect)||panelAspect<=0)
+    return {x:0,y:0,inside:false}
+  const sourceAspect=1000/600
+  const visibleWidth=panelAspect<sourceAspect?600*panelAspect:1000
+  const visibleHeight=panelAspect>sourceAspect?1000/panelAspect:600
+  const nx=(x-(1000-visibleWidth)/2)/visibleWidth
+  const ny=(y-(600-visibleHeight)/2)/visibleHeight
+  return {x:nx,y:ny,inside:nx>=0&&nx<=1&&ny>=0&&ny<=1}
+}
