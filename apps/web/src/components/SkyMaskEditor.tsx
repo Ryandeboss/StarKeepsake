@@ -6,6 +6,8 @@ import {
   getAlpha, maskWorkingDimensions, paintAlphaLine,
 } from '../skyMaskMath'
 import type { MaskPoint } from '../skyMaskMath'
+import { resampleSkyAlpha } from '../skyWorkshopMath'
+import type { SkyAlphaMask } from '../skyWorkshopMath'
 import './SkyMaskEditor.css'
 
 type Tool = 'wand' | 'brush' | 'polygon'
@@ -13,6 +15,7 @@ type Preview = 'overlay' | 'cutout' | 'night'
 type Props = {
   file: File
   initialMask?: Uint8ClampedArray | null
+  detectedMask?: SkyAlphaMask | null
   onApply: (png: Blob, alpha: Uint8ClampedArray) => void
   onClose: () => void
 }
@@ -20,7 +23,7 @@ type LoadedPhoto = { width: number; height: number }
 const MAX_HISTORY = 12
 
 /** Photo and its undo history stay in this browser tab; no upload or image service. */
-export function SkyMaskEditor({ file, initialMask, onApply, onClose }: Props) {
+export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClose }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const photo = useRef<Uint8ClampedArray | null>(null)
   const automatic = useRef<Uint8ClampedArray | null>(null)
@@ -71,7 +74,8 @@ export function SkyMaskEditor({ file, initialMask, onApply, onClose }: Props) {
         photo.current = new Uint8ClampedArray(original)
         automatic.current = prepared
         alpha.current = initialMask?.length === width * height
-          ? new Uint8ClampedArray(initialMask) : getAlpha(prepared)
+          ? new Uint8ClampedArray(initialMask)
+          : detectedMask ? resampleSkyAlpha(detectedMask, width, height) : getAlpha(prepared)
         past.current = []
         future.current = []
         if (!cancelled) setLoaded({ width, height })
@@ -87,7 +91,7 @@ export function SkyMaskEditor({ file, initialMask, onApply, onClose }: Props) {
       document.body.style.overflow = oldOverflow
       if (redrawFrame.current !== null) cancelAnimationFrame(redrawFrame.current)
     }
-  }, [file, initialMask])
+  }, [file, initialMask, detectedMask])
 
   const draw = useCallback(() => {
     const original = photo.current
@@ -270,6 +274,9 @@ export function SkyMaskEditor({ file, initialMask, onApply, onClose }: Props) {
         </div>
         <button ref={closeButton} type="button" onClick={onClose} aria-label="Close sky editor">✕</button>
       </header>
+      <div className="sky-mask-intro">{detectedMask ?
+        'Your photo’s sky was outlined using on-device AI. Paint to restore details, or use the magic wand on missed sky.'
+        : 'No AI mask is available. Start with the magic wand or trace the visible horizon yourself.'}</div>
       <div className="sky-mask-tools" aria-label="Sky mask editing tools">
         <div className="sky-mask-tool-buttons" role="group" aria-label="Choose editing tool">
           {(['wand', 'brush', 'polygon'] as const).map(item =>
@@ -353,7 +360,7 @@ export function SkyMaskEditor({ file, initialMask, onApply, onClose }: Props) {
         <div className="sky-mask-save">
           <button type="button" onClick={onClose}>Cancel</button>
           <button type="button" className="sky-mask-primary" disabled={!loaded || saving}
-            onClick={() => { void exportImage() }}>{saving ? 'Saving…' : 'Apply to night sky'}</button>
+            onClick={() => { void exportImage() }}>{saving ? 'Preparing…' : 'Save my sky & continue'}</button>
         </div>
       </footer>
     </section>

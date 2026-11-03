@@ -95,3 +95,25 @@ test('manual sky-mask editor preserves portrait and panorama aspect ratios', () 
   assert.throws(() => maskWorkingDimensions(9000, 8000), /50 megapixels/)
   assert.throws(() => maskWorkingDimensions(0, 500), /valid photo/)
 })
+
+import { resampleSkyAlpha, wrapWorkshopHeading, clampWorkshopPitch, containWorkshopPhoto } from '../src/skyWorkshopMath.ts'
+
+test('AI horizon mask rescales without reversing foreground and sky', () => {
+  const mask={width:2,height:2,alpha:new Uint8ClampedArray([0,255,0,255])}
+  const enlarged=resampleSkyAlpha(mask,4,4)
+  assert.deepEqual([...enlarged.slice(0,4)],[0,0,255,255])
+  assert.deepEqual([...enlarged.slice(12,16)],[0,0,255,255])
+  assert.throws(()=>resampleSkyAlpha({...mask,width:3},4,4),/dimensions/)
+})
+test('orientation normalization and contain geometry keep stars in photo bounds', () => {
+  assert.equal(wrapWorkshopHeading(-45),315)
+  assert.equal(wrapWorkshopHeading(450),90)
+  assert.equal(clampWorkshopPitch(100),88)
+  assert.equal(clampWorkshopPitch(-30),-8)
+  assert.deepEqual(containWorkshopPhoto(600,300,1),{
+    left:150, top:0, width:300, height:300
+  })
+  assert.deepEqual(containWorkshopPhoto(300,600,2),{
+    left:0, top:225, width:300, height:150
+  })
+})

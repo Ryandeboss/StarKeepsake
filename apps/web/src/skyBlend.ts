@@ -172,3 +172,59 @@ export async function generateHorizonBlend(
     placedStars: stars.length,
   }
 }
+
+/** Reusable original browser AI horizon detection, before a moment is entered.
+ * DeepLab's semantic sky class is mapped into the original photo's aspect
+ * ratio. No customer pixels leave the browser.
+ */
+export type WorkshopDetection = {
+  width: number
+  height: number
+  alpha: Uint8ClampedArray
+  skyPercent: number
+  overlay: Blob
+}
+export async function detectWorkshopSky(photoUrl: string): Promise<WorkshopDetection> {
+  const image = await loadImage(photoUrl)
+  const factor = Math.min(1, 1100 / Math.max(image.naturalWidth, image.naturalHeight))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(image.naturalWidth * factor))
+  canvas.height = Math.max(1, Math.round(image.naturalHeight * factor))
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) throw new Error('This browser could not inspect your photograph.')
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+  const segmentation = await (await loadModel()).segment(canvas)
+  const color = segmentation.legend.sky
+  const alpha = new Uint8ClampedArray(canvas.width * canvas.height)
+  alpha.fill(255)
+  if (!color) return {
+    width: canvas.width, height: canvas.height, alpha, skyPercent: 0,
+    overlay: await canvasToBlob(canvas),
+  }
+  const photo = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  let skyPixels = 0
+  for (let y=0; y<canvas.height; y++) {
+    const my = Math.min(segmentation.height-1, Math.floor(y * segmentation.height / canvas.height))
+    for (let x=0; x<canvas.width; x++) {
+      const mx = Math.min(segmentation.width-1, Math.floor(x * segmentation.width / canvas.width))
+      const index = (y * canvas.width + x)
+      const maskIndex = (my * segmentation.width + mx) * 4
+      const isSky = segmentation.segmentationMap[maskIndex] === color[0] &&
+        segmentation.segmentationMap[maskIndex+1] === color[1] &&
+        segmentation.segmentationMap[maskIndex+2] === color[2]
+      if (!isSky) continue
+      alpha[index] = 0
+      skyPixels++
+      const offset = index * 4
+      photo.data[offset] = Math.round(photo.data[offset]*.45 + 26*.55)
+      photo.data[offset+1] = Math.round(photo.data[offset+1]*.45 + 196*.55)
+      photo.data[offset+2] = Math.round(photo.data[offset+2]*.45 + 224*.55)
+    }
+  }
+  ctx.putImageData(photo, 0, 0)
+  return {
+    width: canvas.width, height: canvas.height, alpha,
+    skyPercent: Math.round(skyPixels / alpha.length * 100),
+    overlay: await canvasToBlob(canvas),
+  }
+}
