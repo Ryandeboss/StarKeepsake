@@ -67,7 +67,7 @@ export function ExperiencePage() {
   const [cutoutEditorOpen, setCutoutEditorOpen] = useState(false)
   const [cutoutEditorMounted, setCutoutEditorMounted] = useState(false)
   const [manualEditorOpen, setManualEditorOpen] = useState(false)
-  const manualMask = useRef<Uint8ClampedArray | null>(null)
+  const [manualMask, setManualMask] = useState<Uint8ClampedArray | null>(null)
   const [mapsUnavailable, setMapsUnavailable] = useState(false)
   const [showObservatory, setShowObservatory] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -117,7 +117,7 @@ export function ExperiencePage() {
     setCutoutEditorOpen(false)
     setCutoutEditorMounted(false)
     setManualEditorOpen(false)
-    manualMask.current = null
+    setManualMask(null)
     if (photoObjectUrl.current) URL.revokeObjectURL(photoObjectUrl.current)
     const url = URL.createObjectURL(file)
     photoObjectUrl.current = url
@@ -219,13 +219,13 @@ export function ExperiencePage() {
   }
 
   function applyManualCutout(blob: Blob, alpha: Uint8ClampedArray) {
-    manualMask.current = alpha
+    setManualMask(alpha)
     applyCutout(blob)
   }
 
   function applyAiCutout(blob: Blob) {
     // An AI result should not silently reuse a previous, unrelated manual mask.
-    manualMask.current = null
+    setManualMask(null)
     applyCutout(blob)
   }
 
@@ -617,7 +617,7 @@ export function ExperiencePage() {
       <footer className="ex-footer"><span>✳ STARKEEP SAKE</span>
         <span>A little piece of forever.</span><span>© {new Date().getFullYear()} STARKEEP SAKE · PREVIEW STUDIO</span></footer>
       {manualEditorOpen && photoFile && <SkyMaskEditor
-        key={photoUrl} file={photoFile} initialMask={manualMask.current}
+        key={photoUrl} file={photoFile} initialMask={manualMask}
         onApply={applyManualCutout} onClose={() => setManualEditorOpen(false)}/>}
       {cutoutEditorMounted && photoFile &&
         <div hidden={!cutoutEditorOpen}>
