@@ -175,7 +175,10 @@ export function decontaminateWhiteFringe(
     if(edgeBrightness<145||chroma>80)continue
 
     let target=-1,closest=Infinity
+    let backedByBrightInterior=false
     // Inspect the sky-side direction, then sample several pixels inward.
+    // A real white structure has bright pixels behind its boundary, even
+    // though other diagonal directions might point at a dark nearby tree.
     for(const [dx,dy] of steps){
       const sx=x+dx,sy=y+dy
       if(sx<0||sx>=width||sy<0||sy>=height||alpha[sy*width+sx]>36)continue
@@ -185,12 +188,12 @@ export function decontaminateWhiteFringe(
         const ii=iy*width+ix
         if(alpha[ii]<250)continue
         const delta=edgeBrightness-lum(ii*4)
-        if(delta<=24)continue
-        if(k<closest){target=ii;closest=k}
+        if(delta<18){backedByBrightInterior=true;break}
+        if(delta>24 && k<closest){target=ii;closest=k}
         break
       }
     }
-    if(target<0)continue
+    if(target<0 || backedByBrightInterior)continue
     const t=target*4
     const difference=edgeBrightness-lum(t)
     // Stronger decontamination for brighter halos; keep real edge texture.
