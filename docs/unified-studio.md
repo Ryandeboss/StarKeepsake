@@ -89,3 +89,27 @@ Reference: https://www.geoapify.com/pricing/ .
 
 
 The two layout cards **Above my photo** and **Within my photo** now appear before generation. Above has adjustable sky height (20–70%) and five fitting modes (fit, center/top/bottom crop, stretch); the preview-only geometry reprojects display star positions without changing catalog identities or claiming manufacturing-ready artwork. Within preserves the original foreground pixels through the full AI sky-cutout editor (local edge recovery, spot cleanup, rectangle sweep, undo), and never requests a paid Fal mask until explicitly clicked. The cutout remains editable during the current page session. No purchase flow exists.
+
+## Manual horizon and sky-mask editor (restored)
+
+The **Within my photo** selection exposes two explicit actions once a user
+uploads an image: **Detect horizon & edit sky manually** (free and local)
+and **Remove sky with AI** (optional Fal-powered editor). This restores the
+older manual SkyMaskEditor that had been dropped from the unified builder.
+Manual editing works even if Fal is not configured or unavailable.
+
+The free editor starts with conservative top-connected near-white sky removal,
+then supports connected-color magic wand, adjustable tolerance, remove/restore
+brush strokes, traced polygon removal, mask-overlay/night/transparency previews,
+and Undo/Redo. It accepts portrait and landscape photos (up to 50 MP input,
+2600-pixel longest-side working preview). At normal zoom the complete photo
+is visible within a vertically scrollable dialog; zoomed-in images can pan
+horizontally. Edited alpha is saved in memory for subsequent editing of the
+same uploaded photo, always composed against the original RGB. Uploading a
+new photo clears the edit session. No free editor action calls a model or
+uploads the photo. Bright-sky auto-detection is not a semantic horizon detector;
+colored/cloudy or complex skies require manual correction or the separate AI
+option. Both modes continue to use the calculated star field once applied.
+
+Regression tests: `npm run test:sky-mask-editor` and the existing
+`test:sky-cutout`; GitHub CI runs both. Do not merge until browser review.

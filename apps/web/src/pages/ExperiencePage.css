@@ -389,3 +389,10 @@
  .ex-composition-illustration {height:62px;}
  .ex-composition-cards button small {font-size:9px;}
 }
+
+/* Two discoverable sky preparation methods; the manual path never calls a paid API. */
+.ex-cutout-methods {display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ex-within-option .ex-cutout-manual {background:#eed4a4;color:#1c3e49;}
+.ex-within-option .ex-cutout-ai {background:rgba(18,46,60,.9);color:#f5ddae;border-color:#9d865d;}
+.ex-within-option .ex-cutout-manual:hover,.ex-within-option .ex-cutout-ai:hover {filter:brightness(1.12);}
+@media (max-width:490px){.ex-cutout-methods{grid-template-columns:1fr;}}

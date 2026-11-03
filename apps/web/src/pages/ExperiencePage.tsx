@@ -4,6 +4,7 @@ import { generateAstronomy, resolveMoment, searchLocations } from '../api'
 import type { AstronomyResult, LocationCandidate } from '../api'
 import { SkyImmersiveView } from '../components/SkyImmersiveView'
 import { SkyCutoutPreview } from '../components/SkyCutoutPreview'
+import { SkyMaskEditor } from '../components/SkyMaskEditor'
 import { StarKeepsakePreview } from '../components/StarKeepsakePreview'
 import { FULL_PHOTO_CROP } from '../photoCrop'
 import { getFrameLayout, INITIAL_DESIGN_SPEC, toRect } from '../designSpec'
@@ -65,6 +66,8 @@ export function ExperiencePage() {
   const [cutoutUrl, setCutoutUrl] = useState('')
   const [cutoutEditorOpen, setCutoutEditorOpen] = useState(false)
   const [cutoutEditorMounted, setCutoutEditorMounted] = useState(false)
+  const [manualEditorOpen, setManualEditorOpen] = useState(false)
+  const manualMask = useRef<Uint8ClampedArray | null>(null)
   const [mapsUnavailable, setMapsUnavailable] = useState(false)
   const [showObservatory, setShowObservatory] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -113,6 +116,8 @@ export function ExperiencePage() {
     setCutoutUrl('')
     setCutoutEditorOpen(false)
     setCutoutEditorMounted(false)
+    setManualEditorOpen(false)
+    manualMask.current = null
     if (photoObjectUrl.current) URL.revokeObjectURL(photoObjectUrl.current)
     const url = URL.createObjectURL(file)
     photoObjectUrl.current = url
@@ -202,8 +207,26 @@ export function ExperiencePage() {
 
   function openCutoutEditor() {
     if (!photoFile) { setError('Upload a photo first.'); return }
+    setManualEditorOpen(false)
     setCutoutEditorMounted(true)
     setCutoutEditorOpen(true)
+  }
+
+  function openManualEditor() {
+    if (!photoFile) { setError('Upload a photo first.'); return }
+    setCutoutEditorOpen(false)
+    setManualEditorOpen(true)
+  }
+
+  function applyManualCutout(blob: Blob, alpha: Uint8ClampedArray) {
+    manualMask.current = alpha
+    applyCutout(blob)
+  }
+
+  function applyAiCutout(blob: Blob) {
+    // An AI result should not silently reuse a previous, unrelated manual mask.
+    manualMask.current = null
+    applyCutout(blob)
   }
 
   function applyCutout(blob: Blob) {
@@ -212,6 +235,7 @@ export function ExperiencePage() {
     cutoutObjectUrl.current = url
     setCutoutUrl(url)
     setCutoutEditorOpen(false)
+    setManualEditorOpen(false)
     setComposition('within')
     setDesignSpec(current => ({ ...current, layoutMode: 'horizon-blend' }))
   }
@@ -382,11 +406,16 @@ export function ExperiencePage() {
                     ))}
                   </div>
                 </div> : <div className="ex-within-option">
-                  <p>Remove the existing sky to reveal stars behind your original foreground.</p>
-                  {photoFile && <button type="button" onClick={openCutoutEditor}>
-                    {cutoutUrl ? '✎ Edit sky cutout' : '✧ Prepare sky cutout'}
-                  </button>}
-                  <small>AI sky removal is optional and may use a paid model. Local touch-ups are free.</small>
+                  <p>Remove the existing sky to reveal the calculated stars behind your photo, keeping the original foreground.</p>
+                  {photoFile ? <div className="ex-cutout-methods">
+                    <button type="button" onClick={openManualEditor} className="ex-cutout-manual">
+                      ✎ {cutoutUrl ? 'Edit horizon & sky mask manually' : 'Detect horizon & edit sky manually'}
+                    </button>
+                    <button type="button" onClick={openCutoutEditor} className="ex-cutout-ai">
+                      ✧ {cutoutUrl ? 'Try AI sky removal instead' : 'Remove sky with AI (optional)'}
+                    </button>
+                  </div> : <small>Upload a photo to enable the free horizon/mask editor.</small>}
+                  <small>Manual tools are free: auto-detect bright sky, click matching colors, remove or restore with a brush, trace regions, undo and redo. AI removal is optional and may incur processing costs.</small>
                 </div>}
               </div>
               <div className="ex-moment-panel">
@@ -587,10 +616,13 @@ export function ExperiencePage() {
       </main>
       <footer className="ex-footer"><span>✳ STARKEEP SAKE</span>
         <span>A little piece of forever.</span><span>© {new Date().getFullYear()} STARKEEP SAKE · PREVIEW STUDIO</span></footer>
+      {manualEditorOpen && photoFile && <SkyMaskEditor
+        key={photoUrl} file={photoFile} initialMask={manualMask.current}
+        onApply={applyManualCutout} onClose={() => setManualEditorOpen(false)}/>}
       {cutoutEditorMounted && photoFile &&
         <div hidden={!cutoutEditorOpen}>
           <SkyCutoutPreview key={photoUrl} file={photoFile}
-            active={cutoutEditorOpen} onApply={applyCutout}
+            active={cutoutEditorOpen} onApply={applyAiCutout}
             onCancel={() => setCutoutEditorOpen(false)}/>
         </div>}
       <input ref={fileInputRef} className="ex-visually-hidden" type="file"
