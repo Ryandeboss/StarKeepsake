@@ -230,3 +230,15 @@
  .at-appear,.at-orbit-ring,.at-loading-orbit i {animation:none;}
  .at-primary,.at-sample-frame {transition:none;}
 }
+
+.at-sky-atmosphere-controls {display:grid;gap:13px;padding:19px;margin-top:14px;
+  background:linear-gradient(150deg,#0d2836,#102332);border:1px solid #405c69;border-radius:15px;}
+.at-sky-atmosphere-controls .at-kicker {margin:0;}
+.at-glow-choice {display:flex;align-items:center;gap:10px;color:#f1e2c7;font-size:12px;}
+.at-glow-choice input {accent-color:#e7c38c;}
+.at-tone-choice {margin:0;padding:0;border:0;display:flex;gap:5px;flex-wrap:wrap;}
+.at-tone-choice legend {font-size:10px;letter-spacing:.08em;color:#b8cdd0;margin-bottom:9px;}
+.at-tone-choice button {padding:9px 10px;border:1px solid #52717b;border-radius:8px;background:#163848;
+  color:#d1dcd9;font-size:10px;}
+.at-tone-choice button[aria-pressed=true] {border-color:#f1d7a5;background:#e6c594;color:#132b3b;}
+.at-sky-atmosphere-controls small {font-size:10px;color:#99b7bd;line-height:1.5;}

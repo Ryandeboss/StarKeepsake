@@ -52,3 +52,41 @@
 .skw-topline,.skw-footline {font-size:9px;}
 }
 @media(prefers-reduced-motion:reduce){.skw-twinkle{animation:none;}}
+
+/* Reuse Sky Lab's camera-aware pixel sky instead of a waxy CSS gradient. */
+.skw-star-atmosphere {background:#020813;pointer-events:auto;}
+.skw-star-atmosphere>.immersive-photo-sky {position:absolute;inset:0;width:100%;height:100%;display:block;
+  object-fit:cover;pointer-events:none;image-rendering:auto;z-index:0;}
+.skw-star-atmosphere>.skw-color-grade {position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.28;}
+.skw-tone-natural>.skw-color-grade {background:transparent;}
+.skw-tone-indigo>.skw-color-grade {background:linear-gradient(155deg,#24234b21,transparent 55%,#1b214811);}
+.skw-tone-teal>.skw-color-grade {background:linear-gradient(155deg,#18434f26,transparent 55%,#19494a17);}
+.skw-catalog-stars {position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:visible;}
+.skw-star-hit {cursor:pointer;outline:none;}
+.skw-catalog-stars a:focus-visible .skw-star-hit circle:first-child,
+.skw-catalog-stars a:hover .skw-star-hit circle:first-child {
+  stroke:#f1d7a2;stroke-width:1.2;stroke-opacity:.75;}
+.skw-star-light {pointer-events:none;transform-box:fill-box;transform-origin:center;}
+.skw-scintillate,.skw-major {animation:skw-photographic-scintillation ease-in-out infinite;}
+.skw-major {animation-name:skw-named-star-breathe;}
+@keyframes skw-photographic-scintillation {
+  0%,100%{opacity:1}43%{opacity:var(--twinkle-low,.95)}71%{opacity:.99}
+}
+@keyframes skw-named-star-breathe {
+  0%,100%{opacity:1;filter:brightness(1)}
+  43%{opacity:var(--twinkle-low,.88);filter:brightness(.94)}
+  71%{opacity:1;filter:brightness(1.09)}
+}
+.skw-star-name {font-size:11px;font-family:ui-sans-serif,system-ui,sans-serif;
+  fill:#f0ece5;stroke:rgba(2,8,18,.9);stroke-width:2.8px;paint-order:stroke;letter-spacing:.025em;}
+.skw-star-detail {position:absolute;z-index:6;right:10px;top:10px;width:min(285px,65%);
+  display:grid;gap:5px;background:rgba(4,17,27,.93);border:1px solid rgba(241,214,168,.7);
+  border-radius:9px;padding:12px;color:#f4e9d8;pointer-events:none;box-shadow:0 10px 30px #0007;}
+.skw-star-detail strong {font:500 21px Georgia,serif;color:#ffe0ab;}
+.skw-star-detail span {font-size:11px;line-height:1.45;color:#c8dfdc;}
+.skw-star-detail small {font-size:10px;color:#f0ddbe;}
+.skw-star-detail .skw-star-open {font-size:9px;color:#d9bc87;}
+.skw-foreground {z-index:3;}
+.skw-unprepared {z-index:4;}
+.skw-photo-below {z-index:5;}
+@media(prefers-reduced-motion:reduce){.skw-major,.skw-scintillate{animation:none;}}

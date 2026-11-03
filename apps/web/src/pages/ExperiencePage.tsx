@@ -80,6 +80,8 @@ export function ExperiencePage() {
   const [fov,setFov]=useState(105)
   const [skyPercent,setSkyPercent]=useState(38)
   const [photoFit,setPhotoFit]=useState<AbovePhotoFitMode>('fit')
+  const [atmosphericGlow,setAtmosphericGlow]=useState(true)
+  const [skyTone,setSkyTone]=useState<'natural'|'indigo'|'teal'>('natural')
   const [error,setError]=useState('')
   const [dragging,setDragging]=useState(false)
   const upload=useRef<HTMLInputElement>(null)
@@ -431,7 +433,9 @@ export function ExperiencePage() {
               layout={placement}
               imageAspect={dimensions?dimensions.width/dimensions.height:1}
               heading={heading} pitch={pitch} fov={fov} skyHeight={skyPercent}
-              photoFit={photoFit} onHeading={v=>setHeading(wrapWorkshopHeading(v))}
+              photoFit={photoFit} glow={atmosphericGlow} tone={skyTone}
+              maskAlpha={savedAlpha} maskDimensions={dimensions}
+              onHeading={v=>setHeading(wrapWorkshopHeading(v))}
               onPitch={v=>setPitch(clampWorkshopPitch(v))}/>
             <div className="at-preview-caption">
               <div><span>THE NIGHT OF {date}</span><strong>{chosenName}</strong></div>
@@ -453,6 +457,18 @@ export function ExperiencePage() {
               onPitch={v=>setPitch(clampWorkshopPitch(v))}
               onFov={setFov}
               onReset={()=>{setHeading(wrapWorkshopHeading(suggestedObserverHeading(design.stars)));setPitch(18);setFov(105)}}/>
+            <div className="at-sky-atmosphere-controls">
+              <span className="at-kicker">LIGHT & ATMOSPHERE</span>
+              <label className="at-glow-choice"><input type="checkbox" checked={atmosphericGlow}
+                onChange={event=>setAtmosphericGlow(event.target.checked)}/>
+                Subtle atmospheric & horizon glow</label>
+              <fieldset className="at-tone-choice"><legend>Night sky tone</legend>
+                {([['natural','Natural darkness'],['indigo','Midnight indigo'],['teal','Deep teal']] as const).map(([value,label])=>
+                  <button key={value} type="button" aria-pressed={skyTone===value}
+                    onClick={()=>setSkyTone(value)}>{label}</button>)}
+              </fieldset>
+              <small>Subtle visual grading only. All visible stars keep their calculated positions and magnitudes.</small>
+            </div>
             <div className="at-workshop-actions">
               <button type="button" onClick={editMoment}>✎ Change date or location</button>
               <button type="button" onClick={()=>setStage('choice')}>✎ Change photo composition</button>
