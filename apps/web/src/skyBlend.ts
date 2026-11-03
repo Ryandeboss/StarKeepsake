@@ -1,6 +1,7 @@
 import type { DesignSpec } from './designSpec'
 import { selectSkyBlendPoints, skyCoverage } from './skyBlendMath'
 import type { SkySegmentation } from './skyBlendMath'
+import { conservativeSkyMask } from './skyWorkshopMask'
 
 /**
  * Experimental, opt-in browser-only sky detection.
@@ -202,24 +203,30 @@ export async function detectWorkshopSky(photoUrl: string): Promise<WorkshopDetec
     overlay: await canvasToBlob(canvas),
   }
   const photo = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  let skyPixels = 0
+  // DeepLab's raw class can include trees, pale buildings and isolated noise.
+  // Only expose the conservative, upper-connected inner sky to the workshop.
+  const rawSky = new Uint8Array(canvas.width * canvas.height)
   for (let y=0; y<canvas.height; y++) {
     const my = Math.min(segmentation.height-1, Math.floor(y * segmentation.height / canvas.height))
     for (let x=0; x<canvas.width; x++) {
       const mx = Math.min(segmentation.width-1, Math.floor(x * segmentation.width / canvas.width))
-      const index = (y * canvas.width + x)
+      const index = y * canvas.width + x
       const maskIndex = (my * segmentation.width + mx) * 4
-      const isSky = segmentation.segmentationMap[maskIndex] === color[0] &&
-        segmentation.segmentationMap[maskIndex+1] === color[1] &&
-        segmentation.segmentationMap[maskIndex+2] === color[2]
-      if (!isSky) continue
-      alpha[index] = 0
-      skyPixels++
-      const offset = index * 4
-      photo.data[offset] = Math.round(photo.data[offset]*.45 + 26*.55)
-      photo.data[offset+1] = Math.round(photo.data[offset+1]*.45 + 196*.55)
-      photo.data[offset+2] = Math.round(photo.data[offset+2]*.45 + 224*.55)
+      if (segmentation.segmentationMap[maskIndex] === color[0] &&
+          segmentation.segmentationMap[maskIndex+1] === color[1] &&
+          segmentation.segmentationMap[maskIndex+2] === color[2]) rawSky[index] = 1
     }
+  }
+  const safeSky = conservativeSkyMask(rawSky, canvas.width, canvas.height)
+  let skyPixels = 0
+  for(let index=0; index<safeSky.length; index++){
+    if(!safeSky[index]) continue
+    alpha[index]=0
+    skyPixels++
+    const offset=index*4
+    photo.data[offset]=Math.round(photo.data[offset]*.64+26*.36)
+    photo.data[offset+1]=Math.round(photo.data[offset+1]*.64+196*.36)
+    photo.data[offset+2]=Math.round(photo.data[offset+2]*.64+224*.36)
   }
   ctx.putImageData(photo, 0, 0)
   return {

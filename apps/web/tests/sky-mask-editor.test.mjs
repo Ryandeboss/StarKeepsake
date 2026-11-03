@@ -117,3 +117,30 @@ test('orientation normalization and contain geometry keep stars in photo bounds'
     left:0, top:225, width:300, height:150
   })
 })
+
+import { conservativeSkyMask,smartRectangleCleanup } from '../src/skyWorkshopMask.ts'
+
+test('conservative AI horizon removes only the upper-connected inner sky',()=>{
+  const w=9,h=7,raw=new Uint8Array(w*h)
+  for(let y=0;y<4;y++)for(let x=0;x<w;x++)raw[y*w+x]=1
+  raw[6*w+4]=1 // isolated false positive: a light facade/window
+  const safe=conservativeSkyMask(raw,w,h,1)
+  assert.equal(safe[6*w+4],0)
+  assert.equal(safe[1*w+4],1)
+  assert.equal(safe[3*w+4],0,'safety margin above foreground')
+  assert.equal(safe[0],1,'keep upper image edge open')
+})
+test('smart rectangle cleans bright sky pockets, not dark tree branches',()=>{
+  const w=4,h=3,original=new Uint8ClampedArray(w*h*4)
+  for(let i=0;i<w*h;i++)original.set([244,244,242,255],i*4)
+  original.set([35,43,50,255],(1*w+1)*4)
+  const mask=new Uint8ClampedArray(w*h).fill(255)
+  const edited=smartRectangleCleanup(original,mask,w,h,{x0:0,y0:0,x1:4,y1:3},false)
+  assert.equal(edited,w*h-1)
+  assert.equal(mask[1*w+1],255)
+  assert.equal(mask[0],0)
+  const restored=smartRectangleCleanup(original,mask,w,h,{x0:0,y0:0,x1:2,y1:2},true)
+  assert.equal(restored,3)
+  assert.equal(mask[0],255)
+  assert.equal(mask[1*w+1],255)
+})

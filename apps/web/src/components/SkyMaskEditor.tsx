@@ -8,9 +8,10 @@ import {
 import type { MaskPoint } from '../skyMaskMath'
 import { resampleSkyAlpha } from '../skyWorkshopMath'
 import type { SkyAlphaMask } from '../skyWorkshopMath'
+import { smartRectangleCleanup } from '../skyWorkshopMask'
 import './SkyMaskEditor.css'
 
-type Tool = 'wand' | 'brush' | 'polygon'
+type Tool = 'smart' | 'brush' | 'polygon'
 type Preview = 'overlay' | 'cutout' | 'night'
 type Props = {
   file: File
@@ -27,6 +28,8 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
   const canvas = useRef<HTMLCanvasElement>(null)
   const photo = useRef<Uint8ClampedArray | null>(null)
   const automatic = useRef<Uint8ClampedArray | null>(null)
+  const initialAlpha = useRef<Uint8ClampedArray | null>(null)
+  const smartDrag = useRef<{start:MaskPoint;latest:MaskPoint;pointerId:number}|null>(null)
   const alpha = useRef<Uint8ClampedArray | null>(null)
   const past = useRef<Uint8ClampedArray[]>([])
   const future = useRef<Uint8ClampedArray[]>([])
@@ -38,7 +41,8 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
   const [loaded, setLoaded] = useState<LoadedPhoto | null>(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [tool, setTool] = useState<Tool>('wand')
+  const [tool, setTool] = useState<Tool>('smart')
+  const [dragBox,setDragBox] = useState<{left:string;top:string;width:string;height:string}|null>(null)
   const [operation, setOperation] = useState<'remove' | 'restore'>('remove')
   const [preview, setPreview] = useState<Preview>('overlay')
   const [zoom, setZoom] = useState(100)
@@ -48,7 +52,7 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
   const [vertices, setVertices] = useState<MaskPoint[]>([])
   const [undoCount, setUndoCount] = useState(0)
   const [redoCount, setRedoCount] = useState(0)
-  const [message, setMessage] = useState('Auto-detect removes top-connected near-white sky. Click a missed sky patch or trace the horizon to refine it.')
+  const [message, setMessage] = useState('Click a missed sky pocket to clean it. Drag over a larger area to clean light gaps while preserving darker branches. Switch to Restore to bring anything back.')
 
   useEffect(() => {
     let cancelled = false
@@ -76,6 +80,7 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
         alpha.current = initialMask?.length === width * height
           ? new Uint8ClampedArray(initialMask)
           : detectedMask ? resampleSkyAlpha(detectedMask, width, height) : getAlpha(prepared)
+        initialAlpha.current = new Uint8ClampedArray(alpha.current)
         past.current = []
         future.current = []
         if (!cancelled) setLoaded({ width, height })
@@ -171,38 +176,76 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
   function pointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
     if (event.button !== 0 || !loaded || !alpha.current || !photo.current) return
     event.preventDefault()
-    const p = position(event)
-    if (tool === 'polygon') {
-      setVertices(points => [...points, p])
+    const p=position(event)
+    if(tool==='polygon'){
+      setVertices(points=>[...points,p])
       return
     }
-    if (tool === 'wand') {
-      const selection = colorRegion(photo.current, loaded.width, loaded.height, p.x, p.y, tolerance, contiguous)
-      saveHistory()
-      const changed = changeRegionAlpha(alpha.current, selection, photo.current, operation === 'restore')
-      setMessage(changed ? `${changed.toLocaleString()} pixels ${operation === 'restore' ? 'restored' : 'removed'}. Click another region or refine with the brush.` : 'No change at this point. Try a different spot or tolerance.')
-      scheduleDraw()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    if(tool==='smart'){
+      smartDrag.current={start:p,latest:p,pointerId:event.pointerId}
+      setDragBox(null)
       return
     }
     saveHistory()
-    painting.current = true
-    lastPointer.current = p
-    event.currentTarget.setPointerCapture(event.pointerId)
-    paintAlphaLine(alpha.current, photo.current, loaded.width, loaded.height,
-      p.x, p.y, p.x, p.y, brushSize / 2, operation === 'restore')
+    painting.current=true
+    lastPointer.current=p
+    paintAlphaLine(alpha.current,photo.current,loaded.width,loaded.height,
+      p.x,p.y,p.x,p.y,brushSize/2,operation==='restore')
     scheduleDraw()
   }
   function pointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (!painting.current || !loaded || !alpha.current || !photo.current || !lastPointer.current) return
-    const p = position(event)
-    paintAlphaLine(alpha.current, photo.current, loaded.width, loaded.height,
-      lastPointer.current.x, lastPointer.current.y, p.x, p.y, brushSize / 2, operation === 'restore')
-    lastPointer.current = p
+    if(!loaded)return
+    const p=position(event)
+    const drag=smartDrag.current
+    if(tool==='smart'&&drag&&drag.pointerId===event.pointerId){
+      drag.latest=p
+      if(Math.hypot(p.x-drag.start.x,p.y-drag.start.y)<6){setDragBox(null);return}
+      const left=Math.min(p.x,drag.start.x),right=Math.max(p.x,drag.start.x)
+      const top=Math.min(p.y,drag.start.y),bottom=Math.max(p.y,drag.start.y)
+      setDragBox({left:`${left/loaded.width*100}%`,top:`${top/loaded.height*100}%`,
+        width:`${(right-left)/loaded.width*100}%`,height:`${(bottom-top)/loaded.height*100}%`})
+      return
+    }
+    if(!painting.current||!alpha.current||!photo.current||!lastPointer.current)return
+    paintAlphaLine(alpha.current,photo.current,loaded.width,loaded.height,
+      lastPointer.current.x,lastPointer.current.y,p.x,p.y,brushSize/2,operation==='restore')
+    lastPointer.current=p
     scheduleDraw()
   }
-  function pointerEnd() {
-    painting.current = false
-    lastPointer.current = null
+  function pointerEnd(event:ReactPointerEvent<HTMLCanvasElement>) {
+    if(tool==='smart'&&smartDrag.current&&loaded&&alpha.current&&photo.current){
+      const drag=smartDrag.current
+      if(event.pointerId!==drag.pointerId)return
+      smartDrag.current=null
+      setDragBox(null)
+      const end=position(event),dx=Math.abs(end.x-drag.start.x),dy=Math.abs(end.y-drag.start.y)
+      saveHistory()
+      let changed=0
+      if(Math.hypot(dx,dy)>=6){
+        changed=smartRectangleCleanup(photo.current,alpha.current,loaded.width,loaded.height,
+          {x0:drag.start.x,y0:drag.start.y,x1:end.x+1,y1:end.y+1},operation==='restore')
+        setMessage(changed?
+          `${changed.toLocaleString()} pixels ${operation==='restore'?'restored':'cleaned'} inside your rectangle.`:
+          'No light sky pockets found in this area. Click a single patch or adjust the tolerance.')
+      }else{
+        const selection=colorRegion(photo.current,loaded.width,loaded.height,
+          end.x,end.y,tolerance,contiguous)
+        changed=changeRegionAlpha(alpha.current,selection,photo.current,operation==='restore')
+        setMessage(changed?
+          `${changed.toLocaleString()} pixels ${operation==='restore'?'restored':'cleaned'} in the selected region.`:
+          'No change here. Try a different spot or adjust tolerance.')
+      }
+      scheduleDraw()
+    }
+    painting.current=false
+    lastPointer.current=null
+  }
+  function pointerCancel() {
+    smartDrag.current=null
+    setDragBox(null)
+    painting.current=false
+    lastPointer.current=null
   }
   function applyPolygon() {
     if (!loaded || !alpha.current || !photo.current || vertices.length < 3) return
@@ -215,9 +258,9 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
   function resetMask() {
     if (!automatic.current || !alpha.current) return
     saveHistory()
-    alpha.current = getAlpha(automatic.current)
+    alpha.current = new Uint8ClampedArray(initialAlpha.current ?? getAlpha(automatic.current))
     setVertices([])
-    setMessage('Automatic sky detection restored. You can continue refining it.')
+    setMessage('The initial AI horizon selection has been restored. You can refine it again.')
     scheduleDraw()
   }
   function restoreOriginal() {
@@ -269,29 +312,29 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
       <header className="sky-mask-header">
         <div>
           <span className="sky-mask-eyebrow">Your photo · free local editing</span>
-          <h2>Detect the horizon & edit the sky</h2>
-          <p>Bright white sky is detected automatically when the photo opens. Correct the mask with the magic wand, brush or traced areas. For colored sky, use the wand or trace the horizon manually.</p>
+          <h2>Polish your photograph</h2>
+          <p>We've marked the likely sky in blue. Simply click a missed patch to clean it or drag a rectangle to tidy several bright pockets at once. Restore details anytime.</p>
         </div>
         <button ref={closeButton} type="button" onClick={onClose} aria-label="Close sky editor">✕</button>
       </header>
       <div className="sky-mask-intro">{detectedMask ?
-        'Your photo’s sky was outlined using on-device AI. Paint to restore details, or use the magic wand on missed sky.'
-        : 'No AI mask is available. Start with the magic wand or trace the visible horizon yourself.'}</div>
+        'AI made a careful first pass. Click to select a connected sky patch or drag to sweep a rectangle; both work automatically.'
+        : 'Use one click to select a region, or drag a rectangle to clean several bright pockets.'}</div>
       <div className="sky-mask-tools" aria-label="Sky mask editing tools">
         <div className="sky-mask-tool-buttons" role="group" aria-label="Choose editing tool">
-          {(['wand', 'brush', 'polygon'] as const).map(item =>
+          {(['smart','brush','polygon'] as const).map(item =>
             <button key={item} type="button" aria-pressed={tool === item} className={tool === item ? 'active' : ''}
-              onClick={() => { setTool(item); setVertices([]) }}>
-              {item === 'wand' ? '✦ Magic wand' : item === 'brush' ? '◉ Brush' : '⬡ Trace area'}
+              onClick={() => { setTool(item); setVertices([]);setDragBox(null) }}>
+              {item === 'smart' ? '✦ Smart cleanup · click or drag' : item === 'brush' ? '◉ Fine brush' : '⬡ Trace area'}
             </button>)}
         </div>
-        <label>Action
-          <select value={operation} onChange={event => setOperation(event.target.value as 'remove' | 'restore')}>
-            <option value="remove">Remove sky</option>
-            <option value="restore">Restore photo</option>
-          </select>
-        </label>
-        {tool === 'wand' && <>
+        <div className="sky-mask-tool-buttons sky-mask-actions" role="group" aria-label="Clean sky or restore photograph">
+          <button type="button" className={operation==='remove'?'active':''}
+            aria-pressed={operation==='remove'} onClick={()=>setOperation('remove')}>✦ Clean remaining sky</button>
+          <button type="button" className={operation==='restore'?'active':''}
+            aria-pressed={operation==='restore'} onClick={()=>setOperation('restore')}>↶ Restore photograph</button>
+        </div>
+        {tool === 'smart' && <>
           <label>Tolerance <strong>{tolerance}</strong>
             <input type="range" min="0" max="100" value={tolerance}
               onChange={event => setTolerance(Number(event.target.value))}/>
@@ -330,10 +373,11 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
           style={{ width: `${zoom}%` }}>
           {loaded ? <>
             <canvas ref={canvas} width={loaded.width} height={loaded.height}
-              aria-label="Skyline image mask editing canvas. Click to select pixels or draw over regions."
+              aria-label="Photo editor. Click to clean one region, or drag to draw a rectangle. Choose Restore to bring back the original photo."
               onPointerDown={pointerDown} onPointerMove={pointerMove}
-              onPointerUp={pointerEnd} onPointerCancel={pointerEnd}
-              onLostPointerCapture={pointerEnd}/>
+              onPointerUp={pointerEnd} onPointerCancel={pointerCancel}
+              onLostPointerCapture={pointerCancel}/>
+            {dragBox && <div className="sky-mask-smart-rect" style={dragBox} aria-hidden="true"/>}
             {tool === 'polygon' && vertices.length > 0 &&
               <svg className="sky-mask-polygon-overlay" viewBox={`0 0 ${loaded.width} ${loaded.height}`}
                 preserveAspectRatio="none" aria-hidden="true">
@@ -347,14 +391,14 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
         </div>
         </div>
         <div className="sky-mask-under-preview" role="status">{message}</div>
-        <small className="sky-mask-disclosure">Cyan marks transparent sky. The full image is shown at 100% zoom; zoom in for gaps between branches. Night preview is illustrative; your calculated stars appear in the frame once you apply. All manual changes stay in your browser.</small>
+        <small className="sky-mask-disclosure">Cyan shows the selected sky. Clicking cleans one connected region; dragging cleans bright gaps within your rectangle, without stripping dark branches. Restore works with the same gestures. Zoom for tiny details, undo mistakes, then save. The original photo is preserved in your browser.</small>
       </div>
       {error && <p className="sky-mask-error" role="alert">{error}</p>}
       <footer className="sky-mask-footer">
         <div className="sky-mask-history">
           <button type="button" disabled={!undoCount} onClick={undo}>↶ Undo</button>
           <button type="button" disabled={!redoCount} onClick={redo}>↷ Redo</button>
-          <button type="button" disabled={!loaded} onClick={resetMask}>Detect bright sky again</button>
+          <button type="button" disabled={!loaded} onClick={resetMask}>Reset to AI selection</button>
           <button type="button" disabled={!loaded} onClick={restoreOriginal}>Restore original</button>
         </div>
         <div className="sky-mask-save">

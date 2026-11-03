@@ -91,3 +91,11 @@
   .sky-mask-workspace {overflow:visible;}
   .sky-mask-canvas-scroll {max-height:none;}
 }
+
+/* Instant smart cleanup: dragging previews a rectangle without entering a mode. */
+.sky-mask-smart-rect {position:absolute;z-index:5;border:2px dashed #f6d899;
+  background:rgba(66,197,215,.19);box-shadow:0 0 0 1px #102b38;
+  pointer-events:none;min-width:2px;min-height:2px;}
+.sky-mask-actions {margin-left:auto;}
+.sky-mask-actions button.active {background:#f0d59e;color:#193d47;}
+.sky-mask-canvas-shell {user-select:none;}
