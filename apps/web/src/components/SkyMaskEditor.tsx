@@ -221,7 +221,7 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
       setDragBox(null)
       const end=position(event),dx=Math.abs(end.x-drag.start.x),dy=Math.abs(end.y-drag.start.y)
       saveHistory()
-      let changed=0
+      let changed:number
       if(Math.hypot(dx,dy)>=6){
         changed=smartRectangleCleanup(photo.current,alpha.current,loaded.width,loaded.height,
           {x0:drag.start.x,y0:drag.start.y,x1:end.x+1,y1:end.y+1},operation==='restore')
