@@ -23,7 +23,7 @@ type Props = {
   onPitch: (next: number) => void
 }
 
-export const SKY_DIRECTION_PRESETS = [
+const SKY_DIRECTION_PRESETS = [
   { label:'N', heading:0 }, { label:'E', heading:90 },
   { label:'S', heading:180 }, { label:'W', heading:270 },
 ] as const

@@ -99,7 +99,6 @@ export function ExperiencePage() {
   },[])
   useEffect(()=>{
     if(stage!=='detecting'&&stage!=='calculating')return
-    setProgress(7)
     const timer=window.setInterval(()=>setProgress(n=>Math.min(91,n+Math.max(.6,(93-n)*.12))),190)
     return ()=>window.clearInterval(timer)
   },[stage])
@@ -107,6 +106,7 @@ export function ExperiencePage() {
   async function runDetection(url:string) {
     const version=++detectionVersion.current
     setStage('detecting')
+    setProgress(7)
     setDetected(null)
     setDetectorError('')
     setError('')
@@ -234,6 +234,7 @@ export function ExperiencePage() {
     if(!selected){setError('Find and select your city or address.');return}
     const version=++astronomyVersion.current
     setError('')
+    setProgress(7)
     setStage('calculating')
     try{
       const moment=isOfflineCity(selected)
