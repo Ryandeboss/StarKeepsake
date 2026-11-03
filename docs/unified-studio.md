@@ -44,10 +44,37 @@ PR branch until reviewed.
 Respect `prefers-reduced-motion`, label the star field as astronomical where
 calculated and artistic where blended, and avoid NASA affiliation claims.
 
-## Staging location fallback and photo composition controls (November 2026)
+## Typed location search and Azure Maps recovery
 
-The staging API requires the **server-side** `AzureMaps__SubscriptionKey` configuration in Azure Container Apps (ASP.NET config path `AzureMaps:SubscriptionKey`). If it is unset, normal address/city search and the server-based location-to-time-zone resolution return 503. No secret is injected into Vercel or any `VITE_` environment variable.
+The original searchable location field remains in the unified page. When
+the staging Azure Maps key is present, StarKeepsake uses the actual
+`/api/locations/search` and `/api/moments/resolve` endpoints, which support
+cities, addresses, and landmarks. The necessary **server-side** setting
+is `AzureMaps__SubscriptionKey` in the Azure Container App. No key is put
+in Vercel frontend configuration.
 
-To unblock visual testing without inventing time zones, the unified page has a visibly labeled **sample cities** row. These cities have known, fixed latitude, longitude, and IANA time zone IDs, and they bypass only the unavailable Azure Maps search/resolve calls. The original astronomy calculation still runs on the backend. Client-side sample resolution validates DST skipped/repeated hours and correct local-to-UTC conversion. Arbitrary address search still requires restoring Azure Maps server configuration; the fallback is not represented as a universal geocoding service.
+When Azure Maps returns an error or is unreachable, the page switches to a
+bundled, local GeoNames city gazetteer (32,754 entries, including Bolingbrook,
+Chicago and global capitals). Visitors can still **type the name of a city
+or town**, press Find, choose a result showing its country and coordinates,
+and generate a real astronomical sky. There is no fixed sample-city picker.
+The local database is fetched only on the first fallback search and cached
+by the browser; no additional third-party API request is made per keystroke.
+An offline city record carries its IANA timezone; wall-clock conversion
+checks for invalid and ambiguous DST hours before sending the calculated UTC
+moment to the existing astronomy API.
+
+**Coverage:** the gazetteer includes cities with about 15,000+ residents and
+national capitals. It is not a street-level or landmark geocoder. Exact
+street addresses and lesser-known places require Azure Maps to be restored;
+the UI explains this rather than silently substituting a nearby city.
+
+**Attribution:** original data © GeoNames (geonames.org), CC BY 4.0,
+https://creativecommons.org/licenses/by/4.0/ . This bundled, compact JSON
+export was adapted from
+https://github.com/serdarsalim/Time-Zoner-Converter-Chrome-Extension
+and is redistributed with GeoNames attribution. Update the dataset
+periodically when necessary to avoid stale administrative names.
+
 
 The two layout cards **Above my photo** and **Within my photo** now appear before generation. Above has adjustable sky height (20–70%) and five fitting modes (fit, center/top/bottom crop, stretch); the preview-only geometry reprojects display star positions without changing catalog identities or claiming manufacturing-ready artwork. Within preserves the original foreground pixels through the full AI sky-cutout editor (local edge recovery, spot cleanup, rectangle sweep, undo), and never requests a paid Fal mask until explicitly clicked. The cutout remains editable during the current page session. No purchase flow exists.

@@ -9,7 +9,8 @@ import { FULL_PHOTO_CROP } from '../photoCrop'
 import { getFrameLayout, INITIAL_DESIGN_SPEC, toRect } from '../designSpec'
 import type { DesignSpec } from '../designSpec'
 import type { ExplorerLocation } from '../skyExplorerData'
-import { SAMPLE_LOCATIONS, isSampleLocation, resolveSampleMoment } from '../sampleLocationFallback'
+import { resolveSampleMoment } from '../sampleLocationFallback'
+import { isOfflineCity, searchOfflineCities } from '../offlineCitySearch'
 import { DEFAULT_PHOTO_FIT, DEFAULT_SKY_SPLIT, withSkyPhotoBalance } from '../frameSkyBalance'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import './ExperiencePage.css'
@@ -167,36 +168,36 @@ export function ExperiencePage() {
 
   async function findLocation() {
     if (locationQuery.trim().length < 2) {
-      setError('Enter a city, address or landmark to search.')
+      setError('Enter at least two characters of a city, town or address.')
       return
     }
     setIsSearching(true)
     setError('')
     setLocationCandidates([])
     try {
-      const matches = await searchLocations(locationQuery)
-      setMapsUnavailable(false)
+      // Prefer the real Azure Maps service whenever it is configured.
+      // If staging is missing its key, fall back to the local city gazetteer.
+      const matches = mapsUnavailable
+        ? await searchOfflineCities(locationQuery)
+        : await searchLocations(locationQuery)
       setLocationCandidates(matches)
-      if (!matches.length) setError('No matching places found. Try a nearby city or a fuller address.')
+      if (!matches.length) setError(mapsUnavailable
+        ? 'No matching city found. Try a nearby city or a different spelling. Precise addresses require Azure Maps.'
+        : 'No matching places found. Try a nearby city or a fuller address.')
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Location search is unavailable.'
-      if (message.includes('Azure Maps is not configured')) {
+      try {
+        const cities = await searchOfflineCities(locationQuery)
         setMapsUnavailable(true)
-        setError('Azure Maps is not configured in staging. Choose a sample city below to test the builder.')
-      } else {
-        setError(message)
+        setLocationCandidates(cities)
+        if (!cities.length) {
+          setError('Live maps are unavailable, and no city matches this search. Try a city or town instead.')
+        }
+      } catch {
+        setError(cause instanceof Error ? cause.message : 'Location search is unavailable.')
       }
     } finally {
       setIsSearching(false)
     }
-  }
-
-  function chooseSampleLocation(location: typeof SAMPLE_LOCATIONS[number]) {
-    invalidateSky()
-    setSelectedLocation(location)
-    setLocationQuery(location.displayName)
-    setLocationCandidates([])
-    setEditor('moment')
   }
 
   function openCutoutEditor() {
@@ -238,7 +239,7 @@ export function ExperiencePage() {
     setBuildProgress(8)
 
     try {
-      const moment = isSampleLocation(selectedLocation)
+      const moment = isOfflineCity(selectedLocation)
         ? resolveSampleMoment(date, exactTimeUnknown ? null : time, exactTimeUnknown, selectedLocation)
         : await resolveMoment({
           date, time: exactTimeUnknown ? null : time,
@@ -415,7 +416,7 @@ export function ExperiencePage() {
                   </label>
                   <label className="ex-location-label">THE LOCATION
                     <span className="ex-search-row">
-                      <input type="search" value={locationQuery} placeholder="City, landmark or address"
+                      <input type="search" value={locationQuery} placeholder="Type a city, town or address"
                         onChange={event => {
                           invalidateSky()
                           setLocationQuery(event.target.value)
@@ -443,15 +444,15 @@ export function ExperiencePage() {
                       </button>
                     ))}
                   </div>}
-                  <div className="ex-sample-cities" aria-label="Sample locations">
-                    <span>{mapsUnavailable ? 'MAPS UNAVAILABLE · SAMPLE CITIES STILL WORK' : 'QUICK-SELECT A SAMPLE CITY'}</span>
-                    <div>{SAMPLE_LOCATIONS.map(city => <button type="button" key={city.displayName}
-                      className={selectedLocation?.displayName === city.displayName ? 'is-selected' : ''}
-                      onClick={() => chooseSampleLocation(city)}>{city.displayName}</button>)}</div>
-                  </div>
+                  {mapsUnavailable && <p className="ex-city-source">
+                    City search is available from an offline place database while Azure Maps is unavailable.
+                    Street addresses and landmarks will work once Azure Maps is configured.
+                    {' '}Data © <a href="https://www.geonames.org/" target="_blank"
+                      rel="noopener noreferrer">GeoNames</a> (CC BY 4.0).
+                  </p>}
                   {selectedLocation && <div className="ex-location-confirmation">
                     <span aria-hidden="true">✦</span> {selectedLocation.displayName}
-                    <small>{isSampleLocation(selectedLocation) ? 'Preset city · time zone supplied locally' : 'Location selected'}</small>
+                    <small>{isOfflineCity(selectedLocation) ? 'City coordinates and time zone from GeoNames' : 'Location selected'}</small>
                   </div>}
                   <label className="ex-dedication">OPTIONAL MESSAGE
                     <input type="text" maxLength={80}

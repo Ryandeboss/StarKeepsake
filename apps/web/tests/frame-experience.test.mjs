@@ -56,3 +56,35 @@ test('photo fitting respects intended crop direction without modifying source',(
   assert.deepEqual(photoFitStyle('bottom-crop'),{objectFit:'cover',objectPosition:'center top'})
   assert.equal(photoFitStyle('stretch').objectFit,'fill')
 })
+
+import { matchCityRows, isOfflineCity } from '../src/offlineCitySearch.ts'
+import { readFile } from 'node:fs/promises'
+
+test('type a city name to find geocoded city candidates with time zones', () => {
+  const rows=[
+    ['Chicago','','America/Chicago','US',2664452,41.85,-87.65],
+    ['Chicago Heights','','America/Chicago','US',27500,41.5,-87.6],
+    ['Napa','','America/Los_Angeles','US',79000,38.29,-122.29],
+    ['Paris','','Europe/Paris','FR',2138551,48.8534,2.3488],
+    ['Paris','','America/Chicago','US',25000,33.66,-95.55],
+  ]
+  const found=matchCityRows(rows,'Chicago')
+  assert.equal(found[0].displayName,'Chicago')
+  assert.equal(found[0].timeZoneId,'America/Chicago')
+  assert.equal(isOfflineCity(found[0]),true)
+  assert.equal(matchCityRows(rows,'Paris, France')[0].timeZoneId,'Europe/Paris')
+  assert.equal(matchCityRows(rows,'Paris, US')[0].timeZoneId,'America/Chicago')
+  assert.equal(matchCityRows(rows,'NA')[0].displayName,'Napa')
+  assert.deepEqual(matchCityRows(rows,'nonexistent'),[])
+})
+
+test('the licensed place database contains thousands of independently searchable real cities', async () => {
+  const raw=await readFile(new URL('../public/data/cities15000.json',import.meta.url),'utf-8')
+  const data=JSON.parse(raw)
+  assert.ok(data.cities.length>30000)
+  assert.ok(data.source.includes('GeoNames'))
+  const places=matchCityRows(data.cities,'Bolingbrook')
+  assert.equal(places[0].timeZoneId,'America/Chicago')
+  assert.equal(places[0].countryCode,undefined)
+  assert.equal(places[0].latitude>41 && places[0].longitude< -87,true)
+})
