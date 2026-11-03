@@ -11,6 +11,11 @@ type StarKeepsakePreviewProps = {
   engravingPreview: string
   isProcessingPhoto: boolean
   blendPreview: string
+  /** Inline studio mode: frame only, with accessible image/sky controls. */
+  minimal?: boolean
+  ready?: boolean
+  onPhotoAreaClick?: () => void
+  onSkyAreaClick?: () => void
 }
 
 function formatDate(date: string) {
@@ -24,7 +29,10 @@ function formatDate(date: string) {
   }).format(new Date(`${date}T12:00:00Z`))
 }
 
-export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview, isProcessingPhoto, blendPreview }: StarKeepsakePreviewProps) {
+export function StarKeepsakePreview({
+  designSpec, photoPreview, engravingPreview, isProcessingPhoto, blendPreview,
+  minimal = false, ready = false, onPhotoAreaClick, onSkyAreaClick,
+}: StarKeepsakePreviewProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [lightsOn, setLightsOn] = useState(true)
   const [showEngraving, setShowEngraving] = useState(true)
@@ -83,7 +91,8 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
   const previewScalePercent = Math.max(38, Math.min(100, 100 * physicalArtwork.widthMm / 406.4))
 
   return (
-    <aside className="preview-card" aria-label="Live StarKeepsake preview">
+    <aside className={`preview-card ${minimal ? 'experience-preview-card' : ''}`}
+      aria-label="Live StarKeepsake preview">
       <div className="preview-topline">
         <span>StarKeepsake / preview</span>
         <span className="preview-live">
@@ -238,6 +247,26 @@ export function StarKeepsakePreview({ designSpec, photoPreview, engravingPreview
               {designSpec.moment.location?.displayName || 'A place worth remembering'}
             </small>
           </div>
+          {minimal && onSkyAreaClick && designSpec.layoutMode === 'classic' &&
+            <div className={`ex-area-shell ex-area-shell--sky ${ready ? 'is-ready' : ''}`}
+              style={displayRectStyle(displaySkyRect)}>
+              <button type="button" onClick={onSkyAreaClick}
+                aria-label={ready ? 'Edit your sky date, time and location' : 'Choose your sky date, time and location'}>
+                <span aria-hidden="true">✦</span>
+                <strong>{ready ? 'Edit sky' : 'Your stars'}</strong>
+                <small>{ready ? 'CHANGE MOMENT' : 'CHOOSE DATE & PLACE'}</small>
+              </button>
+            </div>}
+          {minimal && onPhotoAreaClick &&
+            <div className={`ex-area-shell ex-area-shell--photo ${ready ? 'is-ready' : ''}`}
+              style={displayRectStyle(photoRect)}>
+              <button type="button" onClick={onPhotoAreaClick}
+                aria-label={photoPreview ? 'Replace your photograph' : 'Upload a photograph'}>
+                <span aria-hidden="true">{photoPreview ? '✎' : '＋'}</span>
+                <strong>{ready ? 'Edit photo' : photoPreview ? 'Your photograph' : 'Add your photo'}</strong>
+                <small>{ready ? 'REPLACE IMAGE' : photoPreview ? 'CLICK TO REPLACE' : 'UPLOAD AN IMAGE'}</small>
+              </button>
+            </div>}
         </div>
       </div>
 
