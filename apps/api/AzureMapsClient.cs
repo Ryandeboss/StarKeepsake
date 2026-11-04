@@ -8,7 +8,9 @@ public sealed record LocationCandidate(
     string FormattedAddress,
     double Latitude,
     double Longitude,
-    string Confidence);
+    string Confidence,
+    string? TimeZoneId = null,
+    string? Source = null);
 
 public sealed class AzureMapsException(string message) : Exception(message);
 

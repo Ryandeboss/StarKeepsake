@@ -1,13 +1,8 @@
-import { LandingPage } from './pages/LandingPage'
-import { CreatePage } from './pages/CreatePage'
-import { SkyLabPage } from './pages/SkyLabPage'
+import { ExperiencePage } from './pages/ExperiencePage'
 import './App.css'
 
-function App() {
-  const isCreateRoute = window.location.pathname.startsWith('/create')
-
-  const isSkyLabRoute = window.location.pathname.startsWith('/sky-lab')
-  return isSkyLabRoute ? <SkyLabPage /> : isCreateRoute ? <CreatePage /> : <LandingPage />
+// The former landing, create and sky-lab routes now share one cohesive page.
+// Legacy links continue to render the unified builder rather than a dead end.
+export default function App() {
+  return <ExperiencePage />
 }
-
-export default App

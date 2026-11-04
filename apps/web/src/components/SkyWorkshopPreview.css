@@ -1,0 +1,216 @@
+.skw-workshop { width:100%; border:1px solid rgba(196,217,224,.24);border-radius:20px;
+  background:linear-gradient(155deg,rgba(12,35,52,.96),rgba(5,14,26,.94));overflow:hidden;
+  box-shadow:0 22px 70px rgba(0,0,0,.3);}
+.skw-topline,.skw-footline {display:flex;gap:9px;justify-content:space-between;align-items:center;flex-wrap:wrap;
+  padding:13px 18px;color:#bed0d4;font:10px ui-monospace,monospace;letter-spacing:.09em;}
+.skw-topline {border-bottom:1px solid rgba(187,210,220,.2);}
+.skw-footline {border-top:1px solid rgba(187,210,220,.2);}
+.skw-frame-rail {min-height:330px;padding:30px;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 30%,rgba(80,104,116,.2),transparent 65%);}
+.skw-frame {max-width:100%;max-height:75vh;padding:12px;
+  border:8px solid #745339;border-bottom-color:#3b291f;border-right-color:#513929;
+  background:#281d19;box-shadow:0 0 0 1px #c69a64,inset 0 0 0 2px #c6a980,0 20px 45px #0009;}
+.skw-artwork {width:100%;position:relative;overflow:hidden;background:#0c192b;
+  touch-action:none;cursor:grab;outline-offset:9px;}
+.skw-artwork:active {cursor:grabbing;}
+.skw-artwork:focus-visible {outline:3px solid #f0d4a2;}
+.skw-star-atmosphere {position:absolute;inset:0;overflow:hidden;pointer-events:none;
+  background:radial-gradient(ellipse at 48% 130%,#41627b 0%,#19334f 42%,#060e22 100%);}
+/* Horizon illumination is drawn by SkyAtmosphereCanvas from the camera ray altitude.
+   Do not add a fixed bottom-of-screen CSS haze, even as a fallback. */
+.skw-point {position:absolute;display:block;border-radius:50%;
+  transform:translate(-50%,-50%);pointer-events:none;}
+@keyframes skw-glimmer {0%,100%{filter:brightness(.94)}50%{filter:brightness(1.26)}}
+.skw-twinkle {animation:skw-glimmer 4s ease-in-out infinite;}
+.skw-foreground {position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:fill;
+  z-index:2;pointer-events:none;}
+.skw-unprepared {position:absolute;left:8%;right:8%;bottom:9%;padding:10px 12px;color:#f7e4b8;
+  background:#081a29c9;border-radius:9px;font-size:12px;text-align:center;z-index:3;}
+.skw-sky-above {position:absolute;top:0;left:0;right:0;overflow:hidden;}
+.skw-photo-below {position:absolute;left:0;right:0;bottom:0;overflow:hidden;
+  background:#091a2b;z-index:2;border-top:2px solid rgba(228,196,140,.48);}
+.skw-photo-below img {position:absolute;inset:0;width:100%;height:100%;}
+.skw-orientation-controls {display:grid;gap:18px;padding:20px;border:1px solid #334d59;
+  border-radius:20px;background:linear-gradient(160deg,#102c3a,#0b1f2f);}
+.skw-dome-holder {min-height:166px;position:relative;}
+.skw-dome-holder .sky-dome {position:relative;top:auto;left:auto;width:100%;box-sizing:border-box;}
+.skw-orientation-copy {font-size:12px;color:#b9cfd1;line-height:1.65;margin:0;}
+.skw-compass-buttons {display:grid;grid-template-columns:repeat(4,1fr);gap:7px;border:0;margin:0;padding:0;}
+.skw-compass-buttons legend {font-size:11px;color:#dec392;margin-bottom:9px;}
+.skw-compass-buttons button {background:#244959;border:1px solid #66818e;color:#fff1d8;
+  border-radius:9px;padding:13px 5px;font-size:14px;font-weight:750;cursor:pointer;}
+.skw-compass-buttons button[aria-pressed=true],.skw-compass-buttons button:hover
+  {background:#d9ba81;color:#122c3a;border-color:#fbe3b4;}
+.skw-slider {display:grid;grid-template-columns:1fr auto;gap:8px;color:#e0e7e0;font-size:12px;}
+.skw-slider strong {color:#e4c48b;}
+.skw-slider input {grid-column:1/-1;width:100%;accent-color:#e7c38b;cursor:pointer;}
+.skw-reset {background:transparent;border:1px solid #6b8996;color:#e4ddca;
+  border-radius:10px;padding:11px;cursor:pointer;}
+@media(max-width:650px) {
+.skw-frame-rail {padding:20px 10px;min-height:250px;}
+.skw-frame {padding:7px;border-width:6px;}
+.skw-topline,.skw-footline {font-size:9px;}
+}
+@media(prefers-reduced-motion:reduce){.skw-twinkle{animation:none;}}
+
+/* Reuse Sky Lab's camera-aware pixel sky instead of a waxy CSS gradient. */
+.skw-star-atmosphere {background:#020813;pointer-events:auto;}
+.skw-star-atmosphere>.immersive-photo-sky {position:absolute;inset:0;width:100%;height:100%;display:block;
+  object-fit:cover;pointer-events:none;image-rendering:auto;z-index:0;}
+.skw-star-atmosphere>.skw-color-grade {position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.28;}
+.skw-tone-natural>.skw-color-grade {background:transparent;}
+.skw-tone-indigo>.skw-color-grade {background:linear-gradient(155deg,#24234b21,transparent 55%,#1b214811);}
+.skw-tone-teal>.skw-color-grade {background:linear-gradient(155deg,#18434f26,transparent 55%,#19494a17);}
+.skw-catalog-stars {position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:visible;}
+.skw-star-hit {cursor:pointer;outline:none;}
+.skw-catalog-stars a:focus-visible .skw-star-hit circle:first-child,
+.skw-catalog-stars a:hover .skw-star-hit circle:first-child {
+  stroke:#f1d7a2;stroke-width:1.2;stroke-opacity:.75;}
+.skw-star-light {pointer-events:none;transform-box:fill-box;transform-origin:center;}
+.skw-scintillate,.skw-major {animation:skw-photographic-scintillation ease-in-out infinite;}
+.skw-major {animation-name:skw-named-star-breathe;}
+@keyframes skw-photographic-scintillation {
+  0%,100%{opacity:1}43%{opacity:var(--twinkle-low,.95)}71%{opacity:.99}
+}
+@keyframes skw-named-star-breathe {
+  0%,100%{opacity:1;filter:brightness(1)}
+  43%{opacity:var(--twinkle-low,.88);filter:brightness(.94)}
+  71%{opacity:1;filter:brightness(1.09)}
+}
+.skw-star-name {font-size:11px;font-family:ui-sans-serif,system-ui,sans-serif;
+  fill:#f0ece5;stroke:rgba(2,8,18,.9);stroke-width:2.8px;paint-order:stroke;letter-spacing:.025em;}
+.skw-star-detail {position:absolute;z-index:6;right:10px;top:10px;width:min(285px,65%);
+  display:grid;gap:5px;background:rgba(4,17,27,.93);border:1px solid rgba(241,214,168,.7);
+  border-radius:9px;padding:12px;color:#f4e9d8;pointer-events:none;box-shadow:0 10px 30px #0007;}
+.skw-star-detail strong {font:500 21px Georgia,serif;color:#ffe0ab;}
+.skw-star-detail span {font-size:11px;line-height:1.45;color:#c8dfdc;}
+.skw-star-detail small {font-size:10px;color:#f0ddbe;}
+.skw-star-detail .skw-star-open {font-size:9px;color:#d9bc87;}
+.skw-foreground {z-index:3;}
+.skw-unprepared {z-index:4;}
+.skw-photo-below {z-index:5;}
+@media(prefers-reduced-motion:reduce){.skw-major,.skw-scintillate{animation:none;}}
+
+/* Gentle first-use perspective illustration, not an interaction-blocking modal. */
+.skw-gesture-guide {position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden;}
+.skw-gesture-track {position:absolute;left:36%;top:30%;width:28%;height:21%;
+  border:1.5px dashed #dfc58eaf;border-radius:50%;
+  transform:rotate(-17deg);box-shadow:0 0 22px #f1d29e25;}
+.skw-gesture-track::before,.skw-gesture-track::after {content:'';
+  position:absolute;top:calc(50% - 10px);font:18px sans-serif;color:#f4d49d;}
+.skw-gesture-track::before {content:'‹';left:-15px;}
+.skw-gesture-track::after {content:'›';right:-15px;}
+.skw-gesture-cursor {position:absolute;left:39%;top:35%;filter:drop-shadow(0 5px 12px #0009);
+  animation:skw-gesture-arc 4.5s ease-in-out infinite;}
+.skw-gesture-caption {position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  display:grid;gap:4px;width:min(365px,88%);text-align:center;
+  border:1px solid #e6c58e80;border-radius:12px;padding:12px 15px;
+  background:rgba(3,16,28,.89);box-shadow:0 12px 38px #0009;
+  backdrop-filter:blur(8px);font:11px/1.5 system-ui,sans-serif;color:#d4e1e0;}
+.skw-gesture-caption strong {color:#f3d6a7;font-size:13px;}
+@keyframes skw-gesture-arc {
+  0%,10%{opacity:0;transform:translate(-12px,8px)}
+  23%{opacity:1}
+  47%{transform:translate(75px,-13px)}
+  65%{opacity:1;transform:translate(92px,16px)}
+  85%,100%{opacity:0;transform:translate(92px,16px)}
+}
+@media(prefers-reduced-motion:reduce){.skw-gesture-cursor {animation:none;opacity:1;}}
+
+/* The showroom only changes the camera/presentation, not the calculated sky. */
+.skw-showroom .skw-frame-rail {perspective:1250px;min-height:440px;
+  background:radial-gradient(ellipse at 52% 32%,#40525d6f,transparent 47%),
+  linear-gradient(165deg,#0a1a28,#192c39 48%,#071420);}
+.skw-showroom .skw-frame {position:relative;transform-style:preserve-3d;
+  transform:rotateX(var(--skw-tilt-x,0deg)) rotateY(var(--skw-tilt-y,0deg));
+  transition:transform .27s cubic-bezier(.18,.74,.22,1),box-shadow .3s;
+  box-shadow:0 0 0 1px #f5d1a6,6px 11px 0 #2a1c18,14px 23px 0 #131014,
+    28px 42px 55px #000c,0 0 75px #d8c2a11b;
+  border-width:11px;border-style:solid;backface-visibility:hidden;}
+.skw-showroom .skw-frame::after {content:'';position:absolute;z-index:9;
+  inset:10px;pointer-events:none;
+  background:linear-gradient(119deg,rgba(255,255,255,.13),transparent 16%,
+    transparent 52%,rgba(255,255,255,.022) 65%,transparent 92%);
+  mix-blend-mode:screen;box-shadow:inset 0 0 22px #000a;}
+.skw-showroom .skw-artwork {box-shadow:inset 0 0 9px #0009,0 0 0 3px #191a1b;}
+.skw-showroom.skw-finish-walnut .skw-frame {border-top-color:#936743;border-left-color:#785136;
+  border-right-color:#40291d;border-bottom-color:#34251d;
+  background:repeating-linear-gradient(170deg,#6b442a,#8d613f 7px,#654026 13px);}
+.skw-showroom.skw-finish-midnight .skw-frame {border-top-color:#363f44;
+  border-left-color:#394b52;border-right-color:#151c23;border-bottom-color:#0e1920;background:#1c2830;}
+.skw-showroom.skw-finish-brass .skw-frame {border-top-color:#d9c391;
+  border-left-color:#bfa579;border-right-color:#6f5a39;border-bottom-color:#8b7149;background:#ac925c;}
+.skw-lights-off .skw-catalog-stars {opacity:.25;transition:opacity .8s ease;}
+.skw-lights-on .skw-catalog-stars {opacity:1;transition:opacity 1s ease;}
+.skw-lights-off .skw-star-atmosphere>.immersive-photo-sky {filter:saturate(.55) brightness(.82);}
+.skw-showroom .skw-artwork {cursor:default;touch-action:pan-y;}
+.skw-showroom .skw-artwork:active {cursor:default;}
+@media(prefers-reduced-motion:reduce) {.skw-showroom .skw-frame {transition:none;transform:none;}}
+
+/* Align "sky above" with the *actual* photo edges. The overall aspect
+ is photoAspect × lowerPanelFraction, so contain has zero horizontal bars. */
+.skw-frame-rail{position:relative;min-width:0;}
+.skw-frame{box-sizing:border-box;max-height:none;min-width:0;}
+.skw-sky-above,.skw-photo-below{box-sizing:border-box;width:100%;}
+.skw-sky-above .skw-star-name{font-size:8px;}
+/* Star info belongs to the outer rail, NOT the short upper sky panel.
+ This prevents tiny sky strips from inflating/clipping hover cards. */
+.skw-frame-rail>.skw-star-detail{position:absolute;z-index:15;
+  top:12px;right:12px;width:min(210px,42%);max-height:160px;
+  padding:9px 11px;gap:3px;overflow:hidden;pointer-events:none;
+  border-radius:8px;background:rgba(5,19,31,.96);
+  border-color:rgba(227,201,157,.65);box-shadow:0 8px 24px #0009;}
+.skw-frame-rail>.skw-star-detail strong{font:500 clamp(12px,1.2vw,15px)/1.2 Georgia,serif;}
+.skw-frame-rail>.skw-star-detail span{font-size:10px;line-height:1.4;}
+.skw-frame-rail>.skw-star-detail small{font-size:9px;}
+.skw-frame-rail>.skw-star-detail .skw-star-open{font-size:9px;}
+.skw-frame-rail>.skw-star-detail--compact{width:min(180px,40%);}
+.skw-frame-rail>.skw-star-detail--compact strong{font-size:13px;}
+.skw-frame-rail>.skw-star-detail--compact span{font-size:9px;}
+.skw-frame-rail>.skw-star-detail--compact .skw-star-open{display:none;}
+@media(max-width:650px){
+ .skw-frame-rail>.skw-star-detail{width:min(154px,47%);max-height:120px;
+   top:8px;right:7px;padding:7px;}
+ .skw-frame-rail>.skw-star-detail span{font-size:9px;}
+ .skw-frame-rail>.skw-star-detail small{display:none;}
+}
+
+/* Photo and star canvas occupy one physically shared width in sky-above mode.
+   An overlaid seam does not change the photo panel's height/aspect ratio. */
+.skw-artwork--above .skw-sky-above,
+.skw-artwork--above .skw-photo-below {
+  left:0;right:0;width:100%;margin:0;padding:0;border:0;box-sizing:border-box;
+}
+.skw-artwork--above .skw-sky-above {clip-path:inset(0);isolation:isolate;}
+.skw-artwork--above .skw-photo-below {border-top:0;isolation:isolate;}
+.skw-artwork--above .skw-photo-below::after {
+  content:'';position:absolute;z-index:6;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,#d3ad7550 14%,#ddb98b44 85%,transparent);
+  pointer-events:none;
+}
+.skw-artwork--above .skw-photo-below img {
+  display:block;position:absolute;inset:0;width:100%;height:100%;
+  margin:0;padding:0;max-width:none;
+}
+/* In a narrow star band, show star names as a small corner chip ONLY on hover.
+   No SVG text labels that balloon when the camera field is center-cropped. */
+.skw-artwork--above .skw-star-name {display:none;}
+.skw-frame-rail>.skw-star-detail--compact {
+  width:max-content;min-width:0;max-width:min(148px,48%);
+  max-height:none;top:8px;right:8px;padding:7px 9px;gap:2px;
+  box-sizing:border-box;border-radius:7px;pointer-events:none;
+  background:rgba(5,16,28,.88);backdrop-filter:blur(8px);
+}
+.skw-frame-rail>.skw-star-detail--compact strong{
+  font:500 11px/1.25 Georgia,serif;letter-spacing:.005em;
+}
+.skw-frame-rail>.skw-star-detail--compact small{
+  display:block;font:9px/1.3 system-ui,sans-serif;color:#d7e1d9;
+}
+@media(max-width:650px){
+  .skw-frame-rail>.skw-star-detail--compact{
+    max-width:min(130px,51%);padding:6px 8px;
+  }
+  .skw-frame-rail>.skw-star-detail--compact strong{font-size:10px;}
+  .skw-frame-rail>.skw-star-detail--compact small{font-size:8px;}
+}
