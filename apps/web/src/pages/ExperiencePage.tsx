@@ -14,6 +14,8 @@ import { resolveSampleMoment } from '../sampleLocationFallback'
 import { suggestedObserverHeading } from '../skyImmersiveData'
 import { wrapWorkshopHeading, clampWorkshopPitch } from '../skyWorkshopMath'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
+import { createCustomerPacket, downloadFile, orderPersonalization } from '../customerOrder'
+import type { OrderPreferences } from '../customerOrder'
 import './ExperiencePage.css'
 
 type Stage = 'welcome'|'detecting'|'choice'|'refine'|'moment'|'calculating'|'preview'
@@ -84,6 +86,15 @@ export function ExperiencePage() {
   const [photoFit,setPhotoFit]=useState<AbovePhotoFitMode>('fit')
   const [atmosphericGlow,setAtmosphericGlow]=useState(true)
   const [skyTone,setSkyTone]=useState<'natural'|'indigo'|'teal'>('natural')
+  const [showroom,setShowroom]=useState(false)
+  const [lightsOn,setLightsOn]=useState(true)
+  const [finish,setFinish]=useState<'walnut'|'midnight'|'brass'>('walnut')
+  const [inscription,setInscription]=useState('')
+  const [orderBusy,setOrderBusy]=useState(false)
+  const [orderError,setOrderError]=useState('')
+  const [preparedOrder,setPreparedOrder]=useState<{
+    key:string;packet:Awaited<ReturnType<typeof createCustomerPacket>>
+  }|null>(null)
   const [error,setError]=useState('')
   const [dragging,setDragging]=useState(false)
   const upload=useRef<HTMLInputElement>(null)
@@ -266,6 +277,29 @@ export function ExperiencePage() {
   const atIndex=stage==='welcome'?0:stage==='detecting'||stage==='choice'||stage==='refine'?1:
     stage==='moment'||stage==='calculating'?2:3
   const chosenName=selected?.displayName||'Your special place'
+  const orderPreferences:OrderPreferences={
+    layout:placement,heading,pitch,fov,skyHeight:skyPercent,
+    photoFit,tone:skyTone,glow:atmosphericGlow,inscription:inscription.trim(),
+  }
+  const orderKey=JSON.stringify({moment:design.moment,stars:design.stars,
+    preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl})
+  const currentOrder=preparedOrder?.key===orderKey?preparedOrder.packet:null
+  const etsyLink=(import.meta.env.VITE_ETSY_LISTING_URL as string|undefined)?.trim()
+  const verifiedEtsyLink=etsyLink&&/^https:\/\/(www\.)?etsy\.com\/(listing|shop)\//.test(etsyLink)?etsyLink:null
+
+  async function buildOrderPacket(){
+    if(!photo)return
+    const key=orderKey
+    const preferences={...orderPreferences}
+    setOrderBusy(true);setOrderError('')
+    try{
+      const packet=await createCustomerPacket({design,prefs:preferences,
+        photo,photoUrl,cutoutUrl})
+      setPreparedOrder({key,packet})
+    }catch(cause){
+      setOrderError(cause instanceof Error?cause.message:'Could not prepare your order files.')
+    }finally{setOrderBusy(false)}
+  }
 
   return <div className="at-shell">
     <div className="at-aurora" aria-hidden="true"/>
@@ -477,7 +511,18 @@ export function ExperiencePage() {
         </div>
         <div className="at-preview-grid">
           <div className="at-preview-main">
+            <div className="at-product-modes" role="group" aria-label="Preview mode">
+              <button type="button" aria-pressed={!showroom}
+                onClick={()=>setShowroom(false)}>✧ Edit the sky</button>
+              <button type="button" aria-pressed={showroom}
+                onClick={()=>{setShowroom(true);setShowPerspectiveGuide(false)}}>
+                ◈ 3D showroom</button>
+              {showroom&&<button type="button" className="at-light-switch"
+                aria-pressed={lightsOn} onClick={()=>setLightsOn(value=>!value)}>
+                {lightsOn?'✦ Lights on':'◌ Lights off'}</button>}
+            </div>
             <SkyWorkshopPreview
+              showroom={showroom} lightsOn={lightsOn} finish={finish}
               stars={design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
               layout={placement}
               imageAspect={dimensions?dimensions.width/dimensions.height:1}
@@ -488,6 +533,13 @@ export function ExperiencePage() {
               onPerspectiveInteract={()=>setShowPerspectiveGuide(false)}
               onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
               onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}/>
+            {showroom&&<div className="at-showroom-finish">
+              <span>FRAME FINISH · VISUAL SAMPLE</span>
+              {([['walnut','Warm walnut'],['midnight','Midnight'],['brass','Brass tone']] as const)
+                .map(([value,label])=><button key={value} type="button"
+                  aria-pressed={finish===value} onClick={()=>setFinish(value)}>{label}</button>)}
+              <small>Illustrative finish only; final physical options require prototype approval.</small>
+            </div>}
             <div className="at-preview-caption">
               <div><span>THE NIGHT OF {date}</span><strong>{chosenName}</strong></div>
               <div><span>REAL HIPPARCOS STARS</span><strong>{design.stars.length} plotted in the calculated sky</strong></div>
@@ -519,6 +571,49 @@ export function ExperiencePage() {
                     onClick={()=>setSkyTone(value)}>{label}</button>)}
               </fieldset>
               <small>The warm horizon glow follows your viewing angle and disappears when disabled. Stars remain calculated from the same place and moment.</small>
+            </div>
+            <div className="at-customer-order">
+              <span className="at-kicker">THE FINISHING TOUCH / YOUR KEEPSAKE</span>
+              <h2>Keep this night <em>forever.</em></h2>
+              <p>Happy with your design? Prepare a complete order packet for Etsy,
+                including the original photograph, polished foreground, and
+                a sheet showing your chosen night.</p>
+              <label htmlFor="at-order-inscription">A short inscription (optional)</label>
+              <input id="at-order-inscription" type="text" maxLength={65}
+                value={inscription} placeholder="e.g. The night our story began"
+                onChange={event=>setInscription(event.target.value)}/>
+              <button type="button" className="at-primary at-wide" disabled={orderBusy}
+                onClick={()=>void buildOrderPacket()}>
+                {orderBusy?'Preparing your keepsake…':'Prepare my order files'} <span>✦</span>
+              </button>
+              {orderError&&<p role="alert" className="at-error">{orderError}</p>}
+              {currentOrder&&<div className="at-ready-packet" role="status">
+                <div><strong>Design files ready</strong>
+                  <span className="at-order-reference">{currentOrder.manifest.reference}</span>
+                  <small>This is a file-matching reference, not a paid order.</small>
+                </div>
+                <button type="button" onClick={()=>downloadFile(currentOrder.zip,
+                  currentOrder.manifest.reference+'-maker-packet.zip')}>
+                  ↓ Download complete maker packet</button>
+                <button type="button" onClick={()=>downloadFile(currentOrder.sheet,'order-sheet.png')}>
+                  ↓ Download Etsy order sheet (PNG)</button>
+                {currentOrder.prepared&&<button type="button"
+                  onClick={()=>downloadFile(currentOrder.prepared!,'prepared-foreground.png')}>
+                  ↓ Download polished foreground (PNG)</button>}
+                <button type="button" onClick={()=>{
+                  void navigator.clipboard.writeText(orderPersonalization(currentOrder.manifest))
+                    .catch(()=>setOrderError('Copy failed. Download the order sheet instead.'))
+                }}>Copy Etsy personalization details</button>
+                {verifiedEtsyLink?<a className="at-etsy-checkout" href={verifiedEtsyLink}
+                  target="_blank" rel="noopener noreferrer">
+                  Continue to Etsy checkout ↗</a>
+                  :<p className="at-checkout-pending">
+                    Etsy checkout is not connected yet. Save your files now;
+                    no payment or order has been placed.</p>}
+                <small>Etsy accepts image uploads in its custom options. Your listing
+                  must request the order sheet and original photo, plus the
+                  polished PNG for sky-in-photo designs.</small>
+              </div>}
             </div>
             <div className="at-workshop-actions">
               <button type="button" onClick={editMoment}>✎ Change date or location</button>

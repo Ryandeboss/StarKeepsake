@@ -125,12 +125,6 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
   const grad=ctx.createLinearGradient(0,y,0,y+skyHeight)
   grad.addColorStop(0,palette[0]);grad.addColorStop(1,palette[1])
   ctx.fillStyle=grad;ctx.fillRect(x,y,w,skyHeight)
-  if(p.layout==='within'){
-    ctx.drawImage(await readImage(preparedUrl),x,y,w,h)
-  }else{
-    ctx.fillStyle='#0b1929';ctx.fillRect(x,y+skyHeight,w,h-skyHeight)
-    placePhoto(ctx,await readImage(photoUrl),x,y+skyHeight,w,h-skyHeight,p.photoFit)
-  }
   // Order sheet is illustrative; catalogue positions are camera-projected.
   const aspect=p.layout==='within'?w/h:w/skyHeight
   for(const star of design.stars){
@@ -145,6 +139,13 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
     ctx.arc(px,py,radius,0,2*Math.PI);ctx.fill()
   }
   ctx.shadowBlur=0
+  // Match the preview layer order: star field BEHIND the preserved foreground.
+  if(p.layout==='within'){
+    ctx.drawImage(await readImage(preparedUrl),x,y,w,h)
+  }else{
+    ctx.fillStyle='#0b1929';ctx.fillRect(x,y+skyHeight,w,h-skyHeight)
+    placePhoto(ctx,await readImage(photoUrl),x,y+skyHeight,w,h-skyHeight,p.photoFit)
+  }
   ctx.fillStyle='#f0d5a6';ctx.font='27px Georgia'
   ctx.fillText((p.inscription||'A night to remember').slice(0,65),90,1575)
   ctx.fillStyle='#c4d3d4';ctx.font='21px sans-serif'

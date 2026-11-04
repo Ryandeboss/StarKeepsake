@@ -306,3 +306,41 @@
 @media(prefers-reduced-motion:reduce) {
  .at-place-point-arrow,.at-place-instructions .is-current {animation:none;}
 }
+
+/* Museum-grade presentation above the manufacturing handoff. */
+.at-product-modes {display:flex;flex-wrap:wrap;gap:8px;margin:0 0 13px;}
+.at-product-modes button,.at-showroom-finish button {border:1px solid #536d7c;
+  border-radius:9px;padding:11px 14px;background:#152f41;color:#cedfdd;
+  font-size:12px;cursor:pointer;}
+.at-product-modes button[aria-pressed=true],.at-showroom-finish button[aria-pressed=true]{
+  color:#132b37;border-color:#f5dcaa;background:#ead0a0;}
+.at-product-modes .at-light-switch {margin-left:auto;}
+.at-showroom-finish {display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  margin:14px 0 0;padding:12px 15px;border:1px solid #425969;border-radius:12px;}
+.at-showroom-finish>span {font:10px ui-monospace,monospace;color:#efd3a0;
+  letter-spacing:.08em;width:100%;}
+.at-showroom-finish small {width:100%;font-size:10px;color:#9cb6bb;}
+.at-customer-order {display:grid;gap:12px;border:1px solid #ab936c;border-radius:17px;
+  padding:19px;margin-top:16px;background:linear-gradient(145deg,#243d45,#0d2431 75%);
+  box-shadow:0 15px 35px #0005;}
+.at-customer-order .at-kicker{margin:0;}
+.at-customer-order h2 {font-size:29px;margin:0;}
+.at-customer-order p {color:#bacdcf;font-size:12px;margin:0;}
+.at-customer-order label {color:#f0d8b2;font-size:11px;}
+.at-customer-order input {border:1px solid #567582;border-radius:8px;padding:11px 12px;
+  width:100%;background:#091f2e;color:#f8ece0;}
+.at-customer-order .at-primary:disabled {opacity:.55;cursor:wait;}
+.at-ready-packet {display:grid;gap:9px;margin-top:4px;padding:15px;
+  background:#102b31;border:1px solid #7ea890;border-radius:11px;}
+.at-ready-packet>div {display:grid;gap:6px;}
+.at-ready-packet strong {font-size:13px;color:#dcebd6;}
+.at-order-reference {font:bold 16px ui-monospace,monospace;color:#f0d8a8;letter-spacing:.05em;}
+.at-ready-packet small {font-size:10px;color:#b4c8cb;line-height:1.5;}
+.at-ready-packet button {border:1px solid #557b82;border-radius:8px;
+  background:#173e49;color:#e2eae2;padding:11px 12px;text-align:left;font-size:12px;}
+.at-etsy-checkout {display:block;text-align:center;text-decoration:none;
+  background:#e7ca96;color:#1a3040!important;border-radius:8px;padding:13px;font-weight:700;}
+.at-checkout-pending {color:#e4cd9e!important;font-size:11px!important;
+  background:#3f35292f;padding:12px;border:1px dashed #c5aa7590;border-radius:7px;}
+@media(max-width:680px){.at-product-modes .at-light-switch{margin-left:0;}
+  .at-customer-order{padding:14px;}}

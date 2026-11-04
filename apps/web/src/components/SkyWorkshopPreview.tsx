@@ -29,6 +29,9 @@ type Props = {
   maskAlpha?: Uint8ClampedArray | null
   maskDimensions?: { width: number; height: number } | null
   showPerspectiveGuide: boolean
+  showroom: boolean
+  lightsOn: boolean
+  finish: 'walnut'|'midnight'|'brass'
   onPerspectiveInteract: () => void
   onHeading: (next: number) => void
   onPitch: (next: number) => void
@@ -42,8 +45,10 @@ const SKY_DIRECTION_PRESETS = [
 export function SkyWorkshopPreview({
   stars, photoUrl, cutoutUrl, layout, imageAspect,
   heading, pitch, fov, skyHeight, photoFit, glow, tone, maskAlpha, maskDimensions,
-  showPerspectiveGuide, onPerspectiveInteract, onHeading, onPitch,
+  showPerspectiveGuide, showroom, lightsOn, finish,
+  onPerspectiveInteract, onHeading, onPitch,
 }: Props) {
+  const [tilt,setTilt]=useState({x:0,y:0})
   const drag = useRef<{ x:number; y:number; heading:number; pitch:number } | null>(null)
   const [hoveredHip, setHoveredHip] = useState<number | null>(null)
   const [focusedHip, setFocusedHip] = useState<number | null>(null)
@@ -69,7 +74,7 @@ export function SkyWorkshopPreview({
   const activeStar=visible.find(item=>item.star.hipparcosId===(hoveredHip??focusedHip))
 
   function start(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.button !== 0 || (event.target as Element).closest('[data-star-hit]')) return
+    if (showroom || event.button !== 0 || (event.target as Element).closest('[data-star-hit]')) return
     onPerspectiveInteract()
     drag.current = { x:event.clientX,y:event.clientY,heading,pitch }
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -81,7 +86,7 @@ export function SkyWorkshopPreview({
   }
   function stop() { drag.current = null }
   function onKeys(event: KeyboardEvent<HTMLDivElement>) {
-    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return
+    if (showroom || !['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return
     event.preventDefault()
     onPerspectiveInteract()
     if (event.key==='ArrowLeft') onHeading(wrapWorkshopHeading(heading-7))
@@ -152,12 +157,22 @@ export function SkyWorkshopPreview({
     </div>}
   </div>
 
-  return <div className="skw-workshop">
+  return <div className={`skw-workshop ${showroom?'skw-showroom':''} ${lightsOn?'skw-lights-on':'skw-lights-off'} skw-finish-${finish}`}>
     <div className="skw-topline">
       <span>YOUR NIGHT / LIVE FRAME</span>
       <span>LOOKING {Math.round(heading)}° · UP {Math.round(pitch)}°</span>
     </div>
-    <div className="skw-frame-rail">
+    <div className="skw-frame-rail"
+      onPointerMove={event=>{
+        if(!showroom||event.pointerType==='touch')return
+        const rect=event.currentTarget.getBoundingClientRect()
+        const dx=(event.clientX-rect.left)/rect.width-.5
+        const dy=(event.clientY-rect.top)/rect.height-.5
+        setTilt({x:-dy*12,y:dx*17})
+      }}
+      onPointerLeave={()=>setTilt({x:0,y:0})}
+      style={{'--skw-tilt-x':`${tilt.x.toFixed(2)}deg`,
+        '--skw-tilt-y':`${tilt.y.toFixed(2)}deg`} as CSSProperties}>
       <div className="skw-frame" style={{width:`min(100%, ${Math.max(220,Math.min(600,560*imageAspect))}px)`}}>
         <div className="skw-artwork" style={{aspectRatio:String(imageAspect)}}
           role="group" aria-label="Drag to choose which direction the sky faces"
@@ -177,7 +192,7 @@ export function SkyWorkshopPreview({
                 style={photoFitStyle(photoFit)} draggable={false}/>
             </div>
           </>}
-          {showPerspectiveGuide && <div className="skw-gesture-guide" aria-hidden="true">
+          {showPerspectiveGuide && !showroom && <div className="skw-gesture-guide" aria-hidden="true">
             <div className="skw-gesture-track"/>
             <div className="skw-gesture-cursor">
               <svg width="31" height="38" viewBox="0 0 32 39" aria-hidden="true">
@@ -196,7 +211,7 @@ export function SkyWorkshopPreview({
       </div>
     </div>
     <div className="skw-footline">
-      <span>✧ DRAG TO LOOK AROUND · HOVER FOR STAR NAMES · CLICK TO EXPLORE</span>
+      <span>{showroom?'✧ DIMENSIONAL PRODUCT MOCKUP · MOVE TO INSPECT':'✧ DRAG TO LOOK AROUND · HOVER FOR STAR NAMES · CLICK TO EXPLORE'}</span>
       <span>{visible.length} STARS IN VIEW</span>
     </div>
   </div>
