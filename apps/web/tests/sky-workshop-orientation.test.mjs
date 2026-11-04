@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { projectObserverStar } from '../src/skyImmersiveData.ts'
 import { domeWindow } from '../src/skyDomeMath.ts'
 import { wrapWorkshopHeading, clampWorkshopPitch } from '../src/skyWorkshopMath.ts'
-import { skyAboveArtworkAspect } from '../src/frameSkyBalance.ts'
+import { skyAboveArtworkAspect,skyAbovePhotoStyle } from '../src/frameSkyBalance.ts'
 
 test('workshop orientation changes the actual star projection',()=>{
   const star={azimuthDeg:90,altitudeDeg:35}
@@ -45,4 +45,18 @@ test('sky above and whole original photo always share identical left and right e
   }
   assert.throws(()=>skyAboveArtworkAspect(0,38),/aspect/)
   assert.throws(()=>skyAboveArtworkAspect(1.5,100),/percentage/)
+})
+
+test('whole-photo style reaches both sides of its photo panel in above mode',()=>{
+  assert.equal(skyAbovePhotoStyle('fit').objectFit,'cover')
+  assert.equal(skyAbovePhotoStyle('top-crop').objectFit,'cover')
+  assert.equal(skyAbovePhotoStyle('bottom-crop').objectFit,'cover')
+  // Exact lower-panel aspect: no missing horizontal pixels from contain bars.
+  for(const photoAspect of [.38,.67,1,1.5,2.8]){
+    for(const split of [20,38,50,70]){
+      const composite=skyAboveArtworkAspect(photoAspect,split)
+      const photoPanelAspect=composite/(1-split/100)
+      assert.ok(Math.abs(photoPanelAspect-photoAspect)<1e-11)
+    }
+  }
 })

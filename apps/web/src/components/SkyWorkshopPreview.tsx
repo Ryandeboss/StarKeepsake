@@ -8,7 +8,7 @@ import { NAMED_STAR_COLORS, projectObserverStar, starAppearance, starTwinkleSett
 import { starOptics } from '../skyPhotographicMath'
 import { starDisplayName, starDescription, starCatalogUrl, getStarContext } from '../starDetails'
 import { maskWorkingDimensions } from '../skyMaskMath'
-import { photoFitStyle, skyAboveArtworkAspect } from '../frameSkyBalance'
+import { skyAbovePhotoStyle, skyAboveArtworkAspect } from '../frameSkyBalance'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { wrapWorkshopHeading, clampWorkshopPitch, observerPointInPanel } from '../skyWorkshopMath'
 import './SkyWorkshopPreview.css'
@@ -145,9 +145,8 @@ export function SkyWorkshopPreview({
                 <path d={`M ${point.x} ${point.y-optics.haloRadius} V ${point.y+optics.haloRadius}`}/>
               </g>}
             </g>
-            {isMajor&&<text x={point.x+13} y={point.y-12}
+            {isMajor&&layout==='within'&&<text x={point.x+13} y={point.y-12}
               className="skw-star-name" pointerEvents="none">{starDisplayName(star)}</text>}
-            <title>{starDescription(star)}</title>
           </g>
         </a>
       })}
@@ -165,7 +164,9 @@ export function SkyWorkshopPreview({
         const rect=event.currentTarget.getBoundingClientRect()
         const dx=(event.clientX-rect.left)/rect.width-.5
         const dy=(event.clientY-rect.top)/rect.height-.5
-        setTilt({x:-dy*5,y:dx*7})
+        // A wall-mounted frame should move barely at all; just enough to
+        // reveal its depth and glass surface under a pointer.
+        setTilt({x:-dy*2.4,y:dx*3.2})
       }}
       onPointerLeave={()=>setTilt({x:0,y:0})}
       style={{'--skw-tilt-x':`${tilt.x.toFixed(2)}deg`,
@@ -173,7 +174,8 @@ export function SkyWorkshopPreview({
       <div className="skw-frame" style={{
         width:`min(100%, ${Math.max(155,Math.min(600,560*artworkAspect))}px, calc(80vh * ${artworkAspect}))`
       }}>
-        <div className="skw-artwork" style={{aspectRatio:String(artworkAspect)}}
+        <div className={`skw-artwork ${layout==='above'?'skw-artwork--above':''}`}
+          style={{aspectRatio:String(artworkAspect)}}
           role="group"
           aria-label={showroom?'Framed keepsake display in a simulated room':'Drag to choose which direction the sky faces'}
           tabIndex={showroom?-1:0} onPointerDown={start} onPointerMove={move}
@@ -189,7 +191,7 @@ export function SkyWorkshopPreview({
             <div className="skw-sky-above" style={{height:`${skyHeight}%`}}>{sky}</div>
             <div className="skw-photo-below" style={{top:`${skyHeight}%`}}>
               <img src={photoUrl} alt="Your complete original photograph below its starry sky"
-                style={photoFitStyle(photoFit)} draggable={false}/>
+                style={skyAbovePhotoStyle(photoFit)} draggable={false}/>
             </div>
           </>}
           {showPerspectiveGuide && !showroom && <div className="skw-gesture-guide" aria-hidden="true">
@@ -212,9 +214,13 @@ export function SkyWorkshopPreview({
       {activeStar&&<div className={`skw-star-detail ${layout==='above'?'skw-star-detail--compact':''}`}
         role="status" aria-live="polite">
         <strong>{starDisplayName(activeStar.star)}</strong>
-        <span>{getStarContext(activeStar.star).summary}</span>
-        <small>Magnitude {activeStar.star.magnitude.toFixed(2)} · Altitude {activeStar.star.altitudeDeg.toFixed(1)}°</small>
-        <span className="skw-star-open">Select the star to open its astronomical catalogue entry ↗</span>
+        {layout==='above'
+          ?<small>Mag. {activeStar.star.magnitude.toFixed(1)} · Click to explore ↗</small>
+          :<>
+            <span>{getStarContext(activeStar.star).summary}</span>
+            <small>Magnitude {activeStar.star.magnitude.toFixed(2)} · Altitude {activeStar.star.altitudeDeg.toFixed(1)}°</small>
+            <span className="skw-star-open">Select the star to open its astronomical catalogue entry ↗</span>
+          </>}
       </div>}
     </div>
     <div className="skw-footline">

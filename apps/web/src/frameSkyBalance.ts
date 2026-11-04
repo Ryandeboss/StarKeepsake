@@ -67,3 +67,15 @@ export function skyAboveArtworkAspect(
     throw new Error('Invalid percentage for the separate sky.')
   return photoAspect*(1-skyPercent/100)
 }
+
+/** For sky-above mode the lower photograph panel is mathematically the exact
+ * photo ratio. Make its image fill that panel edge-to-edge even when CSS
+ * border rounding creates a fractional pixel difference. "Whole photo" still
+ * shows the entire source image because the panel and photo share an aspect.
+ */
+export function skyAbovePhotoStyle(mode:AbovePhotoFitMode):{
+  objectFit:'contain'|'cover'|'fill';objectPosition:string
+}{
+  const style=photoFitStyle(mode)
+  return mode==='fit'?{...style,objectFit:'cover'}:style
+}

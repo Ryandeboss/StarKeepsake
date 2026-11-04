@@ -174,3 +174,43 @@
  .skw-frame-rail>.skw-star-detail span{font-size:9px;}
  .skw-frame-rail>.skw-star-detail small{display:none;}
 }
+
+/* Photo and star canvas occupy one physically shared width in sky-above mode.
+   An overlaid seam does not change the photo panel's height/aspect ratio. */
+.skw-artwork--above .skw-sky-above,
+.skw-artwork--above .skw-photo-below {
+  left:0;right:0;width:100%;margin:0;padding:0;border:0;box-sizing:border-box;
+}
+.skw-artwork--above .skw-sky-above {clip-path:inset(0);isolation:isolate;}
+.skw-artwork--above .skw-photo-below {border-top:0;isolation:isolate;}
+.skw-artwork--above .skw-photo-below::after {
+  content:'';position:absolute;z-index:6;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,#d3ad7550 14%,#ddb98b44 85%,transparent);
+  pointer-events:none;
+}
+.skw-artwork--above .skw-photo-below img {
+  display:block;position:absolute;inset:0;width:100%;height:100%;
+  margin:0;padding:0;max-width:none;
+}
+/* In a narrow star band, show star names as a small corner chip ONLY on hover.
+   No SVG text labels that balloon when the camera field is center-cropped. */
+.skw-artwork--above .skw-star-name {display:none;}
+.skw-frame-rail>.skw-star-detail--compact {
+  width:max-content;min-width:0;max-width:min(148px,48%);
+  max-height:none;top:8px;right:8px;padding:7px 9px;gap:2px;
+  box-sizing:border-box;border-radius:7px;pointer-events:none;
+  background:rgba(5,16,28,.88);backdrop-filter:blur(8px);
+}
+.skw-frame-rail>.skw-star-detail--compact strong{
+  font:500 11px/1.25 Georgia,serif;letter-spacing:.005em;
+}
+.skw-frame-rail>.skw-star-detail--compact small{
+  display:block;font:9px/1.3 system-ui,sans-serif;color:#d7e1d9;
+}
+@media(max-width:650px){
+  .skw-frame-rail>.skw-star-detail--compact{
+    max-width:min(130px,51%);padding:6px 8px;
+  }
+  .skw-frame-rail>.skw-star-detail--compact strong{font-size:10px;}
+  .skw-frame-rail>.skw-star-detail--compact small{font-size:8px;}
+}
