@@ -505,3 +505,27 @@
 @media(max-width:1120px){
   .at-home-layout{grid-template-columns:1fr;}
 }
+
+/* Chroma-key photo plates: the frame is no longer fabricated from CSS.
+   Make room options read like an elegant photographed interior selection. */
+.at-home-choice-list{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;
+}
+.at-home-choice-list button{
+  min-width:0;display:flex;align-items:center;justify-content:flex-start;
+  gap:8px;text-align:left;
+  background:#172d37;border-color:#3d5966;min-height:47px;
+}
+.at-home-choice-list button[aria-pressed=true]{
+  color:#f4dfb9;background:#284250;border-color:#e2c58e;
+  box-shadow:inset 0 0 0 1px #c1a37035,0 4px 15px #0003;
+}
+.at-home-choice-list button span{flex:none;margin:0;}
+.at-home-wood-options button{border-radius:8px;background:#142731;}
+.at-home-wood-options button[aria-pressed=true]{
+  color:#efddc1;border-color:#e1be81;box-shadow:0 0 0 2px #e1be8166;
+}
+.at-home-render-note{line-height:1.7;}
+@media(max-width:650px){
+  .at-home-choice-list{grid-template-columns:repeat(2,minmax(0,1fr));}
+}

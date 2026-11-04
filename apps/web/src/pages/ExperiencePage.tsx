@@ -6,6 +6,7 @@ import { SkyMaskEditor } from '../components/SkyMaskEditor'
 import { SkyWorkshopPreview, SkyWorkshopOrientation } from '../components/SkyWorkshopPreview'
 import { HomeShowroom } from '../components/HomeShowroom'
 import { ROOM_OPTIONS, WOOD_OPTIONS } from '../components/HomeShowroomOptions'
+import type { RoomScene } from '../components/HomeShowroomOptions'
 import { detectWorkshopSky } from '../skyBlend'
 import type { WorkshopDetection } from '../skyBlend'
 import { FULL_PHOTO_CROP } from '../photoCrop'
@@ -92,7 +93,7 @@ export function ExperiencePage() {
   const [skyTone,setSkyTone]=useState<'natural'|'indigo'|'teal'>('natural')
   const [lightsOn,setLightsOn]=useState(true)
   const [finish,setFinish]=useState<'walnut'|'oak'|'ebony'>('walnut')
-  const [room,setRoom]=useState<'warm'|'modern'|'gallery'>('warm')
+  const [room,setRoom]=useState<RoomScene>('warm')
   const [inscription,setInscription]=useState('')
   const [orderBusy,setOrderBusy]=useState(false)
   const [orderError,setOrderError]=useState('')
@@ -575,7 +576,13 @@ export function ExperiencePage() {
               finishes and see how your stars could illuminate a room.</p>
           </div>
           <button type="button" className="at-primary"
-            onClick={()=>{setStage('home');window.scrollTo({top:0,behavior:'smooth'})}}>
+            onClick={()=>{
+              if(dimensions&&dimensions.width/dimensions.height<.82&&room==='warm'){
+                setRoom('portrait')
+              }
+              setStage('home')
+              window.scrollTo({top:0,behavior:'smooth'})
+            }}>
             See my keepsake in a room <span>↗</span>
           </button>
         </div>
@@ -623,11 +630,13 @@ export function ExperiencePage() {
                 <legend><span>02</span> Find your frame finish</legend>
                 <div className="at-home-wood-options">{WOOD_OPTIONS.map(choice=>
                   <button type="button" key={choice.id} aria-pressed={finish===choice.id}
-                    onClick={()=>setFinish(choice.id)}>
+                    onClick={()=>{setFinish(choice.id);setRoom(choice.scene)}}>
                     <i className={`at-home-wood-swatch at-swatch-${choice.id}`} aria-hidden="true"/>
                     <strong>{choice.label}</strong>
                   </button>)}</div>
-                <small>Finish colors are digital samples, not finalized materials or stock.</small>
+                <small>Choose a finish to see its photographed studio frame.
+                  Room scenes retain the frame color shown in each original image.
+                  Actual materials and stock will be confirmed after prototyping.</small>
               </fieldset>
               <div className="at-home-lighting">
                 <div><span className="at-home-control-kicker">03 / LIGHT THE STARS</span>
@@ -638,10 +647,11 @@ export function ExperiencePage() {
                 </button>
               </div>
             </div>
-            <p className="at-home-render-note">Your actual customized frame,
-              staged over licensed interior photography for inspiration.
-              This is not a photo of a manufactured product, an exact-scale
-              placement, or camera-based AR. Final wood, lighting and size
+            <p className="at-home-render-note">Your calculated stars and photograph
+              are composited into AI-generated photographic frame and room studies.
+              These are visual mockups—not real product photographs, verified
+              physical materials, exact-scale placement or camera-based AR.
+              Final wood, lighting and size
               depend on a tested physical prototype.</p>
           </div>
           <aside className="at-home-right">

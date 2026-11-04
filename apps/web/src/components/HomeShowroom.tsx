@@ -1,62 +1,130 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ROOM_OPTIONS } from './HomeShowroomOptions'
+import { SHOWROOM_PLATES } from './HomeShowroomOptions'
 import type { RoomScene } from './HomeShowroomOptions'
+import { artworkFit, quadAspect, sceneQuadMatrix } from '../showroomProjection'
+import { removeGreenScreen } from '../showroomMatte'
 import './HomeShowroom.css'
 
-const SCENES:Record<RoomScene,{url:string;photographer:string;credit:string}> = {
-  warm:{
-    url:'https://images.unsplash.com/photo-1585128792020-803d29415281?auto=format&fit=crop&w=1800&q=82',
-    photographer:'Julia / Beazy',
-    credit:'https://unsplash.com/photos/minimalist-living-room-with-wooden-sideboard-aX1TTOuq83M',
-  },
-  modern:{
-    url:'https://images.unsplash.com/photo-1560448204-603b3fc33ddc?auto=format&fit=crop&w=1800&q=82',
-    photographer:'Francesca Tosolini',
-    credit:'https://unsplash.com/photos/empty-living-room-KJFKCed0YKo',
-  },
-  gallery:{
-    url:'https://images.unsplash.com/photo-1773754532196-014342510e64?auto=format&fit=crop&w=1800&q=82',
-    photographer:'Clay Banks',
-    credit:'https://unsplash.com/photos/modern-living-room-with-stylish-furniture-and-large-windows-FL-ZcDK8tMo',
-  },
-}
-
-/** The frame is the actual live astronomy preview superimposed over
- * licensed editorial interiors. This is product staging, not AR or a photo
- * of the customer's own room. */
-export function HomeShowroom({room,imageAspect,lightsOn,children}:{
+type Props={
   room:RoomScene;imageAspect:number;lightsOn:boolean;children:ReactNode
-}) {
-  const [closeView,setCloseView]=useState(false)
-  const [roomPhotoAvailable,setRoomPhotoAvailable]=useState(true)
-  const scene=SCENES[room]
-  const title=ROOM_OPTIONS.find(x=>x.id===room)?.label??'Living room'
-  const aspect=Number.isFinite(imageAspect)?Math.max(.10,Math.min(3,imageAspect)):1
-  const frameWidth=Math.max(90,Math.min(320,345*aspect))
-  return <div className={`hsh-room hsh-room--${room} ${lightsOn?'hsh-room--evening':'hsh-room--day'} ${closeView?'hsh-room--closer':''}`}
-    role="group" aria-label={`Your customized keepsake staged in a photographic ${title.toLowerCase()}`}>
-    <img key={room} className="hsh-room-photo" src={scene.url}
-      alt="" loading="eager" decoding="async" draggable={false}
-      onLoad={()=>setRoomPhotoAvailable(true)}
-      onError={()=>setRoomPhotoAvailable(false)}/>
-    <div className="hsh-room-shading" aria-hidden="true"/>
-    {!roomPhotoAvailable&&<div className="hsh-photo-unavailable" role="status">
-      The room photograph could not load. Your framed design is still available.
-    </div>}
-    <div className="hsh-artwork" style={{width:`min(45%, ${Math.round(frameWidth)}px)`}}>
-      {children}
+}
+type LoadedPlate={id:RoomScene;url:string}
+
+/** Chroma-key only the photographic green insert, retaining all physical
+ * wood edges, real mat board, natural wall shadows and image perspective.
+ * The user's live React star field is rendered BELOW the photographic plate.
+ * No uploaded customer image is sent to an external image-processing API.
+ */
+export function HomeShowroom({room,imageAspect,lightsOn,children}:Props){
+  const scene=SHOWROOM_PLATES[room]
+  const shell=useRef<HTMLDivElement>(null)
+  const [size,setSize]=useState({width:0,height:0})
+  const [loaded,setLoaded]=useState<LoadedPlate|null>(null)
+  const [failure,setFailure]=useState<RoomScene|null>(null)
+  const [closer,setCloser]=useState(false)
+  const [glass,setGlass]=useState(true)
+
+  useEffect(()=>{
+    const node=shell.current
+    if(!node)return
+    const update=()=>{
+      const width=node.clientWidth,height=node.clientHeight
+      setSize(prev=>Math.abs(prev.width-width)<.5&&Math.abs(prev.height-height)<.5
+        ?prev:{width,height})
+    }
+    const observer=new ResizeObserver(update)
+    observer.observe(node)
+    update()
+    return ()=>observer.disconnect()
+  },[])
+
+  useEffect(()=>{
+    let dead=false
+    let currentBlob:string|null=null
+    const image=new Image()
+    image.onload=()=>{
+      try {
+        const canvas=document.createElement('canvas')
+        canvas.width=image.naturalWidth
+        canvas.height=image.naturalHeight
+        const ctx=canvas.getContext('2d',{willReadFrequently:true})
+        if(!ctx)throw new Error('Could not initialize studio preview.')
+        ctx.drawImage(image,0,0)
+        const pixels=ctx.getImageData(0,0,canvas.width,canvas.height)
+        pixels.data.set(removeGreenScreen(pixels.data,canvas.width,canvas.height))
+        ctx.putImageData(pixels,0,0)
+        canvas.toBlob(blob=>{
+          if(!blob||dead){
+            if(!dead)setFailure(room)
+            return
+          }
+          currentBlob=URL.createObjectURL(blob)
+          setLoaded({id:room,url:currentBlob})
+        },'image/png')
+      }catch{
+        if(!dead)setFailure(room)
+      }
+    }
+    image.onerror=()=>{if(!dead)setFailure(room)}
+    image.src=scene.path
+    return ()=>{
+      dead=true
+      image.onload=null
+      image.onerror=null
+      if(currentBlob)URL.revokeObjectURL(currentBlob)
+    }
+  },[room,scene.path])
+
+  const fitted=artworkFit(imageAspect,quadAspect(scene.quad,scene.width,scene.height))
+  const plateReady=loaded?.id===room
+  const failed=failure===room
+  const matrix=sceneQuadMatrix(scene.quad,size.width,size.height)
+
+  return <div ref={shell}
+    className={`hsh-room ${closer?'hsh-room--closer':''} ${lightsOn?'hsh-room--night':''}`}
+    style={{aspectRatio:`${scene.width}/${scene.height}`}}
+    role="group" aria-label={`Your custom StarKeepsake shown in the ${scene.label.toLowerCase()} photo mockup`}>
+    <div className="hsh-world">
+      {plateReady && <div className="hsh-projected-art"
+        style={{transform:matrix,visibility:matrix==='none'?'hidden':'visible'}}>
+        <div className="hsh-opening-matte">
+          <div className="hsh-user-art" style={{
+            width:`${fitted.widthPercent}%`,
+            height:`${fitted.heightPercent}%`,
+          }}>{children}</div>
+          {glass&&<div className="hsh-glass" aria-hidden="true"/>}
+        </div>
+      </div>}
+      {plateReady&&<img className="hsh-host-photo" src={loaded.url}
+        alt="" draggable={false}/>}
+      {!plateReady&&<div className="hsh-loading" role="status">
+        {failed?'This scene could not load. Try another frame photograph.':
+          'Preparing your photographic frame…'}
+      </div>}
+      <div className="hsh-photo-grade" aria-hidden="true"/>
     </div>
-    <div className="hsh-scene-toolbar">
-      <span>STUDIO / {title.toUpperCase()}</span>
-      <button type="button" aria-pressed={closeView}
-        onClick={()=>setCloseView(value=>!value)}>
-        {closeView?'↙ Full room':'↗ Closer view'}
-      </button>
+
+    <div className="hsh-scene-controls">
+      <span className="hsh-scene-id"><i/>{scene.category==='studio'?'FRAME DETAIL':'IN A ROOM'} · {scene.label}</span>
+      <div className="hsh-control-actions">
+        <button type="button" aria-pressed={glass} onClick={()=>setGlass(v=>!v)}
+          title="Show or hide subtle glass reflections">
+          {glass?'✧ Glass on':'✧ Glass off'}
+        </button>
+        <button type="button" aria-pressed={closer} onClick={()=>setCloser(v=>!v)}>
+          {closer?'↙ Room view':'↗ Closer'}
+        </button>
+      </div>
     </div>
-    <span className="hsh-scene-hint">{lightsOn?'EVENING · STARS ILLUMINATED':'DAYLIGHT · STARS AT REST'}</span>
-    <a className="hsh-photo-credit" href={scene.credit} target="_blank" rel="noopener noreferrer">
-      Interior photo: {scene.photographer} / Unsplash
-    </a>
+    <span className="hsh-light-state">
+      {lightsOn?'✦ STARS ILLUMINATED':'○ LIGHTS AT REST'}
+    </span>
+    <span className="hsh-production-note">
+      AI-generated room / frame study · Digital product visualization
+    </span>
+    {fitted.letterboxed&&<span className="hsh-mat-hint">
+      Artwork fitted without cropping or stretching
+    </span>}
   </div>
 }

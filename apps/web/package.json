@@ -27,7 +27,8 @@
     "test:photo-sky-layout": "node --experimental-strip-types --test tests/photo-sky-layout.test.mjs",
     "test:experience": "node --experimental-strip-types --test tests/frame-experience.test.mjs",
     "test:workshop": "node --experimental-strip-types --test tests/sky-workshop-orientation.test.mjs",
-    "test:orders": "node --experimental-strip-types --test tests/customer-order.test.mjs"
+    "test:orders": "node --experimental-strip-types --test tests/customer-order.test.mjs",
+    "test:showroom": "node --experimental-strip-types --test tests/showroom-plates.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
