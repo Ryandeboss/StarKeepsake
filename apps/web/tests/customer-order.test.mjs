@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {orderReference,makeOrderManifest,orderPersonalization,zipFiles}
-  from '../src/customerOrder.ts'
+  from '../src/orderManifest.ts'
 import {INITIAL_DESIGN_SPEC} from '../src/designSpec.ts'
 const prefs={layout:'above',heading:180,pitch:18,fov:105,skyHeight:38,
   photoFit:'fit',tone:'natural',glow:true,inscription:'Our first night'}
