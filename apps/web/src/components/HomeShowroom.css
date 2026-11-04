@@ -51,19 +51,19 @@
 .hsh-artwork .skw-showroom.skw-finish-walnut .skw-frame{
   background:
     linear-gradient(145deg,#b8875444,#24130a57),
-    url('https://images.unsplash.com/photo-1678794792916-e5cb1217bed1?auto=format&fit=crop&w=720&q=82') center/cover,
+    url('https://images.unsplash.com/photo-1621295693450-080546d2ec8e?auto=format&fit=crop&w=720&q=82') center/cover,
     #67442c;
 }
 .hsh-artwork .skw-showroom.skw-finish-oak .skw-frame{
   background:
     linear-gradient(145deg,#fff5c53d,#71532736),
-    url('https://images.unsplash.com/photo-1763392199003-27cee33bae31?auto=format&fit=crop&w=720&q=82') center/cover,
+    url('https://images.unsplash.com/photo-1688274165311-15de2165d686?auto=format&fit=crop&w=720&q=82') center/cover,
     #c5a477;
 }
 .hsh-artwork .skw-showroom.skw-finish-ebony .skw-frame{
   background:
     linear-gradient(145deg,#2a34369e,#090e0dd1),
-    url('https://images.unsplash.com/photo-1732505385271-0e1fbad47bf1?auto=format&fit=crop&w=720&q=82') center/cover,
+    url('https://images.unsplash.com/photo-1771150539043-9e6bc0cabd56?auto=format&fit=crop&w=720&q=82') center/cover,
     #252a29;
 }
 .hsh-scene-label,.hsh-scene-hint,.hsh-photo-credit{
@@ -159,19 +159,19 @@
 .hsh-artwork .skw-showroom.skw-finish-walnut .skw-frame{
   background:
     linear-gradient(120deg,#f4dfbf20,transparent 33%,#120d0b8b) border-box,
-    url('https://images.unsplash.com/photo-1678794792916-e5cb1217bed1?auto=format&fit=crop&w=720&q=86') center/cover border-box,
+    url('https://images.unsplash.com/photo-1621295693450-080546d2ec8e?auto=format&fit=crop&w=720&q=86') center/cover border-box,
     #5c3a27;
 }
 .hsh-artwork .skw-showroom.skw-finish-oak .skw-frame{
   background:
     linear-gradient(119deg,#fff5d637,transparent 35%,#5b3a2696) border-box,
-    url('https://images.unsplash.com/photo-1763392199003-27cee33bae31?auto=format&fit=crop&w=720&q=86') center/cover border-box,
+    url('https://images.unsplash.com/photo-1688274165311-15de2165d686?auto=format&fit=crop&w=720&q=86') center/cover border-box,
     #c4a16e;
 }
 .hsh-artwork .skw-showroom.skw-finish-ebony .skw-frame{
   background:
     linear-gradient(115deg,#cdd0c51a,transparent 28%,#0b1313b0) border-box,
-    url('https://images.unsplash.com/photo-1732505385271-0e1fbad47bf1?auto=format&fit=crop&w=720&q=86') center/cover border-box,
+    url('https://images.unsplash.com/photo-1771150539043-9e6bc0cabd56?auto=format&fit=crop&w=720&q=86') center/cover border-box,
     #292b2a;
 }
 /* Keep wood visible as a real-textured thin border, not a huge waxy bevel. */

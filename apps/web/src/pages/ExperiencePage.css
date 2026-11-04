@@ -456,13 +456,13 @@
 /* Real grain photographs, not repeating CSS stripes, on choice swatches. */
 .at-swatch-walnut{
   background:linear-gradient(130deg,#ddba8a23,#1e100a4d),
-  url('https://images.unsplash.com/photo-1678794792916-e5cb1217bed1?auto=format&fit=crop&w=480&q=75') center/cover,#79543c;}
+  url('https://images.unsplash.com/photo-1621295693450-080546d2ec8e?auto=format&fit=crop&w=480&q=75') center/cover,#79543c;}
 .at-swatch-oak{
   background:linear-gradient(120deg,#fff9d11f,#68513620),
-  url('https://images.unsplash.com/photo-1763392199003-27cee33bae31?auto=format&fit=crop&w=480&q=75') center/cover,#c9ab78;}
+  url('https://images.unsplash.com/photo-1688274165311-15de2165d686?auto=format&fit=crop&w=480&q=75') center/cover,#c9ab78;}
 .at-swatch-ebony{
   background:linear-gradient(135deg,#22292b96,#080c0fba),
-  url('https://images.unsplash.com/photo-1732505385271-0e1fbad47bf1?auto=format&fit=crop&w=480&q=75') center/cover,#252727;}
+  url('https://images.unsplash.com/photo-1771150539043-9e6bc0cabd56?auto=format&fit=crop&w=480&q=75') center/cover,#252727;}
 
 /* Showroom should resemble an editorial architecture portfolio rather
    than a compact product configurator. The photograph leads; controls follow. */
@@ -485,19 +485,19 @@
 .at-swatch-walnut{
   background:
     linear-gradient(106deg,rgba(255,238,203,.14),rgba(20,12,9,.18)),
-    url('https://images.unsplash.com/photo-1678794792916-e5cb1217bed1?auto=format&fit=crop&w=520&q=86') center/cover,
+    url('https://images.unsplash.com/photo-1621295693450-080546d2ec8e?auto=format&fit=crop&w=520&q=86') center/cover,
     #755138;
 }
 .at-swatch-oak{
   background:
     linear-gradient(104deg,rgba(255,242,201,.15),rgba(77,52,29,.12)),
-    url('https://images.unsplash.com/photo-1763392199003-27cee33bae31?auto=format&fit=crop&w=520&q=86') center/cover,
+    url('https://images.unsplash.com/photo-1688274165311-15de2165d686?auto=format&fit=crop&w=520&q=86') center/cover,
     #c8aa77;
 }
 .at-swatch-ebony{
   background:
     linear-gradient(104deg,rgba(109,122,119,.10),rgba(4,9,10,.48)),
-    url('https://images.unsplash.com/photo-1732505385271-0e1fbad47bf1?auto=format&fit=crop&w=520&q=86') center/cover,
+    url('https://images.unsplash.com/photo-1771150539043-9e6bc0cabd56?auto=format&fit=crop&w=520&q=86') center/cover,
     #343b39;
 }
 .at-home-heading h1{letter-spacing:-.045em;}
