@@ -2,7 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {orderReference,makeOrderManifest,orderPersonalization,zipFiles}
   from '../src/orderManifest.ts'
-import {INITIAL_DESIGN_SPEC} from '../src/designSpec.ts'
+// Fixture avoids runtime dependencies on the React/Vite-only designSpec module.
+const INITIAL_DESIGN_SPEC={
+  schemaVersion:'1.5',designId:'test',photoAspectRatio:1,
+  physicalArtwork:{widthMm:279.4,heightMm:355.6,units:'mm',origin:'top-left'},
+  moment:{date:'2024-07-04',time:'21:00',location:{displayName:'Chicago'}},
+  customText:{value:'',align:'center'},
+  stars:[{hipparcosId:1,altitudeDeg:30,azimuthDeg:95,magnitude:1}],
+}
 const prefs={layout:'above',heading:180,pitch:18,fov:105,skyHeight:38,
   photoFit:'fit',tone:'natural',glow:true,inscription:'Our first night'}
 test('reference identifies exact design and photo bytes, deterministically',async()=>{
