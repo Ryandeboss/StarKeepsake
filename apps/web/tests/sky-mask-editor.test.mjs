@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   colorRegion, changeRegionAlpha, paintAlphaLine,
   fillMaskPolygon, getAlpha, composeSkyCutout, maskWorkingDimensions,
-  decontaminateWhiteFringe,
+  decontaminateWhiteFringe, refineThinBranchFringes,
 } from '../src/skyMaskMath.ts'
 import { maskWhiteSkyPixels } from '../src/skyCutout.ts'
 
@@ -190,4 +190,45 @@ test('AI horizon avoids misclassified dark leaves and leaves a safety buffer',()
   assert.equal(mask[18*w+15],0,'AI false positives inside a dark tree stay opaque')
   assert.equal(mask[11*w+10],0,'a few pixels beside branches stay protected')
   assert.equal(mask[2*w+4],1,'open sky away from foreground remains clear')
+})
+
+test('thin opaque tree halos are darkened, including twigs with no inward pixel along the normal',()=>{
+  const w=9,h=9
+  const original=new Uint8ClampedArray(w*h*4)
+  const a=new Uint8ClampedArray(w*h)
+  for(let i=0;i<w*h;i++)original.set([235,240,245,255],i*4)
+  // Dark, narrow twig, surrounded by manually removed sky.
+  original.set([42,52,39,255],(4*w+4)*4)
+  a[4*w+4]=255
+  original.set([247,244,239,255],(3*w+4)*4)
+  a[3*w+4]=255
+  const result=refineThinBranchFringes(original,original,a,w,h)
+  assert.ok(result[(3*w+4)*4]<200,'sky-spill on an opaque white twig is decontaminated')
+  assert.equal(result[(4*w+4)*4],42,'actual branch core stays untouched')
+  assert.equal(result[(3*w+4)*4+3],247,'heavily contaminated edge softly feathers')
+})
+test('solid light building with bright interior remains unchanged',()=>{
+  const w=9,h=8
+  const original=new Uint8ClampedArray(w*h*4)
+  const a=new Uint8ClampedArray(w*h)
+  for(let i=0;i<w*h;i++)original.set([235,241,247,255],i*4)
+  for(let y=2;y<h;y++)for(let x=2;x<7;x++)a[y*w+x]=255
+  original.set([40,47,55,255],(2*w+7)*4) // a nearby dark tree/structure
+  a[2*w+7]=255
+  const result=refineThinBranchFringes(original,original,a,w,h)
+  assert.equal(result[(2*w+4)*4],235,'top building edge has bright backing')
+  assert.equal(result[(5*w+4)*4],235,'building interior untouched')
+})
+test('manual restored regions cannot be recolored by the thin-branch pass',()=>{
+  const w=5,h=5
+  const original=new Uint8ClampedArray(w*h*4)
+  const a=new Uint8ClampedArray(w*h)
+  for(let i=0;i<w*h;i++)original.set([230,235,240,255],i*4)
+  original.set([30,40,50,255],(2*w+2)*4)
+  a[2*w+2]=255
+  a[1*w+2]=255
+  const auto=new Uint8ClampedArray(original)
+  auto[(1*w+2)*4+3]=0
+  const corrected=refineThinBranchFringes(original,original,a,w,h,auto)
+  assert.equal(corrected[(1*w+2)*4],230,'restored original edge not recolored')
 })

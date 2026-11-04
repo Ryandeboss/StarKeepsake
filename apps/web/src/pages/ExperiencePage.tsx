@@ -67,6 +67,8 @@ export function ExperiencePage() {
   const [placement,setPlacement]=useState<Placement>('within')
   const [cutoutUrl,setCutoutUrl]=useState('')
   const [savedAlpha,setSavedAlpha]=useState<Uint8ClampedArray|null>(null)
+  const [showPolishGuide,setShowPolishGuide]=useState(true)
+  const [showPerspectiveGuide,setShowPerspectiveGuide]=useState(true)
   const [date,setDate]=useState('')
   const [time,setTime]=useState('21:00')
   const [unknownTime,setUnknownTime]=useState(false)
@@ -435,8 +437,10 @@ export function ExperiencePage() {
               heading={heading} pitch={pitch} fov={fov} skyHeight={skyPercent}
               photoFit={photoFit} glow={atmosphericGlow} tone={skyTone}
               maskAlpha={savedAlpha} maskDimensions={dimensions}
-              onHeading={v=>setHeading(wrapWorkshopHeading(v))}
-              onPitch={v=>setPitch(clampWorkshopPitch(v))}/>
+              showPerspectiveGuide={showPerspectiveGuide}
+              onPerspectiveInteract={()=>setShowPerspectiveGuide(false)}
+              onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
+              onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}/>
             <div className="at-preview-caption">
               <div><span>THE NIGHT OF {date}</span><strong>{chosenName}</strong></div>
               <div><span>REAL HIPPARCOS STARS</span><strong>{design.stars.length} plotted in the calculated sky</strong></div>
@@ -453,10 +457,10 @@ export function ExperiencePage() {
           <div className="at-preview-sidebar">
             <div className="at-side-heading"><span className="at-kicker">THE PERSPECTIVE</span><h2>Which way<br/><em>were you facing?</em></h2></div>
             <SkyWorkshopOrientation heading={heading} pitch={pitch} fov={fov}
-              onHeading={v=>setHeading(wrapWorkshopHeading(v))}
-              onPitch={v=>setPitch(clampWorkshopPitch(v))}
-              onFov={setFov}
-              onReset={()=>{setHeading(wrapWorkshopHeading(suggestedObserverHeading(design.stars)));setPitch(18);setFov(105)}}/>
+              onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
+              onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}
+              onFov={v=>{setShowPerspectiveGuide(false);setFov(v)}}
+              onReset={()=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(suggestedObserverHeading(design.stars)));setPitch(18);setFov(105)}}/>
             <div className="at-sky-atmosphere-controls">
               <span className="at-kicker">LIGHT & ATMOSPHERE</span>
               <label className="at-glow-choice"><input type="checkbox" checked={atmosphericGlow}
@@ -485,6 +489,7 @@ export function ExperiencePage() {
     <footer className="at-footer"><span>✳ STARKEEPSAKE</span><span>THE BEAUTY OF A NIGHT, HELD FOREVER.</span><span>PERSONAL SKY ATELIER · PREVIEW</span></footer>
     {stage==='refine'&&photo&&<SkyMaskEditor key={photoUrl} file={photo}
       initialMask={savedAlpha} detectedMask={detected}
+      showPolishGuide={showPolishGuide} onDismissPolishGuide={()=>setShowPolishGuide(false)}
       onApply={saveMask} onClose={()=>setStage('choice')}/>}
     <input ref={upload} type="file" accept="image/jpeg,image/png,image/webp"
       className="at-hidden-file" aria-label="Upload your photograph"

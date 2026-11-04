@@ -90,3 +90,29 @@
 .skw-unprepared {z-index:4;}
 .skw-photo-below {z-index:5;}
 @media(prefers-reduced-motion:reduce){.skw-major,.skw-scintillate{animation:none;}}
+
+/* Gentle first-use perspective illustration, not an interaction-blocking modal. */
+.skw-gesture-guide {position:absolute;inset:0;pointer-events:none;z-index:8;overflow:hidden;}
+.skw-gesture-track {position:absolute;left:36%;top:30%;width:28%;height:21%;
+  border:1.5px dashed #dfc58eaf;border-radius:50%;
+  transform:rotate(-17deg);box-shadow:0 0 22px #f1d29e25;}
+.skw-gesture-track::before,.skw-gesture-track::after {content:'';
+  position:absolute;top:calc(50% - 10px);font:18px sans-serif;color:#f4d49d;}
+.skw-gesture-track::before {content:'‹';left:-15px;}
+.skw-gesture-track::after {content:'›';right:-15px;}
+.skw-gesture-cursor {position:absolute;left:39%;top:35%;filter:drop-shadow(0 5px 12px #0009);
+  animation:skw-gesture-arc 4.5s ease-in-out infinite;}
+.skw-gesture-caption {position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  display:grid;gap:4px;width:min(365px,88%);text-align:center;
+  border:1px solid #e6c58e80;border-radius:12px;padding:12px 15px;
+  background:rgba(3,16,28,.89);box-shadow:0 12px 38px #0009;
+  backdrop-filter:blur(8px);font:11px/1.5 system-ui,sans-serif;color:#d4e1e0;}
+.skw-gesture-caption strong {color:#f3d6a7;font-size:13px;}
+@keyframes skw-gesture-arc {
+  0%,10%{opacity:0;transform:translate(-12px,8px)}
+  23%{opacity:1}
+  47%{transform:translate(75px,-13px)}
+  65%{opacity:1;transform:translate(92px,16px)}
+  85%,100%{opacity:0;transform:translate(92px,16px)}
+}
+@media(prefers-reduced-motion:reduce){.skw-gesture-cursor {animation:none;opacity:1;}}

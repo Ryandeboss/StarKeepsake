@@ -205,6 +205,99 @@ export function decontaminateWhiteFringe(
   return corrected
 }
 
+/**
+ * Fine branch edges can remain pale even when alpha is fully opaque: a bright
+ * daytime sky has been mixed into their RGB pixels. Standard partial-alpha
+ * unmatting cannot correct those. Use a local dark foreground anchor if it
+ * genuinely borders removed sky, but never shift a solid light-colored facade.
+ *
+ * This pass only edits a copied output; the original stays pristine for Undo /
+ * Restore. No entire silhouettes are eroded.
+ */
+export function refineThinBranchFringes(
+  original: Uint8ClampedArray,
+  composited: Uint8ClampedArray,
+  alpha: Uint8ClampedArray,
+  width: number,
+  height: number,
+  automatic?: Uint8ClampedArray,
+): Uint8ClampedArray {
+  if(width<=0||height<=0||original.length!==width*height*4||
+     composited.length!==original.length||alpha.length!==width*height||
+     (automatic && automatic.length!==original.length)){
+    throw new Error('Image dimensions do not match')
+  }
+  const result=new Uint8ClampedArray(composited)
+  const dirs: ReadonlyArray<readonly [number,number]>=[
+    [-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1],
+  ]
+  const luma=(i:number)=>(77*original[i*4]+150*original[i*4+1]+29*original[i*4+2])/256
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    const i=y*width+x
+    if(alpha[i]<195)continue
+    // A manual Restore must be a real restoration, not merely look restored.
+    if(automatic&&alpha[i]>automatic[i*4+3])continue
+    const brightness=luma(i)
+    if(brightness<142)continue
+    const chroma=Math.max(original[i*4],original[i*4+1],original[i*4+2])-
+      Math.min(original[i*4],original[i*4+1],original[i*4+2])
+    if(chroma>85)continue
+    const sides: Array<readonly [number,number]>=[]
+    for(const [dx,dy] of dirs){
+      for(let radius=1;radius<=2;radius++){
+        const nx=x+dx*radius,ny=y+dy*radius
+        if(nx<0||nx>=width||ny<0||ny>=height)break
+        if(alpha[ny*width+nx]<=30){sides.push([dx,dy]);break}
+      }
+    }
+    if(!sides.length)continue
+    // A pale building is supported by a broad, similarly bright interior.
+    // Check that before searching the dark part of a nearby tree.
+    let brightInside=false
+    for(const [dx,dy] of sides){
+      let brightSteps=0
+      for(let k=2;k<=4;k++){
+        const ix=x-dx*k,iy=y-dy*k
+        if(ix<0||ix>=width||iy<0||iy>=height)break
+        const interior=iy*width+ix
+        if(alpha[interior]<220)break
+        if(luma(interior)>=brightness-21)brightSteps++
+      }
+      if(brightSteps>=2){brightInside=true;break}
+    }
+    if(brightInside)continue
+
+    let best=-1,bestScore=Infinity
+    // Thin twigs have no dark interior exactly opposite the sky; a nearby
+    // dark branch pixel is sufficient. Do not sample removed sky pixels.
+    for(let dy=-5;dy<=5;dy++)for(let dx=-5;dx<=5;dx++){
+      const xx=x+dx,yy=y+dy
+      if(xx<0||xx>=width||yy<0||yy>=height)continue
+      const distance=dx*dx+dy*dy
+      if(distance<1||distance>25)continue
+      const j=yy*width+xx
+      if(alpha[j]<245)continue
+      const insideBrightness=luma(j)
+      if(insideBrightness>brightness-34)continue
+      const score=distance+insideBrightness*.035
+      if(score<bestScore){best=j;bestScore=score}
+    }
+    if(best<0)continue
+    // Only bleed away the high-luminance fringe; keep actual wood texture.
+    const difference=brightness-luma(best)
+    const mix=Math.max(.36,Math.min(.86,(difference-18)/103))
+    for(let c=0;c<3;c++){
+      result[i*4+c]=Math.round(composited[i*4+c]*(1-mix)+original[best*4+c]*mix)
+    }
+    // A modest feather on heavily contaminated bright tips helps prevent
+    // single-pixel white specks on a black night background.
+    if(difference>85 && alpha[i]>=250 && brightness>210){
+      result[i*4+3]=247
+    }
+  }
+  return result
+}
+
 /** Retain previous auto-cutout RGB cleanup and decontaminate the bright
  * hairline left against the replacement dark sky. The original is never
  * modified, and manual Restore always uses the original photo pixels.
@@ -229,7 +322,8 @@ export function composeSkyCutout(
     output[j+3]=alpha[i]
   }
   if(width!==undefined && height!==undefined){
-    return decontaminateWhiteFringe(original,output,alpha,width,height,autoCutout)
+    const corrected=decontaminateWhiteFringe(original,output,alpha,width,height,autoCutout)
+    return refineThinBranchFringes(original,corrected,alpha,width,height,autoCutout)
   }
   return output
 }

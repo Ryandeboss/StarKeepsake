@@ -28,6 +28,8 @@ type Props = {
   tone: 'natural' | 'indigo' | 'teal'
   maskAlpha?: Uint8ClampedArray | null
   maskDimensions?: { width: number; height: number } | null
+  showPerspectiveGuide: boolean
+  onPerspectiveInteract: () => void
   onHeading: (next: number) => void
   onPitch: (next: number) => void
 }
@@ -40,7 +42,7 @@ const SKY_DIRECTION_PRESETS = [
 export function SkyWorkshopPreview({
   stars, photoUrl, cutoutUrl, layout, imageAspect,
   heading, pitch, fov, skyHeight, photoFit, glow, tone, maskAlpha, maskDimensions,
-  onHeading, onPitch,
+  showPerspectiveGuide, onPerspectiveInteract, onHeading, onPitch,
 }: Props) {
   const drag = useRef<{ x:number; y:number; heading:number; pitch:number } | null>(null)
   const [hoveredHip, setHoveredHip] = useState<number | null>(null)
@@ -68,6 +70,7 @@ export function SkyWorkshopPreview({
 
   function start(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.button !== 0 || (event.target as Element).closest('[data-star-hit]')) return
+    onPerspectiveInteract()
     drag.current = { x:event.clientX,y:event.clientY,heading,pitch }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
@@ -80,6 +83,7 @@ export function SkyWorkshopPreview({
   function onKeys(event: KeyboardEvent<HTMLDivElement>) {
     if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return
     event.preventDefault()
+    onPerspectiveInteract()
     if (event.key==='ArrowLeft') onHeading(wrapWorkshopHeading(heading-7))
     if (event.key==='ArrowRight') onHeading(wrapWorkshopHeading(heading+7))
     if (event.key==='ArrowUp') onPitch(clampWorkshopPitch(pitch+6))
@@ -173,6 +177,21 @@ export function SkyWorkshopPreview({
                 style={photoFitStyle(photoFit)} draggable={false}/>
             </div>
           </>}
+          {showPerspectiveGuide && <div className="skw-gesture-guide" aria-hidden="true">
+            <div className="skw-gesture-track"/>
+            <div className="skw-gesture-cursor">
+              <svg width="31" height="38" viewBox="0 0 32 39" aria-hidden="true">
+                <path d="M5 2v24l6.4-5.5 5.2 13.7 6.6-3.1-5.4-12.9 9.6.6Z"
+                  fill="#fff6dc" stroke="#092638" strokeWidth="1.9"
+                  strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="skw-gesture-caption">
+              <strong>Find your view of the night</strong>
+              <span>Drag left, right, up or down to explore the sky.</span>
+              <span>Or choose N / E / S / W on the compass.</span>
+            </div>
+          </div>}
         </div>
       </div>
     </div>

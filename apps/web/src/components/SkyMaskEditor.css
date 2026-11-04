@@ -99,3 +99,48 @@
 .sky-mask-actions {margin-left:auto;}
 .sky-mask-actions button.active {background:#f0d59e;color:#193d47;}
 .sky-mask-canvas-shell {user-select:none;}
+
+/* An illustrated click-then-drag hint. Visual only: never blocks canvas tools. */
+.sky-mask-gesture-guide {position:absolute;inset:0;z-index:8;pointer-events:none;
+  overflow:hidden;line-height:1.45;}
+.sky-mask-gesture-hand {position:absolute;left:26%;top:28%;
+  filter:drop-shadow(0 4px 9px #071825af);
+  animation:sky-mask-gesture-move 4.6s ease-in-out infinite;}
+.sky-mask-gesture-tap {position:absolute;left:27%;top:29%;width:24px;height:24px;
+  border:2px solid #ffe2a7;border-radius:50%;box-shadow:0 0 20px #f3d6a866;
+  animation:sky-mask-gesture-pulse 4.6s ease-out infinite;}
+.sky-mask-gesture-sweep {position:absolute;left:28%;top:34%;width:21%;height:13%;
+  border:2px dashed #f7ddaa;border-radius:7px;background:#d5af6426;
+  transform-origin:left top;animation:sky-mask-gesture-box 4.6s ease-in-out infinite;}
+.sky-mask-gesture-copy {position:absolute;left:clamp(8px,4%,24px);bottom:clamp(8px,4%,24px);
+  width:min(345px,83%);display:grid;gap:5px;padding:13px 16px;
+  border:1px solid #dec18a94;border-radius:12px;
+  background:rgba(5,23,34,.9);box-shadow:0 14px 35px #0410199c;
+  color:#e3ebdf;font:12px/1.6 system-ui,sans-serif;backdrop-filter:blur(9px);}
+.sky-mask-gesture-copy strong {color:#f1d6a5;font-size:13px;}
+.sky-mask-gesture-copy b {color:#f7dca6;}
+.sky-mask-dismiss-hint {display:inline-flex;align-self:flex-start;margin-top:8px;
+  border:1px solid #beaa83;border-radius:8px;background:#1f4850;color:#ffe2b8;
+  padding:9px 12px;cursor:pointer;font-size:11px;}
+@keyframes sky-mask-gesture-move {
+  0%,9%{opacity:0;transform:translate(0,0)}
+  18%,30%{opacity:1;transform:translate(0,0)}
+  58%{opacity:1;transform:translate(75px,44px)}
+  72%,100%{opacity:0;transform:translate(75px,44px)}
+}
+@keyframes sky-mask-gesture-pulse {
+  0%,16%{opacity:0;transform:scale(.5)}
+  24%{opacity:1;transform:scale(1)}
+  36%,100%{opacity:0;transform:scale(2.4)}
+}
+@keyframes sky-mask-gesture-box {
+  0%,32%{opacity:0;transform:scale(.05)}
+  40%{opacity:.9}
+  59%{opacity:.85;transform:scale(1)}
+  78%,100%{opacity:0;transform:scale(1)}
+}
+@media(prefers-reduced-motion:reduce){
+  .sky-mask-gesture-hand,.sky-mask-gesture-tap,.sky-mask-gesture-sweep {animation:none;opacity:1;}
+  .sky-mask-gesture-tap{transform:scale(1)}
+  .sky-mask-gesture-sweep{transform:scale(1)}
+}

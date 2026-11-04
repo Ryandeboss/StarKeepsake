@@ -17,6 +17,8 @@ type Props = {
   file: File
   initialMask?: Uint8ClampedArray | null
   detectedMask?: SkyAlphaMask | null
+  showPolishGuide?: boolean
+  onDismissPolishGuide?: () => void
   onApply: (png: Blob, alpha: Uint8ClampedArray) => void
   onClose: () => void
 }
@@ -24,7 +26,10 @@ type LoadedPhoto = { width: number; height: number }
 const MAX_HISTORY = 12
 
 /** Photo and its undo history stay in this browser tab; no upload or image service. */
-export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClose }: Props) {
+export function SkyMaskEditor({
+  file, initialMask, detectedMask, showPolishGuide = false, onDismissPolishGuide,
+  onApply, onClose,
+}: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const photo = useRef<Uint8ClampedArray | null>(null)
   const automatic = useRef<Uint8ClampedArray | null>(null)
@@ -176,6 +181,7 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
   function pointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
     if (event.button !== 0 || !loaded || !alpha.current || !photo.current) return
     event.preventDefault()
+    onDismissPolishGuide?.()
     const p=position(event)
     if(tool==='polygon'){
       setVertices(points=>[...points,p])
@@ -320,7 +326,8 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
       <div className="sky-mask-intro">{detectedMask ?
         'AI made a careful first pass. Click to select a connected sky patch or drag to sweep a rectangle; both work automatically.'
         : 'Use one click to select a region, or drag a rectangle to clean several bright pockets.'}</div>
-      <div className="sky-mask-tools" aria-label="Sky mask editing tools">
+      <div className="sky-mask-tools" aria-label="Sky mask editing tools"
+        onPointerDown={onDismissPolishGuide}>
         <div className="sky-mask-tool-buttons" role="group" aria-label="Choose editing tool">
           {(['smart','brush','polygon'] as const).map(item =>
             <button key={item} type="button" aria-pressed={tool === item} className={tool === item ? 'active' : ''}
@@ -378,6 +385,23 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
               onPointerUp={pointerEnd} onPointerCancel={pointerCancel}
               onLostPointerCapture={pointerCancel}/>
             {dragBox && <div className="sky-mask-smart-rect" style={dragBox} aria-hidden="true"/>}
+            {showPolishGuide && tool==='smart' && !dragBox && <div
+              className="sky-mask-gesture-guide" aria-hidden="true">
+              <div className="sky-mask-gesture-tap"/>
+              <div className="sky-mask-gesture-sweep"/>
+              <div className="sky-mask-gesture-hand">
+                <svg viewBox="0 0 32 39" width="31" height="38" aria-hidden="true">
+                  <path d="M5 2v24l6.4-5.5 5.2 13.7 6.6-3.1-5.4-12.9 9.6.6Z"
+                    fill="#fff6dc" stroke="#092638" strokeWidth="1.9"
+                    strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="sky-mask-gesture-copy">
+                <strong>A little polish makes the difference</strong>
+                <span><b>Click</b> a bright sky patch to clean it.</span>
+                <span><b>Drag</b> to sweep multiple gaps. Use Restore for details.</span>
+              </div>
+            </div>}
             {tool === 'polygon' && vertices.length > 0 &&
               <svg className="sky-mask-polygon-overlay" viewBox={`0 0 ${loaded.width} ${loaded.height}`}
                 preserveAspectRatio="none" aria-hidden="true">
@@ -391,6 +415,10 @@ export function SkyMaskEditor({ file, initialMask, detectedMask, onApply, onClos
         </div>
         </div>
         <div className="sky-mask-under-preview" role="status">{message}</div>
+        {showPolishGuide && <button type="button"
+          className="sky-mask-dismiss-hint" onClick={()=>onDismissPolishGuide?.()}>
+          Got it — start polishing
+        </button>}
         <small className="sky-mask-disclosure">Cyan shows the selected sky. Clicking cleans one connected region; dragging cleans bright gaps within your rectangle, without stripping dark branches. Restore works with the same gestures. Zoom for tiny details, undo mistakes, then save. The original photo is preserved in your browser.</small>
       </div>
       {error && <p className="sky-mask-error" role="alert">{error}</p>}
