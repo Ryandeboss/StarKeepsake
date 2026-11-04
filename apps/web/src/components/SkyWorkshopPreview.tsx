@@ -8,7 +8,7 @@ import { NAMED_STAR_COLORS, projectObserverStar, starAppearance, starTwinkleSett
 import { starOptics } from '../skyPhotographicMath'
 import { starDisplayName, starDescription, starCatalogUrl, getStarContext } from '../starDetails'
 import { maskWorkingDimensions } from '../skyMaskMath'
-import { photoFitStyle } from '../frameSkyBalance'
+import { photoFitStyle, skyAboveArtworkAspect } from '../frameSkyBalance'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { wrapWorkshopHeading, clampWorkshopPitch, observerPointInPanel } from '../skyWorkshopMath'
 import './SkyWorkshopPreview.css'
@@ -52,7 +52,10 @@ export function SkyWorkshopPreview({
   const drag = useRef<{ x:number; y:number; heading:number; pitch:number } | null>(null)
   const [hoveredHip, setHoveredHip] = useState<number | null>(null)
   const [focusedHip, setFocusedHip] = useState<number | null>(null)
-  const panelAspect = layout==='within'?imageAspect:imageAspect/(skyHeight/100)
+  const artworkAspect=layout==='above'?skyAboveArtworkAspect(imageAspect,skyHeight):imageAspect
+  // The separate sky and the photo span the same full panel width.
+  // Their panel aspect ratios are derived from the same composite frame.
+  const panelAspect=layout==='within'?artworkAspect:artworkAspect/(skyHeight/100)
   const visible = useMemo(() => stars.map(star => ({
     star,
     point:projectObserverStar(star.azimuthDeg, star.altitudeDeg, heading, pitch, fov),
@@ -149,12 +152,6 @@ export function SkyWorkshopPreview({
         </a>
       })}
     </svg>
-    {activeStar&&<div className="skw-star-detail" role="status">
-      <strong>{starDisplayName(activeStar.star)}</strong>
-      <span>{getStarContext(activeStar.star).summary}</span>
-      <small>Magnitude {activeStar.star.magnitude.toFixed(2)} · {activeStar.star.altitudeDeg.toFixed(1)}° above the horizon</small>
-      <span className="skw-star-open">Click the star to explore its SIMBAD catalogue entry ↗</span>
-    </div>}
   </div>
 
   return <div className={`skw-workshop ${showroom?'skw-showroom':''} ${lightsOn?'skw-lights-on':'skw-lights-off'} skw-finish-${finish}`}>
@@ -173,8 +170,10 @@ export function SkyWorkshopPreview({
       onPointerLeave={()=>setTilt({x:0,y:0})}
       style={{'--skw-tilt-x':`${tilt.x.toFixed(2)}deg`,
         '--skw-tilt-y':`${tilt.y.toFixed(2)}deg`} as CSSProperties}>
-      <div className="skw-frame" style={{width:`min(100%, ${Math.max(220,Math.min(600,560*imageAspect))}px)`}}>
-        <div className="skw-artwork" style={{aspectRatio:String(imageAspect)}}
+      <div className="skw-frame" style={{
+        width:`min(100%, ${Math.max(155,Math.min(600,560*artworkAspect))}px, calc(80vh * ${artworkAspect}))`
+      }}>
+        <div className="skw-artwork" style={{aspectRatio:String(artworkAspect)}}
           role="group"
           aria-label={showroom?'Framed keepsake display in a simulated room':'Drag to choose which direction the sky faces'}
           tabIndex={showroom?-1:0} onPointerDown={start} onPointerMove={move}
@@ -210,6 +209,13 @@ export function SkyWorkshopPreview({
           </div>}
         </div>
       </div>
+      {activeStar&&<div className={`skw-star-detail ${layout==='above'?'skw-star-detail--compact':''}`}
+        role="status" aria-live="polite">
+        <strong>{starDisplayName(activeStar.star)}</strong>
+        <span>{getStarContext(activeStar.star).summary}</span>
+        <small>Magnitude {activeStar.star.magnitude.toFixed(2)} · Altitude {activeStar.star.altitudeDeg.toFixed(1)}°</small>
+        <span className="skw-star-open">Select the star to open its astronomical catalogue entry ↗</span>
+      </div>}
     </div>
     <div className="skw-footline">
       <span>{showroom?'✧ DIMENSIONAL PRODUCT MOCKUP · MOVE TO INSPECT':'✧ DRAG TO LOOK AROUND · HOVER FOR STAR NAMES · CLICK TO EXPLORE'}</span>

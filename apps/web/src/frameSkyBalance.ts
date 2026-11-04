@@ -51,3 +51,19 @@ export function photoFitStyle(mode: AbovePhotoFitMode): {
     default: return { objectFit: 'cover', objectPosition: 'center center' }
   }
 }
+
+/** When the full photo is beneath a separate sky, the *overall frame*
+ * must be taller than the photo. Otherwise object-fit:contain introduces
+ * horizontal bars in the photo panel while stars still cover full width.
+ * The lower panel's aspect is exactly photoAspect:
+ * (frameWidth / ((1-skyFraction) * frameHeight)) === photoAspect.
+ */
+export function skyAboveArtworkAspect(
+  photoAspect:number, skyPercent:number,
+):number{
+  if(!Number.isFinite(photoAspect)||photoAspect<=0)
+    throw new Error('Photo aspect ratio must be positive.')
+  if(!Number.isFinite(skyPercent)||skyPercent<0||skyPercent>=100)
+    throw new Error('Invalid percentage for the separate sky.')
+  return photoAspect*(1-skyPercent/100)
+}

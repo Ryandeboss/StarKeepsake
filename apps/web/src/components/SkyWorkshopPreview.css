@@ -146,3 +146,31 @@
 .skw-showroom .skw-artwork {cursor:default;touch-action:pan-y;}
 .skw-showroom .skw-artwork:active {cursor:default;}
 @media(prefers-reduced-motion:reduce) {.skw-showroom .skw-frame {transition:none;transform:none;}}
+
+/* Align "sky above" with the *actual* photo edges. The overall aspect
+ is photoAspect × lowerPanelFraction, so contain has zero horizontal bars. */
+.skw-frame-rail{position:relative;min-width:0;}
+.skw-frame{box-sizing:border-box;max-height:none;min-width:0;}
+.skw-sky-above,.skw-photo-below{box-sizing:border-box;width:100%;}
+.skw-sky-above .skw-star-name{font-size:8px;}
+/* Star info belongs to the outer rail, NOT the short upper sky panel.
+ This prevents tiny sky strips from inflating/clipping hover cards. */
+.skw-frame-rail>.skw-star-detail{position:absolute;z-index:15;
+  top:12px;right:12px;width:min(210px,42%);max-height:160px;
+  padding:9px 11px;gap:3px;overflow:hidden;pointer-events:none;
+  border-radius:8px;background:rgba(5,19,31,.96);
+  border-color:rgba(227,201,157,.65);box-shadow:0 8px 24px #0009;}
+.skw-frame-rail>.skw-star-detail strong{font:500 clamp(12px,1.2vw,15px)/1.2 Georgia,serif;}
+.skw-frame-rail>.skw-star-detail span{font-size:10px;line-height:1.4;}
+.skw-frame-rail>.skw-star-detail small{font-size:9px;}
+.skw-frame-rail>.skw-star-detail .skw-star-open{font-size:9px;}
+.skw-frame-rail>.skw-star-detail--compact{width:min(180px,40%);}
+.skw-frame-rail>.skw-star-detail--compact strong{font-size:13px;}
+.skw-frame-rail>.skw-star-detail--compact span{font-size:9px;}
+.skw-frame-rail>.skw-star-detail--compact .skw-star-open{display:none;}
+@media(max-width:650px){
+ .skw-frame-rail>.skw-star-detail{width:min(154px,47%);max-height:120px;
+   top:8px;right:7px;padding:7px;}
+ .skw-frame-rail>.skw-star-detail span{font-size:9px;}
+ .skw-frame-rail>.skw-star-detail small{display:none;}
+}
