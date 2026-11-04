@@ -15,6 +15,7 @@ import { isOfflineCity, searchOfflineCities } from '../offlineCitySearch'
 import { resolveSampleMoment } from '../sampleLocationFallback'
 import { suggestedObserverHeading } from '../skyImmersiveData'
 import { wrapWorkshopHeading, clampWorkshopPitch } from '../skyWorkshopMath'
+import { skyAboveArtworkAspect } from '../frameSkyBalance'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { createCustomerPacket, downloadFile, orderPersonalization } from '../customerOrder'
 import type { OrderPreferences } from '../customerOrder'
@@ -593,7 +594,9 @@ export function ExperiencePage() {
         <div className="at-home-layout">
           <div className="at-home-left">
             <HomeShowroom room={room}
-              imageAspect={dimensions?dimensions.width/dimensions.height:1}>
+              imageAspect={placement==='above'
+                ? skyAboveArtworkAspect(dimensions?dimensions.width/dimensions.height:1,skyPercent)
+                :dimensions?dimensions.width/dimensions.height:1}>
               <SkyWorkshopPreview
                 showroom={true} lightsOn={lightsOn} finish={finish}
                 stars={design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
@@ -635,10 +638,11 @@ export function ExperiencePage() {
                 </button>
               </div>
             </div>
-            <p className="at-home-render-note">A styled product visualization,
-              not a photograph or exact-scale AR placement. Wood, dimensions,
-              star lighting and physical appearance will be confirmed after
-              a real prototype is built.</p>
+            <p className="at-home-render-note">Your actual customized frame,
+              staged over licensed interior photography for inspiration.
+              This is not a photo of a manufactured product, an exact-scale
+              placement, or camera-based AR. Final wood, lighting and size
+              depend on a tested physical prototype.</p>
           </div>
           <aside className="at-home-right">
             <div className="at-home-spec">

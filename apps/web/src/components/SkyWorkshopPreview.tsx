@@ -165,7 +165,7 @@ export function SkyWorkshopPreview({
         const rect=event.currentTarget.getBoundingClientRect()
         const dx=(event.clientX-rect.left)/rect.width-.5
         const dy=(event.clientY-rect.top)/rect.height-.5
-        setTilt({x:-dy*12,y:dx*17})
+        setTilt({x:-dy*5,y:dx*7})
       }}
       onPointerLeave={()=>setTilt({x:0,y:0})}
       style={{'--skw-tilt-x':`${tilt.x.toFixed(2)}deg`,

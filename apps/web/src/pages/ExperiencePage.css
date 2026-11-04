@@ -452,3 +452,14 @@
   .at-home-choice-list button,.at-home-lighting button,.at-home-wood-options button{
     transition:none;}
 }
+
+/* Real grain photographs, not repeating CSS stripes, on choice swatches. */
+.at-swatch-walnut{
+  background:linear-gradient(130deg,#ddba8a23,#1e100a4d),
+  url('https://images.unsplash.com/photo-1678794792916-e5cb1217bed1?auto=format&fit=crop&w=480&q=75') center/cover,#79543c;}
+.at-swatch-oak{
+  background:linear-gradient(120deg,#fff9d11f,#68513620),
+  url('https://images.unsplash.com/photo-1763392199003-27cee33bae31?auto=format&fit=crop&w=480&q=75') center/cover,#c9ab78;}
+.at-swatch-ebony{
+  background:linear-gradient(135deg,#22292b96,#080c0fba),
+  url('https://images.unsplash.com/photo-1732505385271-0e1fbad47bf1?auto=format&fit=crop&w=480&q=75') center/cover,#252727;}
