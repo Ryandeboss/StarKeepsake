@@ -211,6 +211,7 @@ export function ExperiencePage() {
     setIsSearching(true)
     setError('')
     setCandidates([])
+    setSelected(null)
     try{
       const matches=offline?await searchOfflineCities(term):await searchLocations(term)
       if(version!==lookupVersion.current)return
@@ -235,7 +236,7 @@ export function ExperiencePage() {
     if(placement==='within'&&!cutoutUrl){setError('Please save your sky cleanup first.');setStage('refine');return}
     if(!date){setError('Choose your special date.');return}
     if(!unknownTime&&!time){setError('Choose a time, or mark the exact time unknown.');return}
-    if(!selected){setError('Find and select your city or address.');return}
+    if(!selected){setError('Choose your location from the search results before continuing.');return}
     const version=++astronomyVersion.current
     setError('')
     setProgress(7)
@@ -395,28 +396,74 @@ export function ExperiencePage() {
               <label className="at-time-unknown"><input type="checkbox" checked={unknownTime}
                 onChange={event=>setUnknownTime(event.target.checked)}/> Time unknown</label>
             </div>
-            <label>WHERE DID IT HAPPEN?
+            <div className="at-location-picker">
+              <div className="at-location-heading">
+                <label htmlFor="at-location-query">WHERE DID IT HAPPEN?</label>
+                <span className={selected?'at-location-complete':'at-location-required'}>
+                  {selected?'✓ Selected':'Selection required'}
+                </span>
+              </div>
               <div className="at-search-field">
-                <input type="search" value={query} placeholder="City, town, landmark or address"
+                <input id="at-location-query" type="search" value={query}
+                  placeholder="City, town, landmark or address"
+                  aria-describedby="at-location-instructions"
+                  aria-controls={candidates.length>0?'at-location-results':undefined}
+                  aria-expanded={candidates.length>0}
                   onChange={event=>{lookupVersion.current++;setQuery(event.target.value);
                     setCandidates([]);setSelected(null)}}
                   onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();void findPlace()}}}/>
                 <button type="button" onClick={()=>void findPlace()} disabled={isSearching}>
-                  {isSearching?'Searching…':'Find'}</button>
+                  {isSearching?'Searching…':'Find places'}</button>
               </div>
-            </label>
-            {candidates.length>0&&<div className="at-place-results" aria-label="Choose the exact place">
-              {candidates.slice(0,7).map((item,index)=><button type="button" key={index}
-                onClick={()=>{setSelected(item);setCandidates([]);setError('')}}>
-                <span>◉</span>{item.displayName}</button>)}
-            </div>}
-            {selected&&<p className="at-place-confirm">✓ {selected.displayName}</p>}
+              <p id="at-location-instructions" className="at-place-instructions">
+                <span className={selected?'is-complete':''}>1. Search for your place</span>
+                <span className={selected?'is-complete':candidates.length?'is-current':''}>
+                  2. <strong>Select the matching location</strong> from the list
+                </span>
+              </p>
+              {isSearching&&<p className="at-place-searching" role="status">
+                Finding possible locations…
+              </p>}
+              {candidates.length>0&&<section className="at-place-results-panel"
+                aria-label="Choose a matching search result">
+                <div className="at-place-results-header" role="status" aria-live="polite">
+                  <span className="at-place-step-number">2</span>
+                  <div><strong>Choose your location below</strong>
+                    <small>Search complete — click the correct result to confirm your place.</small>
+                  </div>
+                  <span className="at-place-point-arrow" aria-hidden="true">↓</span>
+                </div>
+                <div id="at-location-results" className="at-place-results" role="group"
+                  aria-label="Matching locations">
+                  {candidates.slice(0,7).map((item,index)=><button type="button"
+                    key={`${item.latitude}-${item.longitude}-${index}`}
+                    aria-label={`Select ${item.displayName} as the event location`}
+                    onClick={()=>{setSelected(item);setCandidates([]);setError('')}}>
+                    <span className="at-place-pin" aria-hidden="true">⌖</span>
+                    <span className="at-place-result-name">{item.displayName}</span>
+                    <span className="at-place-result-action" aria-hidden="true">Select ↗</span>
+                  </button>)}
+                </div>
+              </section>}
+              {selected&&<div className="at-place-confirm" role="status" aria-live="polite">
+                <span className="at-place-confirm-check" aria-hidden="true">✓</span>
+                <div><strong>Location confirmed</strong><span>{selected.displayName}</span>
+                  <small>You're ready to reveal your night.</small></div>
+                <button type="button" onClick={()=>{setSelected(null);setCandidates([])}}
+                  aria-label="Change the selected location">Change</button>
+              </div>}
+            </div>
             {offline&&<p className="at-tiny-note">Using our offline city index. Exact addresses need the live search service.</p>}
             {selected?.source==='geoapify'&&<p className="at-tiny-note">
               Location search powered by <a href="https://www.geoapify.com/" target="_blank"
                 rel="noopener noreferrer">Geoapify</a> using OpenStreetMap and other sources.</p>}
             {error&&<p className="at-error" role="alert">{error}</p>}
-            <button className="at-primary at-wide" type="submit">Reveal my night <span>✦</span></button>
+            <button className="at-primary at-wide" type="submit" disabled={!selected}>
+              Reveal my night <span>✦</span>
+            </button>
+            {!selected&&<p className="at-place-continue-hint" role="status">
+              Choose a location from the search results to unlock this step.
+            </p>}
             <p className="at-tiny-note">We calculate the real stars for your chosen location and time. The photograph’s camera direction will be yours to choose next.</p>
           </form>
         </div>

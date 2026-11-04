@@ -242,3 +242,67 @@
   color:#d1dcd9;font-size:10px;}
 .at-tone-choice button[aria-pressed=true] {border-color:#f1d7a5;background:#e6c594;color:#132b3b;}
 .at-sky-atmosphere-controls small {font-size:10px;color:#99b7bd;line-height:1.5;}
+
+/* Moment 03: typing a place is not confirming it. Make selection a clear step. */
+.at-location-picker {display:grid;gap:10px;}
+.at-location-heading {display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.at-location-heading>label {font:10px ui-monospace,monospace;letter-spacing:.12em;color:#d8c8a6;}
+.at-location-required,.at-location-complete {font:10px ui-monospace,monospace;
+  letter-spacing:.035em;color:#f1d2a0;}
+.at-location-complete {color:#bce5ce;}
+.at-place-instructions {display:flex;flex-wrap:wrap;gap:6px 14px;margin:2px 0 0;
+  font-size:11px;line-height:1.5;color:#aac0c4;}
+.at-place-instructions>span {padding:4px 8px;border-radius:6px;border:1px solid #355360;}
+.at-place-instructions .is-current {color:#ffe1a6;background:#3d3528;border-color:#a78e60;
+  box-shadow:0 0 0 1px #a78e6030;animation:at-place-guide-glow 2s ease-in-out infinite;}
+.at-place-instructions .is-complete {color:#b4e1c9;border-color:#568b7a;}
+.at-place-results-panel {border:1px solid #caad79;border-radius:12px;overflow:hidden;
+  box-shadow:0 10px 35px #020d1980;}
+.at-place-results-header {display:flex;align-items:center;gap:12px;
+  background:linear-gradient(115deg,#3d342c,#293949);padding:13px 15px;}
+.at-place-step-number {display:grid;place-items:center;flex:none;width:30px;height:30px;
+  background:#f0d39e;border-radius:50%;font:bold 13px ui-monospace,monospace;color:#172e3b;}
+.at-place-results-header div {display:grid;gap:3px;min-width:0;}
+.at-place-results-header strong {color:#f6dcab;font-size:13px;}
+.at-place-results-header small {color:#d8e1da;font-size:11px;line-height:1.35;}
+.at-place-point-arrow {font-size:21px;color:#efcf8e;margin-left:auto;
+  animation:at-place-arrow .9s ease-in-out infinite alternate;}
+.at-place-results-panel .at-place-results {max-height:250px;border:0;border-radius:0;
+  background:#081926;padding:4px 7px 7px;gap:4px;}
+.at-place-results-panel .at-place-results button {display:flex;align-items:center;gap:11px;
+  padding:13px;border:1px solid transparent;border-radius:8px;}
+.at-place-results-panel .at-place-results button:hover,
+.at-place-results-panel .at-place-results button:focus-visible {
+  background:#214653;border-color:#d6b780;outline:none;}
+.at-place-pin {display:grid;place-items:center;flex:none;width:25px;height:25px;
+  background:#193b49;border-radius:50%;font-size:18px;color:#f3d5a1;}
+.at-place-result-name {min-width:0;overflow-wrap:anywhere;flex:1;
+  font-size:12px;line-height:1.55;}
+.at-place-result-action {flex:none;color:#f0d4a0;font-size:11px;font-weight:700;}
+.at-place-confirm {margin:0;display:flex;align-items:center;gap:12px;
+  padding:13px;border-radius:12px;background:linear-gradient(115deg,#1a473f,#18383e);
+  border:1px solid #74b79b;box-shadow:0 0 0 1px #74b79b20;color:#e6f5df;}
+.at-place-confirm-check {flex:none;width:30px;height:30px;border-radius:50%;
+  display:grid;place-items:center;background:#a7dbc1;color:#153c32;font-size:16px;font-weight:800;}
+.at-place-confirm>div {display:grid;gap:4px;min-width:0;flex:1;}
+.at-place-confirm strong {font-size:13px;}
+.at-place-confirm div span {font-size:12px;overflow-wrap:anywhere;}
+.at-place-confirm small {font-size:10px;color:#c7decf;}
+.at-place-confirm button {border:1px solid #97c9b5;background:transparent;border-radius:7px;
+  color:#e6f6ea;padding:7px 9px;font-size:11px;}
+.at-place-searching {color:#d5dece;font-size:11px;margin:0;}
+.at-place-continue-hint {font-size:11px;color:#f0d3a0;line-height:1.5;
+  margin:-11px 0 0;text-align:center;}
+.at-moment-form .at-primary:disabled {opacity:.48;cursor:not-allowed;
+  filter:saturate(.5);transform:none;box-shadow:none;}
+@keyframes at-place-arrow {from{transform:translateY(-2px)}to{transform:translateY(3px)}}
+@keyframes at-place-guide-glow {0%,100%{box-shadow:0 0 0 #d7b66b00}
+  50%{box-shadow:0 0 14px #d7b66b2e}}
+@media(max-width:480px) {
+ .at-place-result-action {font-size:10px;}
+ .at-place-results-header {padding:12px 10px;}
+ .at-place-confirm {flex-wrap:wrap;}
+}
+@media(prefers-reduced-motion:reduce) {
+ .at-place-point-arrow,.at-place-instructions .is-current {animation:none;}
+}
