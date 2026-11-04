@@ -593,7 +593,7 @@ export function ExperiencePage() {
         </div>
         <div className="at-home-layout">
           <div className="at-home-left">
-            <HomeShowroom room={room}
+            <HomeShowroom room={room} lightsOn={lightsOn}
               imageAspect={placement==='above'
                 ? skyAboveArtworkAspect(dimensions?dimensions.width/dimensions.height:1,skyPercent)
                 :dimensions?dimensions.width/dimensions.height:1}>
@@ -631,7 +631,7 @@ export function ExperiencePage() {
               </fieldset>
               <div className="at-home-lighting">
                 <div><span className="at-home-control-kicker">03 / LIGHT THE STARS</span>
-                  <strong>See it come alive after dark.</strong></div>
+                  <strong>{lightsOn?'Evening ambience · stars glowing':'Daylight ambience · star lights resting'}</strong></div>
                 <button type="button" aria-pressed={lightsOn}
                   onClick={()=>setLightsOn(value=>!value)}>
                   {lightsOn?'✦ Turn the stars off':'✧ Illuminate the stars'}

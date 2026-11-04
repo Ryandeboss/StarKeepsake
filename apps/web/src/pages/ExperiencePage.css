@@ -463,3 +463,45 @@
 .at-swatch-ebony{
   background:linear-gradient(135deg,#22292b96,#080c0fba),
   url('https://images.unsplash.com/photo-1732505385271-0e1fbad47bf1?auto=format&fit=crop&w=480&q=75') center/cover,#252727;}
+
+/* Showroom should resemble an editorial architecture portfolio rather
+   than a compact product configurator. The photograph leads; controls follow. */
+.at-home-layout{
+  grid-template-columns:minmax(0,1.65fr) minmax(310px,.76fr);
+  align-items:start;gap:22px;
+}
+.at-home-customize{
+  background:#0d202b;border:1px solid #344e5a;
+  box-shadow:0 8px 28px rgba(0,0,0,.13);
+}
+.at-home-spec{
+  background:#101f2c;border-color:#3e5460;
+  box-shadow:0 8px 25px rgba(0,0,0,.17);
+}
+.at-home-wood-swatch{
+  background-size:cover;background-position:50% 50%;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.10),inset 0 -14px 18px rgba(0,0,0,.14);
+}
+.at-swatch-walnut{
+  background:
+    linear-gradient(106deg,rgba(255,238,203,.14),rgba(20,12,9,.18)),
+    url('https://images.unsplash.com/photo-1678794792916-e5cb1217bed1?auto=format&fit=crop&w=520&q=86') center/cover,
+    #755138;
+}
+.at-swatch-oak{
+  background:
+    linear-gradient(104deg,rgba(255,242,201,.15),rgba(77,52,29,.12)),
+    url('https://images.unsplash.com/photo-1763392199003-27cee33bae31?auto=format&fit=crop&w=520&q=86') center/cover,
+    #c8aa77;
+}
+.at-swatch-ebony{
+  background:
+    linear-gradient(104deg,rgba(109,122,119,.10),rgba(4,9,10,.48)),
+    url('https://images.unsplash.com/photo-1732505385271-0e1fbad47bf1?auto=format&fit=crop&w=520&q=86') center/cover,
+    #343b39;
+}
+.at-home-heading h1{letter-spacing:-.045em;}
+.at-home-heading p{line-height:1.8;}
+@media(max-width:1120px){
+  .at-home-layout{grid-template-columns:1fr;}
+}

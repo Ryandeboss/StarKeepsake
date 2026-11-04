@@ -95,3 +95,138 @@
 @media(prefers-reduced-motion:reduce){
  .hsh-artwork .skw-showroom .skw-frame,.hsh-room-photo{transition:none;}
 }
+
+/* Photographic room treatment: reduce the illustrated/floating look.
+   The background is a real interior photograph; the live sky remains the
+   customer's astronomy calculation, layered in one realistically sized frame. */
+.hsh-room{background:#918f8a;box-shadow:0 15px 55px rgba(0,0,0,.42);}
+.hsh-room-photo{
+  transform:scale(1);transform-origin:50% 49%;
+  image-rendering:auto;filter:saturate(.93) contrast(1.035) brightness(1);
+  transition:filter .85s cubic-bezier(.2,.8,.25,1),transform .8s cubic-bezier(.2,.8,.25,1),opacity .45s;
+  animation:hsh-photographic-arrive .8s ease-out both;
+}
+.hsh-room--evening .hsh-room-photo{
+  filter:saturate(.78) contrast(1.07) brightness(.64);
+}
+.hsh-room--closer .hsh-room-photo{transform:scale(1.13);}
+.hsh-room-shading{
+  background:linear-gradient(0deg,rgba(12,15,20,.36),transparent 20%,transparent 70%,rgba(22,20,19,.06));
+  box-shadow:inset 0 0 65px rgba(10,15,20,.04);
+  transition:background .75s ease;
+}
+.hsh-room--evening .hsh-room-shading{
+  background:
+    radial-gradient(ellipse at 65% 57%,rgba(231,180,99,.085),transparent 36%),
+    linear-gradient(90deg,rgba(10,17,25,.23),rgba(10,17,25,.13) 47%,rgba(10,17,25,.38));
+}
+.hsh-artwork{
+  top:14%;left:50%;max-width:43%;
+  filter:drop-shadow(5px 8px 7px rgba(5,8,11,.35));
+  transition:transform .7s cubic-bezier(.2,.8,.2,1),filter .8s ease;
+}
+.hsh-room--modern .hsh-artwork{top:14%;left:51%;}
+.hsh-room--gallery .hsh-artwork{top:14%;left:51%;}
+.hsh-room--closer .hsh-artwork{
+  transform:translateX(-50%) scale(1.13);
+}
+.hsh-room--evening .hsh-artwork{
+  filter:drop-shadow(3px 5px 10px rgba(0,0,0,.52));
+}
+.hsh-artwork .skw-showroom .skw-frame{
+  border-width:8px;border-style:solid;border-color:transparent;
+  padding:6px;border-radius:0;
+  box-shadow:0 0 0 1px rgba(24,19,15,.65),
+    1px 2px 1px rgba(10,9,8,.50),
+    3px 5px 4px rgba(15,12,9,.50),
+    8px 12px 13px rgba(15,13,13,.37);
+  transition:transform .29s ease-out,box-shadow .29s ease-out;
+}
+.hsh-artwork .skw-showroom .skw-frame:before{
+  inset:-1px;box-shadow:
+    inset 2px 2px 1px rgba(254,241,207,.37),
+    inset -2px -2px 2px rgba(8,7,6,.7);
+}
+.hsh-artwork .skw-showroom .skw-frame:after{
+  inset:6px;opacity:.20;mix-blend-mode:screen;
+  background:linear-gradient(118deg,rgba(255,255,255,.18),transparent 17%,
+    transparent 67%,rgba(255,255,255,.055) 80%,transparent 94%);
+}
+.hsh-artwork .skw-showroom .skw-artwork{
+  background:#060a10;
+  box-shadow:inset 0 0 8px rgba(0,0,0,.74),0 0 0 1px rgba(19,17,16,.82);
+}
+.hsh-artwork .skw-showroom.skw-finish-walnut .skw-frame{
+  background:
+    linear-gradient(120deg,#f4dfbf20,transparent 33%,#120d0b8b) border-box,
+    url('https://images.unsplash.com/photo-1678794792916-e5cb1217bed1?auto=format&fit=crop&w=720&q=86') center/cover border-box,
+    #5c3a27;
+}
+.hsh-artwork .skw-showroom.skw-finish-oak .skw-frame{
+  background:
+    linear-gradient(119deg,#fff5d637,transparent 35%,#5b3a2696) border-box,
+    url('https://images.unsplash.com/photo-1763392199003-27cee33bae31?auto=format&fit=crop&w=720&q=86') center/cover border-box,
+    #c4a16e;
+}
+.hsh-artwork .skw-showroom.skw-finish-ebony .skw-frame{
+  background:
+    linear-gradient(115deg,#cdd0c51a,transparent 28%,#0b1313b0) border-box,
+    url('https://images.unsplash.com/photo-1732505385271-0e1fbad47bf1?auto=format&fit=crop&w=720&q=86') center/cover border-box,
+    #292b2a;
+}
+/* Keep wood visible as a real-textured thin border, not a huge waxy bevel. */
+.hsh-artwork .skw-showroom.skw-finish-walnut .skw-frame,
+.hsh-artwork .skw-showroom.skw-finish-oak .skw-frame,
+.hsh-artwork .skw-showroom.skw-finish-ebony .skw-frame{
+  border-color:transparent;
+  border-image:none;
+}
+.hsh-scene-label{display:none;}
+.hsh-scene-toolbar{
+  position:absolute;z-index:9;top:14px;left:14px;right:14px;
+  display:flex;justify-content:space-between;align-items:center;
+  gap:12px;pointer-events:none;
+}
+.hsh-scene-toolbar span,.hsh-scene-toolbar button{
+  font:10px/1.45 ui-monospace,monospace;letter-spacing:.07em;
+  color:#eee8dd;background:rgba(10,19,25,.72);
+  border:1px solid rgba(249,243,231,.20);padding:8px 11px;border-radius:6px;
+  backdrop-filter:blur(14px);
+}
+.hsh-scene-toolbar button{
+  pointer-events:auto;cursor:pointer;transition:background .18s,border-color .18s;
+}
+.hsh-scene-toolbar button:hover,.hsh-scene-toolbar button:focus-visible{
+  background:rgba(14,31,38,.94);border-color:#f1d8b2;outline:none;
+}
+.hsh-scene-hint{top:auto;right:14px;bottom:14px;
+  font:9px ui-monospace,monospace;letter-spacing:.08em;padding:7px 10px;}
+.hsh-photo-credit{font-size:9px;bottom:14px;left:14px;}
+.hsh-photo-unavailable{
+  position:absolute;z-index:4;top:50%;left:50%;width:min(320px,78%);
+  transform:translate(-50%,-50%);padding:14px;text-align:center;
+  background:rgba(16,28,35,.72);border:1px solid #849aa0;color:#f3e1c8;
+  border-radius:10px;font-size:11px;
+}
+@keyframes hsh-photographic-arrive{
+  from{opacity:.4;filter:blur(3px) saturate(.92)}
+  to{opacity:1;}
+}
+@media(max-width:720px){
+  .hsh-artwork{top:17%;max-width:54%;}
+  .hsh-room--modern .hsh-artwork,.hsh-room--gallery .hsh-artwork{top:17%;}
+  .hsh-scene-toolbar{top:8px;left:8px;right:8px;}
+  .hsh-scene-toolbar span,.hsh-scene-toolbar button{font-size:9px;padding:7px 8px;}
+  .hsh-scene-hint{right:8px;bottom:8px;letter-spacing:.02em;}
+}
+@media(max-width:430px){
+  .hsh-artwork{top:19%;max-width:60%;}
+  .hsh-scene-hint{display:none;}
+  .hsh-scene-toolbar span{max-width:56%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+}
+@media(prefers-reduced-motion:reduce){
+  .hsh-room-photo{animation:none;transition:none;}
+  .hsh-artwork,.hsh-artwork .skw-showroom .skw-frame{
+    transition:none;
+  }
+}
