@@ -25,3 +25,6 @@ Use Etsy Custom options: text design reference, file upload for order-sheet.png,
 7. Test order cancellations/refunds, out-of-stock suppliers, shipping damages, photo rights/privacy, returns and physical electrical quality; launch only after rehearsed end-to-end sample Etsy orders.
 
 This current packet does not turn the astronomical preview into a validated production-ready laser engraving file. It preserves the inputs for a later factory design-engine render.
+
+## Customer final chapter
+After choosing sky perspective in 04 / Your Sky, customers continue to 05 / Your Keepsake. This is a simulated, styled room with independent room presets, warm walnut / natural oak / ebony oak swatches, and a stars-on/off preview. The selected frame finish is captured in the exported manifest and Etsy personalization text, not the decorative room style. The main CTA generates **unpaid** locally downloaded files. A verified Etsy listing URL must be configured before any live Etsy handoff can appear; no actual online purchase happens here.

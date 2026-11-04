@@ -83,7 +83,7 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
   ctx.fillText('Date '+design.moment.date+'  ·  Time '+(design.moment.time??'Unknown'),90,1630)
   ctx.fillText('Place '+(design.moment.location?.displayName??'Unknown').slice(0,85),90,1672)
   ctx.fillText('View '+p.heading.toFixed(0)+'° / '+p.pitch.toFixed(0)+'° · '+p.layout+
-    ' · '+p.tone+' · '+(p.glow?'glow':'no glow'),90,1712)
+    ' · '+p.finish+' wood · '+p.tone+' · '+(p.glow?'glow':'no glow'),90,1712)
   ctx.font='15px sans-serif';ctx.fillStyle='#98b4bb'
   ctx.fillText('Preview only · physical star lights, frame and materials may differ',90,1763)
   return png(canvas)

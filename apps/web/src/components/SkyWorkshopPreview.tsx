@@ -31,7 +31,7 @@ type Props = {
   showPerspectiveGuide: boolean
   showroom: boolean
   lightsOn: boolean
-  finish: 'walnut'|'midnight'|'brass'
+  finish: 'walnut'|'oak'|'ebony'
   onPerspectiveInteract: () => void
   onHeading: (next: number) => void
   onPitch: (next: number) => void
@@ -175,8 +175,9 @@ export function SkyWorkshopPreview({
         '--skw-tilt-y':`${tilt.y.toFixed(2)}deg`} as CSSProperties}>
       <div className="skw-frame" style={{width:`min(100%, ${Math.max(220,Math.min(600,560*imageAspect))}px)`}}>
         <div className="skw-artwork" style={{aspectRatio:String(imageAspect)}}
-          role="group" aria-label="Drag to choose which direction the sky faces"
-          tabIndex={0} onPointerDown={start} onPointerMove={move}
+          role="group"
+          aria-label={showroom?'Framed keepsake display in a simulated room':'Drag to choose which direction the sky faces'}
+          tabIndex={showroom?-1:0} onPointerDown={start} onPointerMove={move}
           onPointerUp={stop} onPointerCancel={stop} onLostPointerCapture={stop}
           onKeyDown={onKeys}>
           {layout === 'within' ? <>

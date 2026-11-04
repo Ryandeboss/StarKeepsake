@@ -4,7 +4,8 @@ import type { AbovePhotoFitMode } from './frameSkyBalance'
 export type OrderPreferences={
   layout:'above'|'within'; heading:number; pitch:number; fov:number
   skyHeight:number; photoFit:AbovePhotoFitMode
-  tone:'natural'|'indigo'|'teal'; glow:boolean; inscription:string
+  tone:'natural'|'indigo'|'teal'; glow:boolean
+  finish:'walnut'|'oak'|'ebony'; inscription:string
 }
 export type OrderManifest={
   format:'starkeepsake-order-v1'; reference:string; status:'UNPAID_PREVIEW'
@@ -35,7 +36,8 @@ export function orderPersonalization(manifest:OrderManifest):string{
   return ['Reference: '+manifest.reference,'Date: '+manifest.design.moment.date,
     'Time: '+(manifest.design.moment.time??'Unknown'),
     'Location: '+(manifest.design.moment.location?.displayName??'Unknown'),
-    'Style: '+manifest.preferences.layout,'Inscription: '+(manifest.preferences.inscription||'None'),
+    'Style: '+manifest.preferences.layout,'Frame: '+manifest.preferences.finish,
+    'Inscription: '+(manifest.preferences.inscription||'None'),
     'Please see uploaded order sheet and photo.'].join('\n')
 }
 function crc(bytes:Uint8Array):number{

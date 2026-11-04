@@ -11,7 +11,7 @@ const INITIAL_DESIGN_SPEC={
   stars:[{hipparcosId:1,altitudeDeg:30,azimuthDeg:95,magnitude:1}],
 }
 const prefs={layout:'above',heading:180,pitch:18,fov:105,skyHeight:38,
-  photoFit:'fit',tone:'natural',glow:true,inscription:'Our first night'}
+  photoFit:'fit',tone:'natural',glow:true,finish:'walnut',inscription:'Our first night'}
 test('reference identifies exact design and photo bytes, deterministically',async()=>{
   const a=await orderReference(INITIAL_DESIGN_SPEC,prefs,new Uint8Array([3,1]))
   const b=await orderReference(INITIAL_DESIGN_SPEC,prefs,new Uint8Array([3,1]))
@@ -24,6 +24,8 @@ test('order manifest is unpaid, with source and canonical mm geometry',()=>{
   assert.equal(m.status,'UNPAID_PREVIEW')
   assert.equal(m.design.physicalArtwork.units,'mm')
   assert.equal(m.design.customText.value,'Our first night')
+  assert.equal(m.preferences.finish,'walnut')
+  assert.ok(orderPersonalization(m).includes('Frame: walnut'))
   assert.equal(m.expectedFiles[0],'order-sheet.png')
   assert.ok(orderPersonalization(m).includes('SK-1234567890AB'))
 })

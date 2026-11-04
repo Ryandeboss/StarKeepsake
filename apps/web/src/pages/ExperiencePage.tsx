@@ -4,6 +4,7 @@ import { generateAstronomy, resolveMoment, searchLocations } from '../api'
 import type { LocationCandidate } from '../api'
 import { SkyMaskEditor } from '../components/SkyMaskEditor'
 import { SkyWorkshopPreview, SkyWorkshopOrientation } from '../components/SkyWorkshopPreview'
+import { HomeShowroom, ROOM_OPTIONS, WOOD_OPTIONS } from '../components/HomeShowroom'
 import { detectWorkshopSky } from '../skyBlend'
 import type { WorkshopDetection } from '../skyBlend'
 import { FULL_PHOTO_CROP } from '../photoCrop'
@@ -18,7 +19,7 @@ import { createCustomerPacket, downloadFile, orderPersonalization } from '../cus
 import type { OrderPreferences } from '../customerOrder'
 import './ExperiencePage.css'
 
-type Stage = 'welcome'|'detecting'|'choice'|'refine'|'moment'|'calculating'|'preview'
+type Stage = 'welcome'|'detecting'|'choice'|'refine'|'moment'|'calculating'|'preview'|'home'
 type Placement = 'above'|'within'
 const MAX_PHOTO = 10*1024*1024
 const STEPS = [
@@ -26,6 +27,7 @@ const STEPS = [
   {label:'THE HORIZON',key:'choice'},
   {label:'THE MOMENT',key:'moment'},
   {label:'YOUR SKY',key:'preview'},
+  {label:'YOUR KEEPSAKE',key:'home'},
 ] as const
 const photoFits: readonly {id:AbovePhotoFitMode;label:string}[]=[
   {id:'fit',label:'Whole photo'},
@@ -86,9 +88,9 @@ export function ExperiencePage() {
   const [photoFit,setPhotoFit]=useState<AbovePhotoFitMode>('fit')
   const [atmosphericGlow,setAtmosphericGlow]=useState(true)
   const [skyTone,setSkyTone]=useState<'natural'|'indigo'|'teal'>('natural')
-  const [showroom,setShowroom]=useState(false)
   const [lightsOn,setLightsOn]=useState(true)
-  const [finish,setFinish]=useState<'walnut'|'midnight'|'brass'>('walnut')
+  const [finish,setFinish]=useState<'walnut'|'oak'|'ebony'>('walnut')
+  const [room,setRoom]=useState<'warm'|'modern'|'gallery'>('warm')
   const [inscription,setInscription]=useState('')
   const [orderBusy,setOrderBusy]=useState(false)
   const [orderError,setOrderError]=useState('')
@@ -275,11 +277,11 @@ export function ExperiencePage() {
   }
 
   const atIndex=stage==='welcome'?0:stage==='detecting'||stage==='choice'||stage==='refine'?1:
-    stage==='moment'||stage==='calculating'?2:3
+    stage==='moment'||stage==='calculating'?2:stage==='home'?4:3
   const chosenName=selected?.displayName||'Your special place'
   const orderPreferences:OrderPreferences={
     layout:placement,heading,pitch,fov,skyHeight:skyPercent,
-    photoFit,tone:skyTone,glow:atmosphericGlow,inscription:inscription.trim(),
+    photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
   }
   const orderKey=JSON.stringify({moment:design.moment,stars:design.stars,
     preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl})
@@ -511,18 +513,8 @@ export function ExperiencePage() {
         </div>
         <div className="at-preview-grid">
           <div className="at-preview-main">
-            <div className="at-product-modes" role="group" aria-label="Preview mode">
-              <button type="button" aria-pressed={!showroom}
-                onClick={()=>setShowroom(false)}>✧ Edit the sky</button>
-              <button type="button" aria-pressed={showroom}
-                onClick={()=>{setShowroom(true);setShowPerspectiveGuide(false)}}>
-                ◈ 3D showroom</button>
-              {showroom&&<button type="button" className="at-light-switch"
-                aria-pressed={lightsOn} onClick={()=>setLightsOn(value=>!value)}>
-                {lightsOn?'✦ Lights on':'◌ Lights off'}</button>}
-            </div>
             <SkyWorkshopPreview
-              showroom={showroom} lightsOn={lightsOn} finish={finish}
+              showroom={false} lightsOn={lightsOn} finish={finish}
               stars={design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
               layout={placement}
               imageAspect={dimensions?dimensions.width/dimensions.height:1}
@@ -533,13 +525,6 @@ export function ExperiencePage() {
               onPerspectiveInteract={()=>setShowPerspectiveGuide(false)}
               onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
               onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}/>
-            {showroom&&<div className="at-showroom-finish">
-              <span>FRAME FINISH · VISUAL SAMPLE</span>
-              {([['walnut','Warm walnut'],['midnight','Midnight'],['brass','Brass tone']] as const)
-                .map(([value,label])=><button key={value} type="button"
-                  aria-pressed={finish===value} onClick={()=>setFinish(value)}>{label}</button>)}
-              <small>Illustrative finish only; final physical options require prototype approval.</small>
-            </div>}
             <div className="at-preview-caption">
               <div><span>THE NIGHT OF {date}</span><strong>{chosenName}</strong></div>
               <div><span>REAL HIPPARCOS STARS</span><strong>{design.stars.length} plotted in the calculated sky</strong></div>
@@ -572,19 +557,117 @@ export function ExperiencePage() {
               </fieldset>
               <small>The warm horizon glow follows your viewing angle and disappears when disabled. Stars remain calculated from the same place and moment.</small>
             </div>
+            <div className="at-workshop-actions">
+              <button type="button" onClick={editMoment}>✎ Change date or location</button>
+              <button type="button" onClick={()=>setStage('choice')}>✎ Change photo composition</button>
+              {placement==='within'&&<button type="button" onClick={()=>setStage('refine')}>✎ Refine the horizon again</button>}
+              <button type="button" onClick={()=>upload.current?.click()}>＋ Choose another photograph</button>
+            </div>
+          </div>
+        </div>
+        <div className="at-finish-chapter">
+          <div>
+            <span className="at-kicker">ONE LAST STEP</span>
+            <strong>Picture your creation at home.</strong>
+            <p>Your sky is ready. Step into the showroom, explore the frame
+              finishes and see how your stars could illuminate a room.</p>
+          </div>
+          <button type="button" className="at-primary"
+            onClick={()=>{setStage('home');window.scrollTo({top:0,behavior:'smooth'})}}>
+            See my keepsake in a room <span>↗</span>
+          </button>
+        </div>
+        <p className="at-science-caveat">The star positions are calculated from your location, date and local time. The
+          perspective is adjustable but not automatically calibrated to your photograph’s camera direction or lens.
+          This is a digital artistic preview, not a manufacturing-ready file. StarKeepsake is not affiliated with NASA.</p>
+      </section>}
+
+      {stage==='home'&&<section className="at-home-stage at-appear">
+        <div className="at-home-heading">
+          <span className="at-kicker">CHAPTER 05 / BRING YOUR NIGHT HOME</span>
+          <h1>A memory made<br/><em>to live with.</em></h1>
+          <p>Imagine your moment on the wall, gently illuminated after dark.
+            Find the finish that feels like you, and see it in a space that feels like home.</p>
+        </div>
+        <div className="at-home-layout">
+          <div className="at-home-left">
+            <HomeShowroom room={room}>
+              <SkyWorkshopPreview
+                showroom={true} lightsOn={lightsOn} finish={finish}
+                stars={design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
+                layout={placement}
+                imageAspect={dimensions?dimensions.width/dimensions.height:1}
+                heading={heading} pitch={pitch} fov={fov} skyHeight={skyPercent}
+                photoFit={photoFit} glow={atmosphericGlow} tone={skyTone}
+                maskAlpha={savedAlpha} maskDimensions={dimensions}
+                showPerspectiveGuide={false}
+                onPerspectiveInteract={()=>{}}
+                onHeading={()=>{}} onPitch={()=>{}}/>
+            </HomeShowroom>
+            <div className="at-home-customize">
+              <fieldset className="at-home-choice">
+                <legend><span>01</span> Choose your room</legend>
+                <div className="at-home-choice-list">{ROOM_OPTIONS.map(choice=>
+                  <button type="button" key={choice.id} aria-pressed={room===choice.id}
+                    onClick={()=>setRoom(choice.id)}>
+                    <span aria-hidden="true">{choice.symbol}</span>
+                    {choice.label}
+                  </button>)}</div>
+              </fieldset>
+              <fieldset className="at-home-choice">
+                <legend><span>02</span> Find your frame finish</legend>
+                <div className="at-home-wood-options">{WOOD_OPTIONS.map(choice=>
+                  <button type="button" key={choice.id} aria-pressed={finish===choice.id}
+                    onClick={()=>setFinish(choice.id)}>
+                    <i className={`at-home-wood-swatch at-swatch-${choice.id}`} aria-hidden="true"/>
+                    <strong>{choice.label}</strong>
+                  </button>)}</div>
+                <small>Finish colors are digital samples, not finalized materials or stock.</small>
+              </fieldset>
+              <div className="at-home-lighting">
+                <div><span className="at-home-control-kicker">03 / LIGHT THE STARS</span>
+                  <strong>See it come alive after dark.</strong></div>
+                <button type="button" aria-pressed={lightsOn}
+                  onClick={()=>setLightsOn(value=>!value)}>
+                  {lightsOn?'✦ Turn the stars off':'✧ Illuminate the stars'}
+                </button>
+              </div>
+            </div>
+            <p className="at-home-render-note">A styled product visualization,
+              not a photograph or exact-scale AR placement. Wood, dimensions,
+              star lighting and physical appearance will be confirmed after
+              a real prototype is built.</p>
+          </div>
+          <aside className="at-home-right">
+            <div className="at-home-spec">
+              <span className="at-kicker">MADE FROM YOUR MOMENT</span>
+              <h2>Your night, <em>framed.</em></h2>
+              <div className="at-home-facts">
+                <div><span>THE MOMENT</span><strong>{date}{unknownTime?' · Time unknown':` · ${time}`}</strong></div>
+                <div><span>THE PLACE</span><strong>{chosenName}</strong></div>
+                <div><span>YOUR VIEW</span><strong>{Math.round(heading)}° direction · {Math.round(pitch)}° upward</strong></div>
+                <div><span>FRAME CONCEPT</span>
+                  <strong>{WOOD_OPTIONS.find(choice=>choice.id===finish)?.label}
+                    {' · '}{design.framePresetId==='auto'?'Custom proportions':design.framePresetId+' in'}</strong></div>
+              </div>
+              <button type="button" className="at-home-back"
+                onClick={()=>{setStage('preview');window.scrollTo({top:0,behavior:'smooth'})}}>
+                ← Adjust my sky and perspective
+              </button>
+            </div>
             <div className="at-customer-order">
               <span className="at-kicker">THE FINISHING TOUCH / YOUR KEEPSAKE</span>
-              <h2>Keep this night <em>forever.</em></h2>
-              <p>Happy with your design? Prepare a complete order packet for Etsy,
-                including the original photograph, polished foreground, and
-                a sheet showing your chosen night.</p>
+              <h2>Make it <em>yours.</em></h2>
+              <p>Your finished design can become a one-of-a-kind keepsake.
+                Prepare the original photo, polished foreground and your personalized
+                design sheet for an eventual Etsy order.</p>
               <label htmlFor="at-order-inscription">A short inscription (optional)</label>
               <input id="at-order-inscription" type="text" maxLength={65}
                 value={inscription} placeholder="e.g. The night our story began"
                 onChange={event=>setInscription(event.target.value)}/>
               <button type="button" className="at-primary at-wide" disabled={orderBusy}
                 onClick={()=>void buildOrderPacket()}>
-                {orderBusy?'Preparing your keepsake…':'Prepare my order files'} <span>✦</span>
+                {orderBusy?'Preparing your keepsake…':'Get this keepsake'} <span>✦</span>
               </button>
               {orderError&&<p role="alert" className="at-error">{orderError}</p>}
               {currentOrder&&<div className="at-ready-packet" role="status">
@@ -608,24 +691,15 @@ export function ExperiencePage() {
                   target="_blank" rel="noopener noreferrer">
                   Continue to Etsy checkout ↗</a>
                   :<p className="at-checkout-pending">
-                    Etsy checkout is not connected yet. Save your files now;
-                    no payment or order has been placed.</p>}
-                <small>Etsy accepts image uploads in its custom options. Your listing
-                  must request the order sheet and original photo, plus the
-                  polished PNG for sky-in-photo designs.</small>
+                    Our Etsy shop is getting ready. You can save your custom design
+                    files now, but ordering and payment are not available yet.</p>}
+                <small>When our Etsy listing opens, use its personalization fields to
+                  send this design reference and your artwork. Your order is only placed
+                  after Etsy checkout is completed.</small>
               </div>}
             </div>
-            <div className="at-workshop-actions">
-              <button type="button" onClick={editMoment}>✎ Change date or location</button>
-              <button type="button" onClick={()=>setStage('choice')}>✎ Change photo composition</button>
-              {placement==='within'&&<button type="button" onClick={()=>setStage('refine')}>✎ Refine the horizon again</button>}
-              <button type="button" onClick={()=>upload.current?.click()}>＋ Choose another photograph</button>
-            </div>
-          </div>
+          </aside>
         </div>
-        <p className="at-science-caveat">The star positions are calculated from your location, date and local time. The
-          perspective is adjustable but not automatically calibrated to your photograph’s camera direction or lens.
-          This is a digital artistic preview, not a manufacturing-ready file. StarKeepsake is not affiliated with NASA.</p>
       </section>}
     </main>
     <footer className="at-footer"><span>✳ STARKEEPSAKE</span><span>THE BEAUTY OF A NIGHT, HELD FOREVER.</span><span>PERSONAL SKY ATELIER · PREVIEW</span></footer>
