@@ -591,7 +591,8 @@ export function ExperiencePage() {
         </div>
         <div className="at-home-layout">
           <div className="at-home-left">
-            <HomeShowroom room={room}>
+            <HomeShowroom room={room}
+              imageAspect={dimensions?dimensions.width/dimensions.height:1}>
               <SkyWorkshopPreview
                 showroom={true} lightsOn={lightsOn} finish={finish}
                 stars={design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
