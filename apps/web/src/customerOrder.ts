@@ -1,4 +1,5 @@
 import type { DesignSpec } from './designSpec'
+import type { AbovePhotoFitMode } from './frameSkyBalance'
 import { projectObserverStar } from './skyImmersiveData'
 import { observerPointInPanel } from './skyWorkshopMath'
 import { orderReference, makeOrderManifest, zipFiles } from './orderManifest'
