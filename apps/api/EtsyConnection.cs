@@ -311,7 +311,7 @@ public static class EtsyConnectionEndpoints
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.Lax,
-                Path = CallbackPath,
+                Path = "/",
                 MaxAge = TimeSpan.FromMinutes(10),
                 IsEssential = true
             });
@@ -331,7 +331,7 @@ public static class EtsyConnectionEndpoints
             var cookie = context.Request.Cookies[EtsyOAuthProtocol.StateCookieName];
             context.Response.Cookies.Delete(EtsyOAuthProtocol.StateCookieName,
                 new CookieOptions { Secure = true, HttpOnly = true, SameSite = SameSiteMode.Lax,
-                    Path = CallbackPath });
+                    Path = "/" });
 
             if (string.IsNullOrWhiteSpace(cookie) ||
                 !EtsyOAuthProtocol.SecureEquals(cookie, state) ||
