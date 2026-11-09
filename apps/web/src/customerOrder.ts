@@ -89,7 +89,7 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
   return png(canvas)
 }
 export async function createCustomerPacket(input:{
-  design:DesignSpec;prefs:OrderPreferences;photo:File;photoUrl:string;cutoutUrl:string;;savedDesignId?:string;
+  design:DesignSpec;prefs:OrderPreferences;photo:File;photoUrl:string;cutoutUrl:string;savedDesignId?:string;
 }):Promise<{manifest:OrderManifest;zip:Blob;sheet:Blob;prepared:Blob|null}>{
   if(!input.design.astronomy||!input.design.moment.location)throw Error('Finish the workshop first.')
   if(input.prefs.layout==='within'&&!input.cutoutUrl)throw Error('Save the polished foreground first.')
