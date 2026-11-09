@@ -89,12 +89,13 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
   return png(canvas)
 }
 export async function createCustomerPacket(input:{
-  design:DesignSpec;prefs:OrderPreferences;photo:File;photoUrl:string;cutoutUrl:string;
+  design:DesignSpec;prefs:OrderPreferences;photo:File;photoUrl:string;cutoutUrl:string;;savedDesignId?:string;
 }):Promise<{manifest:OrderManifest;zip:Blob;sheet:Blob;prepared:Blob|null}>{
   if(!input.design.astronomy||!input.design.moment.location)throw Error('Finish the workshop first.')
   if(input.prefs.layout==='within'&&!input.cutoutUrl)throw Error('Save the polished foreground first.')
   const photo=new Uint8Array(await input.photo.arrayBuffer())
-  const reference=await orderReference(input.design,input.prefs,photo)
+  // Server-assigned Design ID supersedes a local packet-only checksum when saved.
+  const reference=input.savedDesignId??await orderReference(input.design,input.prefs,photo)
   const original={name:input.photo.name,bytes:input.photo.size,mime:input.photo.type}
   const manifest=makeOrderManifest(reference,input.design,input.prefs,original,new Date().toISOString())
   const foreground=input.prefs.layout==='within'?
