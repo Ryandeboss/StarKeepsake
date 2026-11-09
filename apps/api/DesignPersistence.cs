@@ -85,6 +85,10 @@ public static class DesignSecurity
                 loc.ValueKind != JsonValueKind.Object ||
                 !d.TryGetProperty("astronomy", out var astronomy) ||
                 astronomy.ValueKind != JsonValueKind.Object ||
+                !d.TryGetProperty("photo", out var photoSpec) ||
+                photoSpec.ValueKind != JsonValueKind.Object ||
+                !photoSpec.TryGetProperty("assetId", out var assetId) ||
+                assetId.ValueKind != JsonValueKind.String ||
                 !d.TryGetProperty("stars", out var stars) ||
                 stars.ValueKind != JsonValueKind.Array ||
                 stars.GetArrayLength() > 20_000 ||
@@ -151,6 +155,7 @@ public sealed class DesignRepository(DesignPersistenceOptions options)
         var foregroundBlob = container.GetBlobClient(id + "/foreground");
         var uploadedOriginal = false;
         var uploadedForeground = false;
+        var insertionStarted = false;
         try
         {
             await originalBlob.UploadAsync(BinaryData.FromBytes(photoBytes),
@@ -183,20 +188,25 @@ public sealed class DesignRepository(DesignPersistenceOptions options)
             command.Parameters.Add("@mime", SqlDbType.VarChar, 24).Value = photo.ContentType;
             command.Parameters.Add("@fgMime", SqlDbType.VarChar, 24).Value =
                 foregroundBytes is null ? DBNull.Value : "image/png";
+            insertionStarted = true;
             var created = (DateTime)(await command.ExecuteScalarAsync(ct) ??
                 throw new InvalidOperationException("Design was not saved."));
             return (id, key, DateTime.SpecifyKind(created, DateTimeKind.Utc));
         }
         catch
         {
-            // No SQL row should point at half-written files. Blob cleanup is best-effort;
-            // expired or orphaned blobs can also be reconciled by a maintenance job.
-            if (uploadedOriginal)
-                try { await originalBlob.DeleteIfExistsAsync(cancellationToken: CancellationToken.None); }
-                catch (RequestFailedException) { }
-            if (uploadedForeground)
-                try { await foregroundBlob.DeleteIfExistsAsync(cancellationToken: CancellationToken.None); }
-                catch (RequestFailedException) { }
+            // If the SQL insert was attempted, it might have committed despite a
+            // network timeout. Keep the blobs rather than leave a valid SQL row
+            // pointing at deleted artwork. A reconciliation job can remove orphans.
+            if (!insertionStarted)
+            {
+                if (uploadedOriginal)
+                    try { await originalBlob.DeleteIfExistsAsync(cancellationToken: CancellationToken.None); }
+                    catch (RequestFailedException) { }
+                if (uploadedForeground)
+                    try { await foregroundBlob.DeleteIfExistsAsync(cancellationToken: CancellationToken.None); }
+                    catch (RequestFailedException) { }
+            }
             throw;
         }
     }
