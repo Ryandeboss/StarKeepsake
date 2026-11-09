@@ -1,0 +1,128 @@
+/* Photographic green-screen compositing for Chapter 05.
+   No second, CSS-drawn frame: the actual frame moulding, mat and shadow
+   are all retained from the customer's chosen studio plate. */
+.hsh-room{
+  position:relative;isolation:isolate;width:100%;overflow:hidden;
+  border-radius:14px;background:#1b1f24;border:1px solid #465158;
+  box-shadow:0 22px 65px rgba(0,0,0,.34);
+}
+.hsh-world{
+  position:absolute;inset:0;transform:scale(1);transform-origin:50% 45%;
+  transition:transform .7s cubic-bezier(.22,.78,.25,1);
+}
+.hsh-room--closer .hsh-world{transform:scale(1.18);}
+.hsh-host-photo{position:absolute;inset:0;width:100%;height:100%;
+  display:block;object-fit:fill;pointer-events:none;user-select:none;z-index:4;}
+.hsh-projected-art{
+  position:absolute;inset:0;width:100%;height:100%;transform-origin:0 0;
+  z-index:3;pointer-events:none;backface-visibility:hidden;overflow:hidden;
+}
+.hsh-opening-matte{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;background:linear-gradient(140deg,#040b15,#101e27);
+}
+.hsh-user-art{
+  position:relative;display:flex;flex:none;align-items:center;justify-content:center;
+  overflow:hidden;min-width:0;min-height:0;
+}
+.hsh-user-art .skw-workshop{
+  display:flex;flex-direction:column;width:100%;height:100%;
+  border:0;border-radius:0;background:none;box-shadow:none;overflow:hidden;
+}
+.hsh-user-art .skw-topline,
+.hsh-user-art .skw-footline{display:none;}
+.hsh-user-art .skw-frame-rail,
+.hsh-user-art .skw-showroom .skw-frame-rail{
+  position:relative;display:flex;align-items:stretch;justify-content:stretch;
+  padding:0;min-height:0;width:100%;height:100%;flex:1;max-height:none;
+  box-shadow:none;border:0;background:transparent;perspective:none;overflow:hidden;
+}
+.hsh-user-art .skw-frame,
+.hsh-user-art .skw-showroom .skw-frame{
+  box-sizing:border-box!important;display:block!important;
+  width:100%!important;height:100%!important;max-width:none!important;
+  max-height:none!important;min-width:0!important;
+  margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:none!important;box-shadow:none!important;
+  transform:none!important;transition:none!important;
+}
+.hsh-user-art .skw-frame::before,.hsh-user-art .skw-frame::after{display:none!important;}
+.hsh-user-art .skw-artwork,
+.hsh-user-art .skw-showroom .skw-artwork{
+  width:100%!important;height:100%!important;aspect-ratio:auto!important;
+  margin:0;padding:0;box-shadow:none!important;background:#050f1b;
+  overflow:hidden;border:0;outline:0;
+}
+.hsh-user-art .skw-star-detail{display:none!important;}
+.hsh-user-art .skw-catalog-stars{pointer-events:none;}
+.hsh-user-art .skw-unprepared{font-size:9px;bottom:8px;}
+/* A photograph of reflected windows, screen-blended very faintly.
+   The supplied shadow-map stays as a separate reference asset: the host
+   photo already contains physically correct wall contact shadows. */
+.hsh-glass{
+  position:absolute;inset:0;pointer-events:none;z-index:5;
+  background:url('/showroom/glass-reflection.png') center/cover;
+  mix-blend-mode:screen;opacity:.065;
+}
+.hsh-photo-grade{
+  position:absolute;inset:0;z-index:5;pointer-events:none;
+  background:linear-gradient(180deg,rgba(7,13,21,.07),transparent 38%,
+    rgba(5,10,14,.1));
+}
+.hsh-room--night .hsh-host-photo{
+  filter:brightness(.78) saturate(.86);
+}
+.hsh-room--night .hsh-photo-grade{
+  background:linear-gradient(100deg,rgba(3,9,18,.19),transparent 62%,
+    rgba(3,9,18,.12));
+}
+.hsh-loading{
+  position:absolute;inset:0;display:grid;place-items:center;z-index:2;
+  padding:24px;text-align:center;color:#dfd1b8;
+  font:13px/1.6 system-ui,sans-serif;background:linear-gradient(125deg,#1b282f,#1d2027);
+}
+.hsh-scene-controls{
+  position:absolute;top:13px;left:13px;right:13px;z-index:10;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:12px;pointer-events:none;
+}
+.hsh-scene-id,.hsh-control-actions button,
+.hsh-light-state,.hsh-production-note,.hsh-mat-hint{
+  color:#f8f3e9;background:rgba(10,17,21,.68);border:1px solid rgba(247,244,235,.16);
+  border-radius:6px;padding:8px 10px;
+  font:10px/1.35 ui-monospace,monospace;letter-spacing:.07em;
+  backdrop-filter:blur(11px);-webkit-backdrop-filter:blur(11px);
+}
+.hsh-scene-id i{display:inline-block;width:5px;height:5px;margin-right:6px;
+  background:#e1c68a;border-radius:50%;vertical-align:middle;}
+.hsh-control-actions{display:flex;gap:7px;pointer-events:auto;}
+.hsh-control-actions button{
+  cursor:pointer;white-space:nowrap;background:rgba(11,20,26,.76);
+  transition:background .18s,border-color .18s;
+}
+.hsh-control-actions button:hover,.hsh-control-actions button:focus-visible{
+  outline:none;background:rgba(21,45,52,.94);border-color:rgba(246,224,175,.75);
+}
+.hsh-light-state{position:absolute;bottom:12px;right:13px;z-index:9;}
+.hsh-production-note{position:absolute;bottom:12px;left:13px;z-index:9;
+  font-size:8px;max-width:48%;line-height:1.4;}
+.hsh-mat-hint{
+  position:absolute;bottom:48px;right:13px;z-index:9;font-size:8px;
+}
+@media(max-width:800px){
+ .hsh-scene-controls{top:7px;left:7px;right:7px;gap:4px;}
+ .hsh-scene-id,.hsh-control-actions button{font-size:8px;padding:6px 7px;letter-spacing:0;}
+ .hsh-light-state{right:7px;bottom:7px;font-size:8px;padding:5px 7px;}
+ .hsh-production-note{left:7px;bottom:7px;font-size:7px;padding:5px 7px;}
+ .hsh-mat-hint{right:7px;bottom:34px;}
+}
+@media(max-width:460px){
+ .hsh-control-actions{gap:4px;}
+ .hsh-control-actions button:first-child{display:none;}
+ .hsh-scene-id{max-width:53%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+ .hsh-production-note{max-width:60%;}
+ .hsh-light-state{display:none;}
+}
+@media(prefers-reduced-motion:reduce){
+ .hsh-world,.hsh-control-actions button{transition:none;}
+}

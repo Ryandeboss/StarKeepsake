@@ -42,3 +42,20 @@ test('brighter catalog stars have wider point-spread halos and low-altitude exti
   assert.ok(!starOptics(5,65,false,true).spikes)
   assert.ok(!starOptics(-1,65,true,false).spikes)
 })
+
+test('horizon glow toggle genuinely turns off warm haze, not just dims it',()=>{
+  const on=skyRgb(500,300,2,105,true,true)
+  const off=skyRgb(500,300,2,105,true,false)
+  assert.ok(on[0] >= off[0]+15,'warm light must disappear entirely')
+  assert.ok(on[1] >= off[1]+8)
+  const highOn=skyRgb(500,300,75,105,true,true)
+  const highOff=skyRgb(500,300,75,105,true,false)
+  assert.ok(Math.abs(highOn[0]-highOff[0])<3,'high sky stays dark with either setting')
+})
+test('horizon glow moves downward in the camera when looking upward',()=>{
+  const middle=skyRgb(500,300,44,105,true,true)
+  const bottom=skyRgb(500,575,44,105,true,true)
+  assert.ok(bottom[0]>middle[0]+7,'horizon now lies near lower edge')
+  const offBottom=skyRgb(500,575,44,105,true,false)
+  assert.ok(bottom[0]>offBottom[0]+12,'optional glow follows the projected horizon')
+})

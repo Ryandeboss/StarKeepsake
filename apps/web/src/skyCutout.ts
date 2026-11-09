@@ -108,13 +108,13 @@ export function hasTransparentSky(pixels: Uint8ClampedArray): boolean {
 export async function createSkylineCutout(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file)
   try {
-    if (bitmap.width < 600 || bitmap.width / bitmap.height < 1.4) {
-      throw new Error('Choose a landscape Chicago skyline image, at least 600 pixels wide.')
+    if (!bitmap.width || !bitmap.height || bitmap.width * bitmap.height > 50_000_000) {
+      throw new Error('Choose a valid photo under 50 megapixels.')
     }
-    const scale = Math.min(1, 3000 / bitmap.width)
+    const scale = Math.min(1, 3000 / Math.max(bitmap.width, bitmap.height))
     const canvas = document.createElement('canvas')
-    canvas.width = Math.round(bitmap.width * scale)
-    canvas.height = Math.round(bitmap.height * scale)
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
     if (!ctx) throw new Error('The browser could not prepare the skyline image.')
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)

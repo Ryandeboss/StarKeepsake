@@ -17,8 +17,19 @@
     "test:landscapes": "node --experimental-strip-types --test tests/sky-landscapes.test.mjs",
     "test:photo-panorama": "node --experimental-strip-types --test tests/photo-panorama.test.mjs",
     "test:sky-cutout": "node --experimental-strip-types --test tests/sky-cutout.test.mjs",
+    "test:sky-mask-editor": "node --experimental-strip-types --test tests/sky-mask-editor.test.mjs",
     "test:sky-dome": "node --experimental-strip-types --test tests/sky-dome.test.mjs",
-    "test:photographic": "node --experimental-strip-types --test tests/sky-photographic.test.mjs"
+    "test:photographic": "node --experimental-strip-types --test tests/sky-photographic.test.mjs",
+    "test:sky-ai-mask": "node --experimental-strip-types --test tests/sky-ai-mask.test.mjs",
+    "test:sky-recovery": "node --experimental-strip-types --test tests/sky-missed-sky-recovery.test.mjs",
+    "test:sky-spot": "node --experimental-strip-types --test tests/sky-spot-cleanup.test.mjs",
+    "test:sky-sweep": "node --experimental-strip-types --test tests/sky-sweep-cleanup.test.mjs",
+    "test:photo-sky-layout": "node --experimental-strip-types --test tests/photo-sky-layout.test.mjs",
+    "test:experience": "node --experimental-strip-types --test tests/frame-experience.test.mjs",
+    "test:workshop": "node --experimental-strip-types --test tests/sky-workshop-orientation.test.mjs",
+    "test:orders": "node --experimental-strip-types --test tests/customer-order.test.mjs",
+    "test:showroom": "node --experimental-strip-types --test tests/showroom-plates.test.mjs",
+    "test:saved-design": "node --experimental-strip-types --test tests/saved-design.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
