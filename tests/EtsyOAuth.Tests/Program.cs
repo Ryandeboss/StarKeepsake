@@ -39,10 +39,14 @@ var options = new EtsyConnectionOptions
     ExpectedShopName = "ApexCraftedUS",
     AdminSetupKey = new string('A', 40),
     StateSigningKey = secret,
-    KeyVaultUri = "https://example.vault.azure.net/",
-    TokenSecretName = "etsy-token-test"
+    StorageConnectionString = "UseDevelopmentStorage=true",
+    StorageContainerName = "starkeepsake-private",
+    TokenBlobName = "integrations/etsy/connection.json"
 };
-Check(options.IsConfigured, "configuration validation accepts complete settings");
+Check(options.IsConfigured, "configuration validation accepts Container Apps secret and private blob settings");
+options.StorageConnectionString = "";
+Check(!options.IsConfigured, "missing durable token storage fails closed");
+options.StorageConnectionString = "UseDevelopmentStorage=true";
 var url = EtsyOAuthProtocol.AuthorizeUrl(options, state);
 Check(url.StartsWith("https://www.etsy.com/oauth/connect?") &&
       url.Contains("code_challenge_method=S256") &&
