@@ -123,7 +123,7 @@ builder.Services.AddHttpClient<EtsyApiClient>(client =>
     client.BaseAddress = new Uri("https://api.etsy.com/");
     client.Timeout = TimeSpan.FromSeconds(20);
 });
-builder.Services.AddTransient<EtsyTokenVault>();
+builder.Services.AddTransient<EtsyTokenStore>();
 builder.Services.AddTransient<EtsyTokenProvider>();
 
 var app = builder.Build();
