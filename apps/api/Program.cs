@@ -60,6 +60,16 @@ builder.Services.AddCors(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("etsy-admin", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 8,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
     options.AddPolicy("maps", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -106,11 +116,22 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Etsy").Get<EtsyConnectionOptions>() ?? new EtsyConnectionOptions());
+builder.Services.AddHttpClient<EtsyApiClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api.etsy.com/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
+builder.Services.AddTransient<EtsyTokenVault>();
+builder.Services.AddTransient<EtsyTokenProvider>();
+
 var app = builder.Build();
 var deploymentCommitSha = builder.Configuration["Deployment:CommitSha"] ?? "unknown";
 
 app.UseCors("web");
 app.UseRateLimiter();
+app.MapEtsyConnectionEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new
 {
