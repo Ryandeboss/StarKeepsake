@@ -1,30 +1,36 @@
-using System.Data;
+using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
-using Azure;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Data.SqlClient;
 
 namespace StarKeepsake.Api;
 
-// Design IDs are public order references. The separate random access key is private:
-// knowing an Etsy personalization ID alone must never expose a customer's photo.
+// Customer photos and snapshots now live in a dedicated Supabase project.
+// The secret API key is only read on the Azure API server, NEVER in Vite.
 public sealed class DesignPersistenceOptions
 {
-    public string SqlConnectionString { get; set; } = "";
-    public string StorageConnectionString { get; set; } = "";
-    public string StorageContainerName { get; set; } = "starkeepsake-artwork";
+    public string ProjectUrl { get; set; } = "";
+    public string SecretKey { get; set; } = "";
+    public string StorageBucketName { get; set; } = "starkeepsake-designs";
+
     public bool IsConfigured =>
-        !string.IsNullOrWhiteSpace(SqlConnectionString) &&
-        !string.IsNullOrWhiteSpace(StorageConnectionString) &&
-        Regex.IsMatch(StorageContainerName, "^[a-z0-9](?:[a-z0-9-]{1,61})[a-z0-9]$");
+        Uri.TryCreate(ProjectUrl, UriKind.Absolute, out var url) &&
+        url.Scheme == Uri.UriSchemeHttps &&
+        url.Host.EndsWith(".supabase.co", StringComparison.OrdinalIgnoreCase) &&
+        url.AbsolutePath == "/" &&
+        url.Query == "" && url.Fragment == "" &&
+        (SecretKey.StartsWith("sb_secret_", StringComparison.Ordinal) ||
+         SecretKey.StartsWith("eyJ", StringComparison.Ordinal)) &&
+        SecretKey.Length >= 40 &&
+        Regex.IsMatch(StorageBucketName,
+            "^[a-z0-9](?:[a-z0-9-]{1,61})[a-z0-9]$");
 }
 
+// Knowing the public Etsy Design ID does not provide access to private photo bytes.
 public static class DesignSecurity
 {
     public const int MaxImageBytes = 10 * 1024 * 1024;
@@ -58,8 +64,7 @@ public static class DesignSecurity
         };
     }
 
-    // Before the production renderer trusts a saved design, a separate manufacturing
-    // validation will check all dimensions, astronomy, materials and SKU compatibility.
+    // Validity for the M1 preview, not approval for physical manufacture.
     public static bool ValidDesignJson(string designJson, string preferencesJson, bool prepared)
     {
         if (Encoding.UTF8.GetByteCount(designJson) > MaxJsonBytes ||
@@ -72,15 +77,13 @@ public static class DesignSecurity
             using var prefs = JsonDocument.Parse(preferencesJson);
             var d = design.RootElement;
             var p = prefs.RootElement;
-            if (d.ValueKind != JsonValueKind.Object || p.ValueKind != JsonValueKind.Object)
-                return false;
-            if (!d.TryGetProperty("schemaVersion", out var version) ||
+            if (d.ValueKind != JsonValueKind.Object || p.ValueKind != JsonValueKind.Object ||
+                !d.TryGetProperty("schemaVersion", out var version) ||
                 version.GetString() != "1.5" ||
                 !d.TryGetProperty("moment", out var moment) ||
                 moment.ValueKind != JsonValueKind.Object ||
                 !moment.TryGetProperty("date", out var date) ||
-                date.ValueKind != JsonValueKind.String ||
-                date.GetString()?.Length != 10 ||
+                date.ValueKind != JsonValueKind.String || date.GetString()?.Length != 10 ||
                 !moment.TryGetProperty("location", out var loc) ||
                 loc.ValueKind != JsonValueKind.Object ||
                 !d.TryGetProperty("astronomy", out var astronomy) ||
@@ -109,17 +112,61 @@ public static class DesignSecurity
 }
 
 public sealed record SavedDesignRow(
-    string DesignId, byte[] KeyHash, DateTime CreatedUtc,
+    string DesignId, byte[] KeyHash, DateTimeOffset CreatedUtc,
     string DesignJson, string PreferencesJson,
     string OriginalMime, string? ForegroundMime);
 
-public sealed class DesignRepository(DesignPersistenceOptions options)
+// PostgREST and private Supabase Storage need only one server-side secret key.
+// New sb_secret_ keys must be sent in apikey, not as Authorization: Bearer.
+public sealed class DesignRepository
 {
-    private BlobContainerClient Container =>
-        new BlobServiceClient(options.StorageConnectionString)
-            .GetBlobContainerClient(options.StorageContainerName);
+    private readonly HttpClient _http;
+    private readonly DesignPersistenceOptions _options;
 
-    private SqlConnection NewConnection() => new(options.SqlConnectionString);
+    public DesignRepository(HttpClient http, DesignPersistenceOptions options)
+    {
+        _http = http;
+        _options = options;
+        if (options.IsConfigured)
+            _http.BaseAddress = new Uri(options.ProjectUrl.TrimEnd('/') + "/");
+    }
+
+    private HttpRequestMessage NewRequest(HttpMethod method, string relativePath)
+    {
+        var request = new HttpRequestMessage(method, relativePath.TrimStart('/'));
+        request.Headers.TryAddWithoutValidation("apikey", _options.SecretKey);
+        if (_options.SecretKey.StartsWith("eyJ", StringComparison.Ordinal))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _options.SecretKey);
+        return request;
+    }
+
+    private string AssetPath(string id, string type) =>
+        _options.StorageBucketName + "/" + id + "/" + type;
+
+    private async Task UploadImageAsync(
+        string id, string type, byte[] bytes, string mime, CancellationToken ct)
+    {
+        using var request = NewRequest(HttpMethod.Post,
+            "storage/v1/object/" + AssetPath(id, type));
+        request.Content = new ByteArrayContent(bytes);
+        request.Content.Headers.ContentType = new MediaTypeHeaderValue(mime);
+        request.Headers.TryAddWithoutValidation("x-upsert", "false");
+        using var response = await _http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException("Private photo upload failed.", null, response.StatusCode);
+    }
+
+    private async Task DeleteUploadedAsync(string id, string type)
+    {
+        try
+        {
+            using var request = NewRequest(HttpMethod.Delete,
+                "storage/v1/object/" + AssetPath(id, type));
+            using var response = await _http.SendAsync(request, CancellationToken.None);
+        }
+        catch (HttpRequestException) { /* Reconcile any orphaned objects separately. */ }
+        catch (TaskCanceledException) { }
+    }
 
     private static async Task<byte[]> ReadImage(IFormFile file, CancellationToken ct)
     {
@@ -134,7 +181,7 @@ public sealed class DesignRepository(DesignPersistenceOptions options)
         return bytes;
     }
 
-    public async Task<(string Id, string Key, DateTime CreatedUtc)> SaveAsync(
+    public async Task<(string Id, string Key, DateTimeOffset CreatedUtc)> SaveAsync(
         string designJson, string preferencesJson, IFormFile photo,
         IFormFile? foreground, CancellationToken ct)
     {
@@ -147,65 +194,55 @@ public sealed class DesignRepository(DesignPersistenceOptions options)
         var key = DesignSecurity.NewAccessKey();
         var design = JsonNode.Parse(designJson)!.AsObject();
         design["designId"] = id;
-        design["photo"]!["assetId"] = "private-blob-original";
-        var finalDesignJson = design.ToJsonString();
-
-        var container = Container;
-        var originalBlob = container.GetBlobClient(id + "/original");
-        var foregroundBlob = container.GetBlobClient(id + "/foreground");
+        design["photo"]!["assetId"] = "private-supabase-original";
+        var designPayload = JsonSerializer.Deserialize<JsonElement>(design.ToJsonString());
+        var preferencesPayload = JsonSerializer.Deserialize<JsonElement>(preferencesJson);
         var uploadedOriginal = false;
         var uploadedForeground = false;
-        var insertionStarted = false;
+        var insertStarted = false;
         try
         {
-            await originalBlob.UploadAsync(BinaryData.FromBytes(photoBytes),
-                new BlobUploadOptions {
-                    HttpHeaders = new BlobHttpHeaders { ContentType = photo.ContentType }
-                }, ct);
+            await UploadImageAsync(id, "original", photoBytes, photo.ContentType, ct);
             uploadedOriginal = true;
             if (foregroundBytes is not null)
             {
-                await foregroundBlob.UploadAsync(BinaryData.FromBytes(foregroundBytes),
-                    new BlobUploadOptions {
-                        HttpHeaders = new BlobHttpHeaders { ContentType = "image/png" }
-                    }, ct);
+                await UploadImageAsync(id, "foreground", foregroundBytes, "image/png", ct);
                 uploadedForeground = true;
             }
 
-            await using var sql = NewConnection();
-            await sql.OpenAsync(ct);
-            await using var command = sql.CreateCommand();
-            command.CommandText = """
-                INSERT INTO dbo.CustomerDesigns
-                  (DesignId, AccessKeyHash, DesignJson, PreferencesJson, OriginalMime, ForegroundMime)
-                OUTPUT inserted.CreatedUtc
-                VALUES (@id, @hash, @design, @prefs, @mime, @fgMime);
-                """;
-            command.Parameters.Add("@id", SqlDbType.NVarChar, 24).Value = id;
-            command.Parameters.Add("@hash", SqlDbType.VarBinary, 32).Value = DesignSecurity.HashKey(key);
-            command.Parameters.Add("@design", SqlDbType.NVarChar, -1).Value = finalDesignJson;
-            command.Parameters.Add("@prefs", SqlDbType.NVarChar, -1).Value = preferencesJson;
-            command.Parameters.Add("@mime", SqlDbType.VarChar, 24).Value = photo.ContentType;
-            command.Parameters.Add("@fgMime", SqlDbType.VarChar, 24).Value =
-                foregroundBytes is null ? DBNull.Value : "image/png";
-            insertionStarted = true;
-            var created = (DateTime)(await command.ExecuteScalarAsync(ct) ??
-                throw new InvalidOperationException("Design was not saved."));
-            return (id, key, DateTime.SpecifyKind(created, DateTimeKind.Utc));
+            // The service key never enters the browser. No user-supplied ID controls
+            // object paths, and all column values are JSON encoded (not SQL strings).
+            using var request = NewRequest(HttpMethod.Post, "rest/v1/customer_designs");
+            request.Headers.TryAddWithoutValidation("Prefer", "return=representation");
+            request.Content = new StringContent(JsonSerializer.Serialize(new
+            {
+                design_id = id,
+                access_key_hash = Convert.ToHexString(DesignSecurity.HashKey(key)),
+                design_json = designPayload,
+                preferences_json = preferencesPayload,
+                original_mime = photo.ContentType,
+                foreground_mime = foregroundBytes is null ? null : "image/png"
+            }), Encoding.UTF8, "application/json");
+            insertStarted = true;
+            using var response = await _http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException("Could not save design metadata.", null, response.StatusCode);
+            using var result = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct),
+                cancellationToken: ct);
+            var rows = result.RootElement;
+            if (rows.ValueKind != JsonValueKind.Array || rows.GetArrayLength() != 1)
+                throw new InvalidDataException("Design database returned no row.");
+            var created = rows[0].GetProperty("created_at").GetDateTimeOffset();
+            return (id, key, created);
         }
         catch
         {
-            // If the SQL insert was attempted, it might have committed despite a
-            // network timeout. Keep the blobs rather than leave a valid SQL row
-            // pointing at deleted artwork. A reconciliation job can remove orphans.
-            if (!insertionStarted)
+            // The INSERT can commit despite a timeout. Never delete photos once a
+            // metadata insert was attempted, or a real design may lose its files.
+            if (!insertStarted)
             {
-                if (uploadedOriginal)
-                    try { await originalBlob.DeleteIfExistsAsync(cancellationToken: CancellationToken.None); }
-                    catch (RequestFailedException) { }
-                if (uploadedForeground)
-                    try { await foregroundBlob.DeleteIfExistsAsync(cancellationToken: CancellationToken.None); }
-                    catch (RequestFailedException) { }
+                if (uploadedOriginal) await DeleteUploadedAsync(id, "original");
+                if (uploadedForeground) await DeleteUploadedAsync(id, "foreground");
             }
             throw;
         }
@@ -213,29 +250,39 @@ public sealed class DesignRepository(DesignPersistenceOptions options)
 
     public async Task<SavedDesignRow?> FindAsync(string id, CancellationToken ct)
     {
-        await using var sql = NewConnection();
-        await sql.OpenAsync(ct);
-        await using var command = sql.CreateCommand();
-        command.CommandText = """
-            SELECT DesignId, AccessKeyHash, CreatedUtc, DesignJson,
-                   PreferencesJson, OriginalMime, ForegroundMime
-              FROM dbo.CustomerDesigns WHERE DesignId = @id;
-            """;
-        command.Parameters.Add("@id", SqlDbType.NVarChar, 24).Value = id;
-        await using var reader = await command.ExecuteReaderAsync(ct);
-        if (!await reader.ReadAsync(ct)) return null;
+        using var request = NewRequest(HttpMethod.Get,
+            "rest/v1/customer_designs?design_id=eq." + id +
+            "&select=design_id%2Caccess_key_hash%2Ccreated_at%2Cdesign_json%2Cpreferences_json%2Coriginal_mime%2Cforeground_mime&limit=1");
+        using var response = await _http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException("Design lookup failed.", null, response.StatusCode);
+        using var result = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct),
+            cancellationToken: ct);
+        var rows = result.RootElement;
+        if (rows.ValueKind != JsonValueKind.Array || rows.GetArrayLength() == 0)
+            return null;
+        var row = rows[0];
         return new SavedDesignRow(
-            reader.GetString(0), (byte[])reader[1],
-            DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc),
-            reader.GetString(3), reader.GetString(4), reader.GetString(5),
-            reader.IsDBNull(6) ? null : reader.GetString(6));
+            row.GetProperty("design_id").GetString()!,
+            Convert.FromHexString(row.GetProperty("access_key_hash").GetString()!),
+            row.GetProperty("created_at").GetDateTimeOffset(),
+            row.GetProperty("design_json").GetRawText(),
+            row.GetProperty("preferences_json").GetRawText(),
+            row.GetProperty("original_mime").GetString()!,
+            row.GetProperty("foreground_mime").ValueKind == JsonValueKind.Null
+                ? null : row.GetProperty("foreground_mime").GetString());
     }
 
     public async Task<byte[]> DownloadAssetAsync(string id, string type, CancellationToken ct)
     {
-        var blob = Container.GetBlobClient(id + "/" + type);
-        var result = await blob.DownloadContentAsync(ct);
-        return result.Value.Content.ToArray();
+        using var request = NewRequest(HttpMethod.Get,
+            "storage/v1/object/authenticated/" + AssetPath(id, type));
+        using var response = await _http.SendAsync(request, ct);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            throw new FileNotFoundException("Private design file not found.");
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException("Private design file read failed.", null, response.StatusCode);
+        return await response.Content.ReadAsByteArrayAsync(ct);
     }
 }
 
@@ -277,8 +324,8 @@ public static class DesignPersistenceEndpoints
             catch (InvalidDataException) {
                 return Results.BadRequest("Please upload a valid JPG, PNG or WebP image (up to 10 MB).");
             }
-            catch (Exception ex) when (ex is SqlException or RequestFailedException or
-                InvalidOperationException or JsonException or IOException) {
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or
+                InvalidOperationException or IOException or FormatException) {
                 return Results.Problem("Design storage is temporarily unavailable.", statusCode: 503);
             }
         }).RequireRateLimiting("design-save");
@@ -303,7 +350,7 @@ public static class DesignPersistenceEndpoints
                     hasPreparedForeground = row.ForegroundMime is not null
                 });
             }
-            catch (Exception ex) when (ex is SqlException or RequestFailedException or JsonException)
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or FormatException)
             { return Results.Problem("Design retrieval is temporarily unavailable.", statusCode: 503); }
         }).RequireRateLimiting("design-load");
 
@@ -325,7 +372,8 @@ public static class DesignPersistenceEndpoints
                 var data = await repository.DownloadAssetAsync(designId, type, context.RequestAborted);
                 return Results.File(data, type == "foreground" ? row.ForegroundMime : row.OriginalMime);
             }
-            catch (Exception ex) when (ex is SqlException or RequestFailedException)
+            catch (FileNotFoundException) { return Results.NotFound(); }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or FormatException)
             { return Results.Problem("Design file is temporarily unavailable.", statusCode: 503); }
         }).RequireRateLimiting("design-load");
     }
