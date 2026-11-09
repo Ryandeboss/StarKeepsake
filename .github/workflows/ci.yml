@@ -43,6 +43,8 @@ jobs:
           dotnet-version: 10.0.x
       - run: dotnet restore StarKeepsake.slnx
       - run: dotnet build StarKeepsake.slnx --no-restore --configuration Release
+      - run: dotnet run --project tests/EtsyOAuth.Tests/EtsyOAuth.Tests.csproj --configuration Release
+      - run: bash -n scripts/etsy/prepare-container-app.sh
 
   design-engine:
     name: Design Engine
