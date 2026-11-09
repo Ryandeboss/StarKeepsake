@@ -1,65 +1,115 @@
-# StarKeepsake → Etsy (seller-only connection, milestone 1)
+# StarKeepsake → Etsy: owner-only connection (Milestone 1)
 
-Status: **code on feature branch; not authorized, merged or deployed**.
-The Etsy shop in the current design is **ApexCraftedUS**. Physical frames will be sold on Etsy, while StarKeepsake handles the customizer and later the design-to-paid-order-to-production pipeline.
+**State:** code on `feature/etsy-seller-oauth` (draft PR #49); **not deployed, not Etsy-authorized and no live Etsy listing changed**.
 
-## Implemented in this milestone
+This MVP uses **existing Azure Container Apps secrets**, plus one private Azure Blob container for the OAuth tokens that must survive restarts. **No Azure Key Vault** or managed-identity permissions are required for this version. Physical frames will eventually be sold on Etsy; StarKeepsake will save exact custom designs and associate only verified paid Etsy orders with production instructions.
 
-- A private **owner-only** browser form at `GET /api/admin/etsy/connect`, protected at submission by a separate strong StarKeepsake admin setup key.
-- Etsy OAuth2 authorization-code grant with **PKCE S256**, signed 10-minute state, browser-bound HttpOnly/Secure/SameSite=Lax cookie, one-time callback handling, and rate limiting. Callback path: `/api/admin/etsy/callback`.
-- Smallest read scopes needed for the next milestone: `shops_r listings_r transactions_r`. **No listing write, publication, payment, or order fulfillment permissions.**
-- Exact owner verification through Etsy's `GET /v3/application/users/{user_id}/shops` endpoint. Connection fails if that account does **not** own the configured shop name.
-- Token exchange and refresh, including refresh-token rotation, with durable storage as a secret in **Azure Key Vault** accessed by the API's managed identity.
-- Authenticated `GET /api/admin/etsy/status` (no token data returned), for confirming the connection and refreshing expired access tokens.
-- All Etsy secrets/tokens remain server-side; disabled if required server configuration is missing.
+## What was implemented
 
-## Setup (after PR review; do not deploy yet)
+- Owner-only authorization page: `GET /api/admin/etsy/connect`, requiring a separate randomly generated admin setup key on submission (not the Etsy Shared Secret).
+- Etsy OAuth 2.0 authorization code + PKCE S256 with 10-minute signed state, secure browser cookie and rate limiting.
+- Read-only scopes `shops_r listings_r transactions_r` (no listing edits, publishing or fulfillment).
+- Verifies that the authorized seller owns **ApexCraftedUS** before saving any tokens.
+- Access/refresh tokens persist in a **private Azure Blob** (encrypted at rest); access token refreshed when needed. The storage connection string lives in a Container App secret.
+- Authenticated status endpoint: `GET /api/admin/etsy/status` (does not return tokens).
 
-1. In Etsy Developer Portal → Your Apps, register the **exact HTTPS Redirect URI**
-   `https://<YOUR-AZURE-API-HOST>/api/admin/etsy/callback`. Use the actual API host; do not register the frontend Vercel host. Do not append a slash or query.
-2. Create a **dedicated Azure Key Vault** for StarKeepsake API integrations (or a securely scoped existing one). Enable an API-managed identity on Azure Container Apps. Grant it **Get and Set secret** rights on the dedicated vault (RBAC via Key Vault Secrets Officer on this *dedicated* vault, or a narrowly scoped secret access policy). If a user-assigned identity is used, provide its **client ID**, not its resource ID.
-3. Generate two **separate** high-entropy setup secrets, distinct from Etsy's Shared Secret. PowerShell example for each:
-   `[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))`
-4. Configure the **API Container App** (secure environment variables/secret references, not GitHub, not Vercel):
-   - `Etsy__Keystring` = Etsy Keystring (private to API)
-   - `Etsy__SharedSecret` = Etsy Shared Secret (**keep private**)
-   - `Etsy__RedirectUri` = exact HTTPS URI from step 1
-   - `Etsy__ExpectedShopName` = `ApexCraftedUS`
-   - `Etsy__AdminSetupKey` = separately generated ≥32-character random key
-   - `Etsy__StateSigningKey` = different ≥32-character random key
-   - `Etsy__KeyVaultUri` = `https://<VAULT>.vault.azure.net/`
-   - `Etsy__ManagedIdentityClientId` = optional, only for user-assigned managed identity
-   - `Etsy__TokenSecretName` = optional, defaults to `starkeepsake-etsy-connection`
-5. After deploying *with approval*, visit `https://<YOUR-AZURE-API-HOST>/api/admin/etsy/connect`. Enter **the StarKeepsake admin setup key**, NOT the Etsy Shared Secret. Etsy will ask you to approve read-only shop, listing and order access. Use the Etsy account that owns **ApexCraftedUS**. The callback verifies shop ownership and saves tokens to Key Vault.
-6. Check status locally with an authenticated request (the admin key must never appear in the URL or git history):
-   `curl -H "X-Starkeepsake-Admin-Key: <ADMIN_KEY>" https://<YOUR-AZURE-API-HOST>/api/admin/etsy/status`
-   Expected response: `{"connected":true,"shopName":"ApexCraftedUS","shopId":...}`.
-   Rotate the admin setup key and signing key if either is leaked; changing the signing key invalidates in-flight callbacks only.
+## Step 1 — Already done: add the two Etsy secrets
 
-**Failure behavior:** Missing credentials → HTTP 503. Bad admin setup key → HTTP 401. Tampered, mismatched or expired callback state → HTTP 400. Wrong Etsy shop → no tokens saved. API or Key Vault failure → generic HTTP 502, without reflecting codes/tokens/secrets.
+In Azure Portal → Container Apps → `starkeepsake-api-dev` (resource group `rg-starkeepsake-dev`) → Secrets:
 
-### Operational/security notes
+| Container App secret name | Value |
+| --- | --- |
+| `etsy-keystring` | Etsy developer app Keystring |
+| `etsy-shared-secret` | Etsy developer app Shared Secret |
 
-- The OAuth state cookie is root-scoped because the `__Host-` prefix requires `Path=/`; it is HttpOnly, Secure, SameSite=Lax and expires in 10 minutes.
-- Requesting additional scopes later requires Etsy reauthorization. Avoid adding write scopes until there is a specific approved need.
-- The API's secret store is **Azure Key Vault**, not static Container Apps environment variables: Etsy refresh tokens rotate and must persist across restarts/replicas.
-- Set Azure networking/Key Vault policy so only the API's managed identity can access this dedicated secret store. Do not log Authorization headers, HTTP token bodies, OAuth query codes, or Key Vault secret values.
-- Read-only Etsy API calls are owner-authenticated. This code **does not** publish listings or verify payments yet.
-- Seller authorization must be initiated by the owner. Do not expose the admin setup key to customer-facing React code.
+**Do not paste credential values into GitHub, ChatGPT or the customer-facing Vercel app.** Merely adding these two secrets does not make them readable to the backend until environment variables reference them.
 
-## Next development milestones (NOT implemented)
+## Step 2 — Run one safe Cloud Shell bootstrap
 
-1. Persist customer design specs and uploaded photos securely; provide a stable, unique Design ID with a 1:1 link to artwork and intended frame dimensions/finish.
-2. Etsy listing personalization collects Design ID; enforce an exact match for any selected variation/price; customer buys the **physical frame on Etsy**.
-3. Consume signed `order.paid` Etsy webhooks; verify their signature with a separate webhook signing secret; fetch the order receipt and confirm status, quantities, listing and personalization before associating a design with an Etsy order. Deduplicate retries and handle cancellation/refund state.
-4. Produce a materials bill and assembly checklist only for **verified paid** orders using *actual approved frame SKUs, parts and suppliers*; optionally export to Google Sheets.
-5. Photograph a real physical sample and verify Etsy listing accuracy, actual fulfillment times and manufacture method before publishing.
+In [Azure Cloud Shell](https://shell.azure.com/) select **Bash**, and make sure the subscription is the one containing StarKeepsake. Then run:
 
-## Developer checks
+```bash
+git clone --branch feature/etsy-seller-oauth --single-branch https://github.com/Ryandeboss/StarKeepsake.git starkeepsake-etsy
+cd starkeepsake-etsy
+bash scripts/etsy/prepare-container-app.sh --inspect
+bash scripts/etsy/prepare-container-app.sh --prepare
+```
 
-`dotnet build StarKeepsake.slnx --configuration Release`
-`dotnet run --project tests/EtsyOAuth.Tests/EtsyOAuth.Tests.csproj --configuration Release`
+- `--inspect` is read-only. It verifies the two *names* are present, shows your actual API host and exact Etsy callback URL, and displays no secret values.
+- `--prepare` asks for the word **PREPARE** before doing anything. It creates (or reuses) a **Standard LRS** Storage account and a **private** `starkeepsake-private` Blob container; disables public blob access on a new account; then adds three Container App secrets:
+  - `etsy-storage-connection`: private Blob Storage connection string
+  - `etsy-admin-setup-key`: a fresh owner-only password
+  - `etsy-state-signing-key`: a different fresh random key for OAuth state/PKCE
+- It **does not deploy code, publish a listing, change API environment variables, or authorize Etsy**.
+- Azure Storage is a **small usage-based cost** (not necessarily free).
+- At the end, Cloud Shell shows your exact redirect URI and **one-time admin setup password**. Save the admin setup password somewhere private. Never share it in chat. Running `--prepare` again rotates both generated secrets and invalidates any setup key you previously saved.
 
-Official docs:
+If you already have a suitable Azure Storage account and prefer to reuse it, a manual setup is possible, but the script is optimized for a simple dedicated private container.
+
+## Step 3 — Add the Etsy Redirect URI (manual)
+
+At [Etsy Developer Portal → Your Apps](https://www.etsy.com/developers/your-apps), select your approved application and register **exactly** the HTTPS URL printed in the script output, ending:
+
+```text
+/api/admin/etsy/callback
+```
+
+Do **not** use the Vercel host or add a trailing slash.
+
+## Step 4 — Bind secrets to your API (after review and approved deployment)
+
+**Do not do this until PR #49 has been reviewed and you want to deploy it.** Azure environment-variable updates create a new revision. They must point to the five existing Container Apps secrets:
+
+| API environment variable | Value |
+| --- | --- |
+| `Etsy__Keystring` | `secretref:etsy-keystring` |
+| `Etsy__SharedSecret` | `secretref:etsy-shared-secret` |
+| `Etsy__StorageConnectionString` | `secretref:etsy-storage-connection` |
+| `Etsy__AdminSetupKey` | `secretref:etsy-admin-setup-key` |
+| `Etsy__StateSigningKey` | `secretref:etsy-state-signing-key` |
+| `Etsy__ExpectedShopName` | `ApexCraftedUS` |
+| `Etsy__RedirectUri` | the exact HTTPS callback URL from Step 3 |
+| `Etsy__StorageContainerName` | `starkeepsake-private` (default) |
+| `Etsy__TokenBlobName` | `integrations/etsy/connection.json` (default) |
+
+You can configure these in **Azure Container Apps → Revisions and replicas → Create new revision → Edit container → Environment variables**, or with `az containerapp update --set-env-vars`. Use secret references, **not the plain secret values**.
+
+## Step 5 — Authorize Etsy (only after approved deployment)
+
+Go to `https://<YOUR-API-HOST>/api/admin/etsy/connect` in your browser. Enter the **StarKeepsake admin setup password** generated in Step 2, not the Etsy Shared Secret. Etsy asks you to authorize read-only shop/listing/order access. Confirm that the account owns `ApexCraftedUS`. The callback verifies shop identity before storing tokens in Blob Storage.
+
+To check the status with the privately saved admin key:
+
+```bash
+curl -H "X-Starkeepsake-Admin-Key: <YOUR-ADMIN-SETUP-KEY>" \
+  "https://<YOUR-API-HOST>/api/admin/etsy/status"
+```
+
+Expected response includes `"connected":true` and `"shopName":"ApexCraftedUS"`.
+
+### Important limitations and security tradeoffs
+
+- The OAuth token file is **never** placed on ephemeral container storage and is **not** sent to browsers or GitHub. The private blob survives replica restarts/deployments.
+- A Storage connection string grants significant access to its account. This is a simpler owner-operated MVP compromise, **not** maximum least-privilege security. Rotate that secret if leaked; keep the container private.
+- The initial token-store implementation uses last-writer-wins storage and a per-process refresh lock. Before operating with multiple replicas or high-volume orders, add ETag/lease coordination to avoid refresh races.
+- The API is disabled (503) until all required configuration exists; no Etsy charges or listing publication occur from this OAuth integration.
+- Etsy access tokens last about one hour; refresh tokens last longer (~90 days). Token renewals do not require another owner sign-in while authorization remains valid. Reauthorization may still be required if the refresh token expires or is revoked.
+- The Etsy **webhook signing secret is a separate credential**, which isn't needed in Milestone 1.
+
+## What is *not* implemented
+
+Saving the customer's exact design and photos, Etsy checkout button, design ID matching, verifying paid orders, generating a bill of materials, and Google Sheets tracking are **future milestones**. Keep the physical listing as a draft until the design→paid order→production workflow and real manufacturing specs are tested.
+
+## Verification
+
+```bash
+dotnet build StarKeepsake.slnx --configuration Release
+dotnet run --project tests/EtsyOAuth.Tests/EtsyOAuth.Tests.csproj --configuration Release
+bash -n scripts/etsy/prepare-container-app.sh
+```
+
+Official references:
 - https://developers.etsy.com/documentation/essentials/authentication/
-- https://developers.etsy.com/documentation/reference/
+- https://learn.microsoft.com/azure/container-apps/manage-secrets
+- https://learn.microsoft.com/azure/container-apps/environment-variables
+- https://learn.microsoft.com/azure/container-apps/storage-mounts
