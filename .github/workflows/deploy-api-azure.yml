@@ -33,6 +33,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Needed so git show HEAD lists only changed files, not every file in a shallow root.
+          fetch-depth: 2
 
       - name: Sign in to Azure with OIDC
         uses: Azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
