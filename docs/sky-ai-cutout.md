@@ -1,0 +1,185 @@
+# Sky-only AI cutout prototype (not released)
+
+## User flow
+
+1. Sky Lab → Chicago → upload a skyline photo (JPG, PNG, WebP).
+2. A full-fit side-by-side dialog shows original photo at its complete aspect ratio. No zoom canvas or nested scrollbars.
+3. Click **Remove sky with AI** to request text-prompted "sky" segmentation. The model produces a mask only; the site applies it locally to the original photo. A narrow edge-only decontamination option can adjust partially transparent fringe RGB while fully opaque foreground RGB stays unchanged. No building, tree or waterfront pixels are generated.
+4. Inspect the result over a dark night gradient or a checkerboard. Use **Edge cleanup** (0–8 original-image pixels; default 2 px) to remove thin sky-colored borders. The local cleanup references nearby confident-sky pixels and protects contrasting branches/building edges. Toggle **Remove sky-colored edge glow** for semi-transparent fringe RGB decontamination, or set cleanup to 0 and disable the toggle to see the untouched AI matte. These adjustments reuse the existing downloaded AI mask and never make another Fal request. If mask polarity is reversed, use **Invert AI mask**. Click **Apply to night sky** only after checking.
+5. An already transparent PNG can be applied directly; for images with a plain white sky, a free local white-sky remover is offered explicitly as fallback.
+
+## Local second-pass recovery (no new Fal calls)
+
+After the AI mask is downloaded, the preview applies a second, browser-only
+`recoverMissedSkyMask` pass to remove bright sky around tree canopies that
+SAM sometimes marks as foreground.
+
+- **Recover missed bright sky:** Off / Low / Medium / High (Medium by default).
+  A median color reference is drawn only from bright, high-confidence model sky
+  in the original photo. The browser grows candidate sky through similarly
+  bright/color-matching pixels, seeded by the top image border, upper-left and
+  upper-right edges, and existing confident model-sky pixels.
+- The flood fill cannot cross strongly contrasting dark branches or buildings,
+  and stops at 58% of image height to protect the walkway and water. Opaque
+  original foreground RGB is preserved by the subsequent compositor.
+- This is intentionally conservative. Enclosed sky pockets with no qualifying
+  path to a seed may remain; in those cases, a dedicated alpha-matting model or
+  manual correction may still be needed.
+- Recovery runs **before** the existing edge cleanup and semi-transparent
+  decontamination. Both reuse the same in-memory Fal mask; **no further paid
+  requests** occur when changing presets or sliders.
+- **Show raw AI mask** sets recovery Off, edge cleanup 0, and decontamination
+  false, so users can compare the unmodified model output.
+
+Tests: `npm run test:sky-recovery` in `apps/web` covers missed canopy sky,
+thin branches, dark buildings, enclosed bright windows, lower-image protection,
+preset strengths, invert, and input immutability.
+
+### Tree-gap cleanup for enclosed sky pockets
+
+An additional local pass looks for sufficiently large connected regions of
+very bright, nearly neutral cloud RGB in the upper half of the original image.
+These can be entirely enclosed by thin dark branches; a top-edge flood cannot
+reach them. Only pockets within two pixels of model-confirmed sky are recovered
+automatically, reducing the risk of cutting white windows out of buildings.
+
+For isolated patches that still remain, click **Touch up white pockets**,
+then click the white patch itself in the right-hand preview. The browser flood-
+fills only a locally connected, bright, similar-color region above the water/
+foreground portion of the image. Thin dark branches stop the fill. The user can
+click several regions, or use **Sweep white pockets** to drag a rectangle around a
+cluster of missed sky islands. A sweep scans the original photo within that
+rectangle for bright, low-chroma components and removes all qualifying pockets
+in one browser-only operation. Each drag counts as one Undo step, even if it
+removes hundreds of separate gaps. The selection never edits pixels outside
+its boundaries or below 62% of image height. Both click and sweep edits use a
+unified 32-operation history with **Undo edit**; **Show raw AI mask** clears
+all local edits. The photo and original model mask
+remain unchanged; touch-ups are non-generative, free, and reversible until
+Apply is selected.
+
+Manual touch-ups are user-directed and are not a perfect semantic guarantee:
+review the result closely before applying, especially on pale buildings.
+
+### Full-height manual cleanup and editing after Apply
+
+**Protect lower image** is checked by default. It limits manual spot and
+rectangle-sweep removal to the upper 62% of the original photo (safer for
+skyline water, buildings, and reflections). For an upward-looking leafy-canopy
+or portrait image, uncheck it to let **manual** spot and rectangle tools operate
+across the entire selected photo. Automatic AI-based bright sky recovery
+remains conservative at the original upper-image limit regardless of this
+toggle. The color/brightness tests and rectangle boundaries still apply, so
+review pale objects and Undo if needed.
+
+After **Apply to night sky**, the parent SkyImmersiveView deliberately keeps
+SkyCutoutPreview mounted but hidden, retaining the original File, AI mask Blob,
+edge/recovery settings, spot and sweep edit history, and lower-protection
+setting in browser memory. The skyline toolbar shows **Edit cutout**, reopening
+that exact editor with its last result and edits; reapplying updates the
+displayed foreground without another Fal request. **Resume cutout** is shown
+if the user cancels before the initial Apply. Uploading a different photo
+starts a fresh editor session and resets the previous mask/history. The edits
+remain in memory only for the current page session; reloading does not restore
+them, and uploading a different source replaces the editable photo.
+
+Tests: `npm run test:sky-spot` checks separate white islands, preserved
+branches, undo behavior, lower-image protection and inverted masks.
+`npm run test:sky-sweep` covers multiple islands in one rectangle, strict
+selection boundaries, branch protection, water protection, undo and inversion.
+Drag-sweep cleanup can still remove a pale building within the selected
+rectangle if its pixels resemble bright sky; review and Undo before applying.
+
+## Server configuration and costs
+
+- Backend: ASP.NET Core endpoint `POST /api/sky/mask` on the existing Azure API.
+- Third party: fal.ai `fal-ai/sam-3/image`, text prompt `sky`, `apply_mask=false`, `sync_mode=true`. No image generation.
+- Configure **Fal__ApiKey** on the API server through Azure's protected environment configuration, **never** a Vite `VITE_` variable.
+- **Disabled by default even if the key exists**. Both `Fal__ApiKey` and `SkyMask__Enabled=true` are required. Without the explicit opt-in, `GET /api/sky/mask/status` returns `{"available":false}`. This prevents paid requests accidentally activating if the feature is merged into an existing live backend.
+- Metered third-party processing incurs charges. Before configuring a key for public visitors, enforce an account/usage budget and monitor service spend. A 3-per-10-minute per-IP limiter is provided but is not a reliable billing ceiling for an anonymous public site; auth, abuse controls, and monetary caps are still necessary.
+- When clicked, an upload copy of the user's photo is sent to Fal. The original browser photo is not uploaded when using the local fallback or an existing transparent PNG. Check Fal's privacy and retention terms before public launch.
+- On provider error or unusable mask, the original remains intact and the user can cancel. The server returns an error without disclosing credentials.
+
+## Correctness and limitations
+
+- This is a **prototype** pending credentialed, browser-level tests on the owner's actual Chicago image. The Fal model's ability to segment thin leafless tree twigs and disconnected sky patches has **not been verified**.
+- The image-transmission copy is resized to a maximum side of 2048 pixels, while the mask is composited onto the original-resolution RGB image. Fine branches may need a higher-res model path later.
+- A semantic model can misclassify water or buildings. Always review before applying, especially for complex skyline panoramas.
+- No true compass bearing, 360° view, historic photographic accuracy, or real sky photometry is implied.
+- Pre-existing production and manufacturing design workflows are unchanged.
+
+## Isolated Azure staging procedure (ACR Tasks workaround)
+
+Azure rejected `az acr build` with `TasksOperationsNotAllowed`. Our replacement builds the Docker image on a GitHub-hosted runner and **pushes** it to the same ACR. This does not require ACR Tasks or Docker inside Azure Cloud Shell.
+
+1. A GitHub Actions workflow `.github/workflows/build-sky-mask-image.yml` runs only on pushes to `feature/sky-only-ai-cutout`. It signs into Azure with the repository's existing OIDC secrets and runs Docker build/push. It **does not update any Azure Container App**.
+2. The existing Azure deployment identity `id-starkeepsake-github-dev` needs a federated credential authorizing that **exact** feature branch. The repository uses an immutable ID-based OIDC subject, consistent with its existing `github-main` credential. Create it in Cloud Shell once:
+   ```bash
+   az identity federated-credential create \
+     --resource-group rg-starkeepsake-dev \
+     --identity-name id-starkeepsake-github-dev \
+     --name github-sky-mask-feature \
+     --issuer https://token.actions.githubusercontent.com \
+     --subject "repo:Ryandeboss@96958000/StarKeepsake@1409130491:ref:refs/heads/feature/sky-only-ai-cutout" \
+     --audiences api://AzureADTokenExchange \
+     --output none
+   ```
+   Creating a branch credential grants workflows on that branch the Azure identity's current privileges. Remove the credential when the staging experiment ends.
+3. After the new GitHub Actions workflow successfully uploads a matching SHA-tagged image, in Azure Cloud Shell run:
+   ```bash
+   cd ~/StarKeepsake
+   git pull --ff-only
+   bash scripts/deploy-sky-mask-staging.sh --deploy
+   ```
+   This script **never** invokes `az acr build`. It confirms an image tagged with the exact checked-out SHA exists in ACR before creating/updating a separate app `starkeepsake-api-sky-staging` (scale to zero). No existing API is modified.
+4. New staging defaults to `SkyMask__Enabled=false`. Add your Fal key as a secret `fal-api-key` to the **new staging app**, not to the Vercel frontend. Reference it through `Fal__ApiKey=secretref:fal-api-key` and set `SkyMask__Enabled=true` on staging. Do not paste the key in chat.
+5. Confirm staging `GET /api/sky/mask/status` is `{"available":true}`, then configure a Vercel preview **branch-specific override** for `VITE_API_BASE_URL` to the new staging API URL. The shared Vercel default points to the live API and must not be changed.
+6. Test the original Chicago image and examine the mask before merging. This *one* requested AI removal invokes a metered third-party model; all subsequent edge and halo adjustments in the same open preview are local and free.
+7. On completion, disable `SkyMask__Enabled`, delete staging and remove the temporary Azure OIDC feature-branch credential to minimize blast radius and costs.
+
+The staging script is deliberately opt-in and the workflow does **not** deploy to Azure. ACR image storage and staging resources may incur costs even at zero replicas.
+
+## Two composition choices (Sky Lab preview)
+
+The Sky Lab photo composer offers only the two distinct compositions:
+- **Within my photo:** the original AI sky-cutout flow. A user with an
+  existing sky/horizon can remove the sky and preserve the foreground
+  (including the full edge cleanup, bright-sky recovery, manual rectangle
+  sweep, lower-image protection, Undo and Edit cutout after Apply).
+  The calculated night sky appears behind the transparent regions.
+- **Above my photo:** the original uploaded photograph is not cut out or
+  overlaid with stars. The entire uncropped photograph remains in a lower
+  panel, with an additional transparent upper panel showing the calculated
+  night sky above it and a clear horizontal division. This is ideal for
+  indoor photos or images without a sky/horizon. No Fal AI request is needed.
+  The overall two-panel composition is fitted into the available viewport
+  while preserving portrait, square or landscape source proportions.
+
+Switching between these layouts retains the original file and an existing
+cutout in browser memory. Returning to **Within my photo** without a cutout
+opens the AI editor; switching to **Above my photo** doesn't submit the image
+to an AI provider. Uploading a different photo resets its edit session.
+
+The earlier experimental Photo Studio (multi-ratio controls, stars over the
+whole photo, and stars only over the photo's upper half) was rolled back.
+These remain illustrative digital photo compositions, not a physical
+fabrication template or camera-calibrated astronomical composite.
+Test frame geometry with `npm run test:photo-sky-layout`.
+
+## Above-photo sky balance and fitting
+
+The existing **Within my photo** cutout editor is unchanged. The **Above my
+photo** digital composition now offers a Sky section height slider (20–70%,
+default 38%). This adjusts the split within a *fixed* outer preview frame:
+moving the horizon never stretches or resizes the outer frame. The calculated
+night sky stays in a separate upper section; the uploaded image occupies the
+remaining lower section, unaltered in storage.
+
+The user can choose **Fit full photo** (contain, preserves entire image),
+**Center crop** (default, cover), **Crop top** (favor bottom of image),
+**Crop bottom** (favor top of image), or **Stretch** (fill; distorts proportions).
+Crop and stretch change browser presentation only, not the original bytes.
+A visual balance bar, a range slider and thumbnail fit cards update the
+preview in real time without additional Fal model calls. Drag-and-drop or the
+accessible Browse files control accept JPG/PNG/WebP under 12 MB. The
+two layouts remain the only choices, and the previous cutout tools are kept.

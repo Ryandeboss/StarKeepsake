@@ -3,13 +3,14 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { AstronomyResult } from '../api'
 import type { ExplorerLocation } from '../skyExplorerData'
 import { SkyCityHorizon } from './SkyCityHorizon'
-import { createSkylineCutout } from '../skyCutout'
+import { SkyCutoutPreview } from './SkyCutoutPreview'
 import { getObserverScene } from '../skyLandscapeData'
 import { SkyStreetView } from './SkyStreetView'
 import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
 import { SkyAtmosphereCanvas } from './SkyAtmosphereCanvas'
 import { starOptics } from '../skyPhotographicMath'
 import { photoHorizonBottomPercent } from '../skyAtmosphereMath'
+import { fitAbovePhotoLayout } from '../photoSkyLayout'
 import {
   NAMED_STAR_COLORS, SKY_PATTERNS, projectObserverStar,
   starAppearance, starTwinkleSettings, suggestedObserverHeading,
@@ -33,19 +34,44 @@ export function SkyImmersiveView({ result, location }: Props) {
   const [showScenery, setShowScenery] = useState(true)
   const [photoMode, setPhotoMode] = useState(false)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [photoSkyLayout, setPhotoSkyLayout] = useState<'within' | 'above'>('within')
+  const [skySectionPercent, setSkySectionPercent] = useState(38)
+  const [abovePhotoFit, setAbovePhotoFit] = useState<'fit' | 'center-crop' | 'top-crop' | 'bottom-crop' | 'stretch'>('center-crop')
+  const [photoDragOver, setPhotoDragOver] = useState(false)
+  const [originalPhotoUrl, setOriginalPhotoUrl] = useState<string | null>(null)
+  const [originalPhotoSize, setOriginalPhotoSize] = useState({ width: 0, height: 0 })
+  const [skyWindowSize, setSkyWindowSize] = useState({ width: 0, height: 0 })
   const [photoError, setPhotoError] = useState('')
   const [photoScale, setPhotoScale] = useState(100)
-  const [photoBusy, setPhotoBusy] = useState(false)
+  const [editingPhoto, setEditingPhoto] = useState<File | null>(null)
+  const [cutoutEditorOpen, setCutoutEditorOpen] = useState(false)
+  const [cutoutSession, setCutoutSession] = useState(0)
   const photoUpload = useRef<HTMLInputElement | null>(null)
   const imageObjectUrl = useRef<string | null>(null)
+  const originalObjectUrl = useRef<string | null>(null)
+  const decodeId = useRef(0)
   useEffect(() => () => {
     if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+    if (originalObjectUrl.current) URL.revokeObjectURL(originalObjectUrl.current)
+    decodeId.current += 1
   }, [])
   const [groundView, setGroundView] = useState(false)
   const [showHint, setShowHint] = useState(true)
   const [demoRun, setDemoRun] = useState(0)
   const [touring, setTouring] = useState(false)
   const skyWindowRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const target = skyWindowRef.current
+    if (!target) return
+    const update = () => {
+      const bounds = target.getBoundingClientRect()
+      setSkyWindowSize({ width: bounds.width, height: bounds.height })
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [])
   const drag = useRef<{ x: number; y: number; heading: number; pitch: number; moved: boolean } | null>(null)
   const ignoreClick = useRef(false)
   const tourCamera = useRef({ heading: suggestedObserverHeading(result?.stars ?? []), pitch: 15 })
@@ -112,30 +138,55 @@ export function SkyImmersiveView({ result, location }: Props) {
     setShowHint(true)
     setDemoRun(run => run + 1)
   }
-  async function receivePhoto(file: File | undefined) {
+  function receivePhoto(file: File | undefined) {
     if (!file) return
     if (!['image/jpeg', 'image/webp', 'image/png'].includes(file.type) || file.size > 12000000) {
       setPhotoError('Choose a JPG, PNG, or WebP image under 12 MB.')
       return
     }
-    setPhotoBusy(true)
     setPhotoError('')
-    try {
-      // A normal flat image is intentionally NOT mapped as a 360° texture.
-      const transparent = await createSkylineCutout(file)
-      const url = URL.createObjectURL(transparent)
-      if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
-      imageObjectUrl.current = url
-      setPhotoUrl(url)
+    interruptTour()
+    // A new upload starts a new composition, never displaying a stale cutout.
+    if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+    imageObjectUrl.current = null
+    setPhotoUrl(null)
+    setPhotoScale(100)
+    const originalUrl = URL.createObjectURL(file)
+    if (originalObjectUrl.current) URL.revokeObjectURL(originalObjectUrl.current)
+    originalObjectUrl.current = originalUrl
+    setOriginalPhotoUrl(originalUrl)
+    setOriginalPhotoSize({ width: 0, height: 0 })
+    const currentId = ++decodeId.current
+    void createImageBitmap(file).then(image => {
+      if (currentId === decodeId.current)
+        setOriginalPhotoSize({ width: image.width, height: image.height })
+      image.close()
+    }).catch(() => {
+      if (currentId === decodeId.current)
+        setPhotoError('The photo dimensions could not be read.')
+    })
+    setEditingPhoto(file)
+    setCutoutSession(version => version + 1)
+    if (photoSkyLayout === 'within') {
+      setPhotoMode(false)
+      setCutoutEditorOpen(true)
+    } else {
+      // The separate-sky option never needs segmentation or another upload.
       setPhotoMode(true)
-      setGroundView(false)
-      setPhotoScale(100)
-      interruptTour()
-    } catch (error) {
-      setPhotoError(error instanceof Error ? error.message : 'Unable to prepare this skyline.')
-    } finally {
-      setPhotoBusy(false)
+      setCutoutEditorOpen(false)
     }
+  }
+  function applyPhotoCutout(cutout: Blob) {
+    const url = URL.createObjectURL(cutout)
+    if (imageObjectUrl.current) URL.revokeObjectURL(imageObjectUrl.current)
+    imageObjectUrl.current = url
+    setPhotoUrl(url)
+    setPhotoMode(true)
+    setGroundView(false)
+    setPhotoSkyLayout('within')
+    // Keep the source photo and SkyCutoutPreview mounted after applying.
+    // Returning to the editor preserves the Fal mask and all local edits.
+    setCutoutEditorOpen(false)
   }
   function nudge(dx: number, dy: number) {
     interruptTour()
@@ -154,6 +205,11 @@ export function SkyImmersiveView({ result, location }: Props) {
     optics: starOptics(star.magnitude, star.altitudeDeg, Boolean(NAMED_STAR_COLORS[star.hipparcosId]), photoExposure),
   })).filter(item => item.point.inFront) ?? [], [result, heading, pitch, fov, photoExposure])
   const photoBottom = photoHorizonBottomPercent(pitch, fov)
+  const abovePhotoFrame = fitAbovePhotoLayout(
+    skyWindowSize.width, skyWindowSize.height,
+    originalPhotoSize.width, originalPhotoSize.height, skySectionPercent,
+  )
+  const isAbovePhoto = photoSkyLayout === 'above'
   const pointsByHip = useMemo(() => new Map(visible.map(item => [item.star.hipparcosId, item.point] as const)), [visible])
   const chosen = starByHip.get(hoveredHip ?? pinnedHip ?? -1)
   const chosenPoint = chosen ? pointsByHip.get(chosen.hipparcosId) : undefined
@@ -240,7 +296,7 @@ export function SkyImmersiveView({ result, location }: Props) {
               className={!groundView && photoMode ? 'is-selected' : ''}
               onClick={() => {
                 if (location.id !== 'chicago') return
-                if (!photoUrl) photoUpload.current?.click()
+                if (!photoUrl && !originalPhotoUrl) photoUpload.current?.click()
                 else { interruptTour(); setGroundView(false); setPhotoMode(true) }
               }}>◈ Chicago skyline photo</button>
           </div>
@@ -261,31 +317,137 @@ export function SkyImmersiveView({ result, location }: Props) {
           </button>}
         </div>
       </div>
-      {location.id === 'chicago' && !groundView && <div className="immersive-photo-setup">
-        <label>
-          <span>Chicago skyline photo (white sky removed automatically)</span>
-          <input ref={photoUpload} type="file" accept="image/jpeg,image/webp,image/png"
-            disabled={photoBusy}
+      {location.id === 'chicago' && !groundView && <div className="immersive-photo-setup sky-studio-setup">
+        <div className="sky-studio-intro">
+          <span className="immersive-eyebrow">SKY LAB · YOUR PHOTO</span>
+          <h3>Make room for the stars.</h3>
+          <p>Choose how your photograph meets the night sky, then fine-tune the balance.</p>
+        </div>
+        <fieldset className="immersive-photo-layout-choices">
+          <legend>Where should the stars go?</legend>
+          <button type="button" className={photoSkyLayout === 'within' ? 'is-chosen' : ''}
+            aria-pressed={photoSkyLayout === 'within'}
+            onClick={() => {
+              setPhotoSkyLayout('within')
+              if (editingPhoto && !photoUrl) { setCutoutEditorOpen(true); setPhotoMode(false) }
+              else if (photoUrl) { setCutoutEditorOpen(false); setPhotoMode(true) }
+            }}>
+            <span className="immersive-layout-thumbnail is-within" aria-hidden="true">
+              <span className="immersive-layout-stars">✧ ✦ ·</span>
+              <span className="immersive-layout-land"/>
+            </span>
+            <span><strong>Within my photo</strong>
+              <small>My image already has a sky or horizon. Keep foreground detail and replace its sky.</small></span>
+          </button>
+          <button type="button" className={isAbovePhoto ? 'is-chosen' : ''}
+            aria-pressed={isAbovePhoto}
+            onClick={() => {
+              setPhotoSkyLayout('above')
+              setCutoutEditorOpen(false)
+              if (originalPhotoUrl) { setPhotoMode(true); setGroundView(false) }
+            }}>
+            <span className="immersive-layout-thumbnail is-above" aria-hidden="true">
+              <span className="immersive-layout-stars">✧ ✦ ·</span>
+              <span className="immersive-layout-boundary"/>
+              <span className="immersive-layout-land"/>
+            </span>
+            <span><strong>Above my photo</strong>
+              <small>No visible horizon? Add a new starry sky section above the entire original image.</small></span>
+          </button>
+        </fieldset>
+        <div className={`sky-studio-upload ${photoDragOver ? 'is-dragging' : ''}`}
+          onDragOver={event => { event.preventDefault(); setPhotoDragOver(true) }}
+          onDragLeave={() => setPhotoDragOver(false)}
+          onDrop={event => {
+            event.preventDefault()
+            setPhotoDragOver(false)
+            receivePhoto(event.dataTransfer.files[0])
+          }}>
+          <div className="sky-studio-upload-art" aria-hidden="true">
+            <svg viewBox="0 0 72 70">
+              <rect x="9" y="14" width="49" height="41" rx="7" fill="#315567" stroke="#C9DBD7" strokeWidth="1.5"/>
+              <path d="M15 48l13-14 8 8 11-12 7 13" fill="none" stroke="#F5D6A4" strokeWidth="2.7" strokeLinejoin="round"/>
+              <circle cx="43" cy="26" r="4" fill="#F5D6A4"/>
+              <path d="M58 5v16M50 13h16" stroke="#F5D6A4" strokeWidth="2.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <strong>{editingPhoto ? editingPhoto.name : 'Drop your photo here'}</strong>
+          <span>JPG, PNG or WebP · up to 12 MB</span>
+          <label htmlFor="sky-studio-file" className="sky-studio-browse">Browse files</label>
+          <input ref={photoUpload} id="sky-studio-file" className="sky-studio-file" type="file"
+            accept="image/jpeg,image/webp,image/png" aria-label="Choose a photo"
             onChange={event => {
-              void receivePhoto(event.currentTarget.files?.[0])
+              receivePhoto(event.currentTarget.files?.[0])
               event.currentTarget.value = ''
             }}/>
-        </label>
-        {photoBusy && <span role="status">Preparing transparent skyline…</span>}
-        {photoUrl && <>
+        </div>
+        {isAbovePhoto && <div className="sky-studio-above-controls">
+          <div className="sky-studio-section-title">
+            <strong>Customize your frame</strong>
+            <span>Separate sky above · photo below</span>
+          </div>
+          <div className="sky-studio-balance">
+            <div className="sky-studio-setting-label">
+              <label htmlFor="sky-studio-sky-height">Sky section height</label>
+              <strong>{skySectionPercent}% stars · {100 - skySectionPercent}% photo</strong>
+            </div>
+            <div className="sky-studio-balance-meter" aria-hidden="true">
+              <span className="sky-studio-balance-sky" style={{ width: skySectionPercent + '%' }}>✦ Sky</span>
+              <span className="sky-studio-balance-photo">▧ Photo</span>
+            </div>
+            <input id="sky-studio-sky-height" type="range" min="20" max="70" step="1"
+              value={skySectionPercent}
+              onChange={event => setSkySectionPercent(Number(event.target.value))}/>
+            <div className="sky-studio-range-ends"><span>More photo</span><span>More stars</span></div>
+          </div>
+          <fieldset className="sky-studio-fit-options">
+            <legend>How should the photo fill its space?</legend>
+            {([
+              ['fit', 'Fit full photo', 'No cropping'],
+              ['center-crop', 'Center crop', 'Fill naturally'],
+              ['top-crop', 'Crop top', 'Keep lower area'],
+              ['bottom-crop', 'Crop bottom', 'Keep upper area'],
+              ['stretch', 'Stretch', 'May distort'],
+            ] as const).map(([value, label, detail]) => (
+              <button type="button" key={value} aria-pressed={abovePhotoFit === value}
+                className={abovePhotoFit === value ? 'is-chosen' : ''}
+                onClick={() => setAbovePhotoFit(value)}>
+                <span className={`sky-studio-fit-glyph sky-studio-fit-${value}`} aria-hidden="true">
+                  <span/>
+                </span>
+                <strong>{label}</strong><small>{detail}</small>
+              </button>
+            ))}
+          </fieldset>
+          <p className="sky-studio-help">Cropping changes only the preview. The original upload stays intact.
+            Choose “Fit full photo” to preserve everything; “Stretch” can distort proportions.</p>
+        </div>}
+        {editingPhoto && !isAbovePhoto && <button type="button" className="immersive-edit-cutout"
+          onClick={() => {
+            interruptTour()
+            setGroundView(false)
+            if (photoUrl) setPhotoMode(true)
+            setCutoutEditorOpen(true)
+          }}>{photoUrl ? '✎ Edit cutout' : 'Prepare sky cutout'}</button>}
+        {(isAbovePhoto ? originalPhotoUrl : photoUrl) && <>
           <button type="button" aria-pressed={photoMode}
             onClick={() => { interruptTour(); setPhotoMode(mode => !mode) }}>
             {photoMode ? 'Hide skyline' : 'Show skyline'}
           </button>
-          {photoMode && <label>Skyline size <strong>{photoScale}%</strong>
+          {photoMode && !isAbovePhoto && <label>Skyline size <strong>{photoScale}%</strong>
             <input type="range" min="100" max="160" step="5" value={photoScale}
               onChange={event => setPhotoScale(Number(event.target.value))}/>
           </label>}
         </>}
         {photoError && <span role="alert" className="immersive-photo-error">{photoError}</span>}
-        <small>Upload the Chicago JPG you provided. We remove its white sky in your browser and
-          anchor the photograph to the bottom. This is a flat scenic plate, not a 360° panorama;
-          the photograph is illustrative and its alignment to true north is unverified.</small>
+        <small>{isAbovePhoto
+          ? 'This layout keeps the entire photo intact, then adds a distinct calculated star-sky area above it. No AI sky removal is required.'
+          : 'This is the original sky-cutout layout: remove the existing sky, preserve your foreground and horizon, and edit the cutout again after applying.'}
+          Stars are calculated for the selected moment, but are not calibrated to the photo camera.</small>
+      </div>}
+      {editingPhoto && <div hidden={!cutoutEditorOpen}>
+        <SkyCutoutPreview key={cutoutSession} file={editingPhoto} active={cutoutEditorOpen}
+          onApply={applyPhotoCutout} onCancel={() => setCutoutEditorOpen(false)}/>
       </div>}
       <div ref={skyWindowRef} className="immersive-sky-window" tabIndex={groundView ? -1 : 0}
         aria-label="First-person sky view. Use arrow keys to pan left, right, up or down."
@@ -379,10 +541,28 @@ export function SkyImmersiveView({ result, location }: Props) {
             d={`M0 ${projectObserverStar(heading, 0, heading, pitch, fov).y} H1000 V600 H0Z`}
             fill="#061624" pointerEvents="none"/>}
         </svg>
-        {photoMode && photoUrl && <img
+        {photoMode && !isAbovePhoto && photoUrl && <img
           src={photoUrl} alt="" aria-hidden="true"
           className="immersive-photo-horizon"
           style={{ width: photoScale + '%', bottom: photoBottom + '%' }}/>}
+        {photoMode && isAbovePhoto && originalPhotoUrl && abovePhotoFrame.width > 0 &&
+          <div className="immersive-sky-above-frame"
+            aria-label="Separate star-sky section above the entire original photo"
+            style={{ width: abovePhotoFrame.width, height: abovePhotoFrame.height }}>
+            <div className="immersive-sky-above-panel"
+              style={{ height: abovePhotoFrame.skyHeight }} aria-hidden="true"/>
+            <div className="immersive-sky-above-photo-slot"
+              style={{ height: abovePhotoFrame.photoHeight }}>
+              <img src={originalPhotoUrl} alt="Original photograph beneath a separate star-sky section"
+                className="immersive-sky-above-original" draggable={false}
+                style={{
+                  objectFit: abovePhotoFit === 'fit' ? 'contain' :
+                    abovePhotoFit === 'stretch' ? 'fill' : 'cover',
+                  objectPosition: abovePhotoFit === 'top-crop' ? 'center bottom' :
+                    abovePhotoFit === 'bottom-crop' ? 'center top' : 'center center',
+                }}/>
+            </div>
+          </div>}
         
         <SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}/>
         <div className="immersive-crosshair" aria-hidden="true">+</div>
@@ -394,7 +574,10 @@ export function SkyImmersiveView({ result, location }: Props) {
         </div>}
         <div className="immersive-location-readout">
           <strong>{location.name}</strong>
-          <small>{photoMode ? 'Chicago foreground follows tilt only · not a 360° panorama' : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
+          <small>{photoMode
+            ? isAbovePhoto ? 'Separate sky above full photo · original image unchanged'
+              : 'Existing horizon and transparent foreground · not a 360° panorama'
+            : getObserverScene(location.id).title + ' · illustrative scenery, not an exact sightline'}</small>
         </div>
         <div className="immersive-view-readout">LOOK {Math.round(heading)}° · UP {Math.round(pitch)}° · FOV {fov}°</div>
         {chosen && chosenPoint && (

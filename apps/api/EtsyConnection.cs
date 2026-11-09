@@ -22,6 +22,8 @@ public sealed class EtsyConnectionOptions
     public string StorageConnectionString { get; set; } = "";
     public string StorageContainerName { get; set; } = "starkeepsake-private";
     public string TokenBlobName { get; set; } = "integrations/etsy/connection.json";
+    // Optional: leave webhook endpoint disabled until Etsy signing secret is configured.
+    public string WebhookSigningSecret { get; set; } = "";
 
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(Keystring) &&

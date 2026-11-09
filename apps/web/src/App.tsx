@@ -1,13 +1,11 @@
-import { LandingPage } from './pages/LandingPage'
-import { CreatePage } from './pages/CreatePage'
-import { SkyLabPage } from './pages/SkyLabPage'
+import { ExperiencePage } from './pages/ExperiencePage'
+import { ProductionDashboardPage } from './pages/ProductionDashboardPage'
 import './App.css'
 
-function App() {
-  const isCreateRoute = window.location.pathname.startsWith('/create')
-
-  const isSkyLabRoute = window.location.pathname.startsWith('/sky-lab')
-  return isSkyLabRoute ? <SkyLabPage /> : isCreateRoute ? <CreatePage /> : <LandingPage />
+// Keep the approved immersive customer studio as the public experience;
+// route internal operations separately under the owner-only admin screen.
+export default function App() {
+  return window.location.pathname === '/admin/production'
+    ? <ProductionDashboardPage />
+    : <ExperiencePage />
 }
-
-export default App

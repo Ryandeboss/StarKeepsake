@@ -30,13 +30,16 @@ export function altitudeForCameraPixel(
 export function skyRgb(
   x: number, y: number, pitchDeg: number, horizontalFovDeg: number,
   enhanced: boolean,
+  horizonGlow = true,
 ): [number, number, number] {
   const altitude = altitudeForCameraPixel(x,y,pitchDeg,horizontalFovDeg)
   const horizon = gaussian(altitude,2.3,14)
   const airglow = gaussian(altitude,12,32)
   const zenith = clamp(altitude / 77,0,1)
   const urbanWeight = .7 + .3 * Math.max(0,Math.cos((x/1000-.5)*Math.PI))
-  const exposure = enhanced ? 1 : .58
+  // The old disabled state still drew 58% of the warm horizon light.
+  // Keep the subtle unlit sky gradient/grain, but give the studio a real off switch.
+  const exposure = horizonGlow ? (enhanced ? 1 : .58) : 0
   // Upper atmosphere is near-black charcoal, not saturated flat royal blue.
   let red = 3.5 + 4 * (1 - zenith)
   let green = 7 + 9 * (1 - zenith)

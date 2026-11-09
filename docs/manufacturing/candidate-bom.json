@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "status": "CANDIDATE_NOT_APPROVED",
+  "product": "11x14 illuminated personalized shadow-box",
+  "currency": "USD",
+  "notes": "Verify actual fit, power budget, safe assembly, shipping and per-unit pricing on a physical prototype. No ASINs or prices have been approved.",
+  "rows": [
+    {
+      "key": "frame",
+      "name": "11x14 deep shadow-box frame",
+      "qty": 1,
+      "unit": "each",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "controller",
+      "name": "Raspberry Pi Pico WH",
+      "qty": 1,
+      "unit": "each",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "leds",
+      "name": "5V addressable WS2812B LEDs, ~20–30 individually controlled points",
+      "qty": 30,
+      "unit": "led",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "supply",
+      "name": "Regulated 5V 3A listed power supply with suitable connector",
+      "qty": 1,
+      "unit": "each",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "level_shifter",
+      "name": "74AHCT125 level shifter",
+      "qty": 1,
+      "unit": "each",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "resistor",
+      "name": "330–470 ohm LED data resistor",
+      "qty": 1,
+      "unit": "each",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "capacitor",
+      "name": "500–1000µF electrolytic power capacitor",
+      "qty": 1,
+      "unit": "each",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "board",
+      "name": "Black foam mounting board",
+      "qty": 1,
+      "unit": "sheet",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "art",
+      "name": "Matte print stock / engraving substrate",
+      "qty": 1,
+      "unit": "sheet",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "wiring",
+      "name": "Wire, connectors, insulating and securing supplies",
+      "qty": 1,
+      "unit": "kit",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "light_guides",
+      "name": "Star perforations / short optical light guides",
+      "qty": 30,
+      "unit": "point",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    },
+    {
+      "key": "packaging",
+      "name": "Protected mailer / box and cushioning",
+      "qty": 1,
+      "unit": "set",
+      "amazonAsin": null,
+      "costCents": null,
+      "approved": false,
+      "stockStatus": "not_checked"
+    }
+  ]
+}
