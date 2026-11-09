@@ -60,6 +60,26 @@ builder.Services.AddCors(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("design-save", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 6,
+                Window = TimeSpan.FromHours(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+    options.AddPolicy("design-load", ctx =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 80,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
     options.AddPolicy("maps", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -106,11 +126,21 @@ builder.Services.AddRateLimiter(options =>
             }));
 });
 
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Designs").Get<DesignPersistenceOptions>() ??
+    new DesignPersistenceOptions());
+builder.Services.AddTransient<DesignRepository>();
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(opts =>
+{
+    opts.MultipartBodyLengthLimit = DesignSecurity.MaxRequestBytes;
+});
+
 var app = builder.Build();
 var deploymentCommitSha = builder.Configuration["Deployment:CommitSha"] ?? "unknown";
 
 app.UseCors("web");
 app.UseRateLimiter();
+app.MapDesignPersistenceEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new
 {
