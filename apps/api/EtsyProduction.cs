@@ -225,9 +225,15 @@ public static class EtsyProductionEndpoints
             byte[] raw;
             try {
                 using var memory = new MemoryStream();
-                await context.Request.Body.CopyToAsync(memory, context.RequestAborted);
+                var buffer = new byte[4096];
+                int count;
+                while ((count = await context.Request.Body.ReadAsync(
+                    buffer.AsMemory(), context.RequestAborted)) > 0)
+                {
+                    if (memory.Length + count > 16 * 1024) return Results.StatusCode(413);
+                    memory.Write(buffer, 0, count);
+                }
                 raw = memory.ToArray();
-                if (raw.Length > 16 * 1024) return Results.StatusCode(413);
             }
             catch (IOException) { return Results.BadRequest(); }
 
