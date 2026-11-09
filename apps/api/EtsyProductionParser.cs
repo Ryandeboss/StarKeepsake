@@ -144,12 +144,12 @@ public static class EtsyProductionParser
                 throw new InvalidDataException("Invalid or repeated Etsy transaction.");
 
             var (state, designId) = Personalization(transaction);
+            var title = String(transaction, "title") ?? "Untitled";
             output.Add(new
             {
                 transaction_id = id.Value,
                 listing_id = Long(transaction, "listing_id"),
-                title = (String(transaction, "title") ?? "Untitled") is var title &&
-                    title.Length > 180 ? title[..180] : title,
+                title = title.Length > 180 ? title[..180] : title,
                 quantity = (int)quantity.Value,
                 reference_state = state,
                 candidate_design_id = designId
