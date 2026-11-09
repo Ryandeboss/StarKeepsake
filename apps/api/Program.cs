@@ -129,7 +129,11 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddSingleton(
     builder.Configuration.GetSection("Designs").Get<DesignPersistenceOptions>() ??
     new DesignPersistenceOptions());
-builder.Services.AddTransient<DesignRepository>();
+builder.Services.AddHttpClient<DesignRepository>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
+builder.Logging.AddFilter("System.Net.Http.HttpClient.DesignRepository", LogLevel.Warning);
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(opts =>
 {
     opts.MultipartBodyLengthLimit = DesignSecurity.MaxRequestBytes;
