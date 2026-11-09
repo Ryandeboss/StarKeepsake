@@ -53,6 +53,7 @@ jobs:
           dotnet-version: 10.0.x
       - run: dotnet restore StarKeepsake.slnx
       - run: dotnet build StarKeepsake.slnx --no-restore --configuration Release
+      - run: dotnet run --project tests/DesignSave.Tests/DesignSave.Tests.csproj --configuration Release
 
   design-engine:
     name: Design Engine
