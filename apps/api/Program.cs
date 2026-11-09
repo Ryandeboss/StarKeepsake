@@ -67,6 +67,30 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
                 AutoReplenishment = true,
             }));
+    options.AddPolicy("production-admin", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 50, Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0, AutoReplenishment = true
+            }));
+    options.AddPolicy("production-sync", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5, Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0, AutoReplenishment = true
+            }));
+    options.AddPolicy("production-webhook", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120, Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0, AutoReplenishment = true
+            }));
     options.AddPolicy("etsy-admin", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -120,6 +144,16 @@ builder.Services.AddHttpClient<EtsyApiClient>(client =>
 });
 builder.Services.AddTransient<EtsyTokenStore>();
 builder.Services.AddTransient<EtsyTokenProvider>();
+builder.Services.AddHttpClient<EtsyProductionClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api.etsy.com/");
+    client.Timeout = TimeSpan.FromSeconds(25);
+});
+builder.Services.AddHttpClient<EtsyProductionRepository>(client =>
+    client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddTransient<EtsyProductionService>();
+builder.Logging.AddFilter("System.Net.Http.HttpClient.EtsyProductionClient", LogLevel.Warning);
+builder.Logging.AddFilter("System.Net.Http.HttpClient.EtsyProductionRepository", LogLevel.Warning);
 
 builder.Services.AddSingleton(
     builder.Configuration.GetSection("Designs").Get<DesignPersistenceOptions>() ??
@@ -140,6 +174,7 @@ var deploymentCommitSha = builder.Configuration["Deployment:CommitSha"] ?? "unkn
 app.UseCors("web");
 app.UseRateLimiter();
 app.MapEtsyConnectionEndpoints();
+app.MapEtsyProductionEndpoints();
 app.MapDesignPersistenceEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new
