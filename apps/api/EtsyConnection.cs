@@ -4,8 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Azure;
-using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
@@ -20,9 +19,9 @@ public sealed class EtsyConnectionOptions
     public string ExpectedShopName { get; set; } = "";
     public string AdminSetupKey { get; set; } = "";
     public string StateSigningKey { get; set; } = "";
-    public string KeyVaultUri { get; set; } = "";
-    public string ManagedIdentityClientId { get; set; } = "";
-    public string TokenSecretName { get; set; } = "starkeepsake-etsy-connection";
+    public string StorageConnectionString { get; set; } = "";
+    public string StorageContainerName { get; set; } = "starkeepsake-private";
+    public string TokenBlobName { get; set; } = "integrations/etsy/connection.json";
 
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(Keystring) &&
@@ -33,9 +32,9 @@ public sealed class EtsyConnectionOptions
         !string.IsNullOrWhiteSpace(ExpectedShopName) &&
         AdminSetupKey.Length >= 32 &&
         StateSigningKey.Length >= 32 &&
-        Uri.TryCreate(KeyVaultUri, UriKind.Absolute, out var vault) &&
-        vault.Scheme == Uri.UriSchemeHttps &&
-        !string.IsNullOrWhiteSpace(TokenSecretName);
+        !string.IsNullOrWhiteSpace(StorageConnectionString) &&
+        StorageContainerName.Length >= 3 && StorageContainerName.Length <= 63 &&
+        !string.IsNullOrWhiteSpace(TokenBlobName);
 }
 
 public sealed record EtsyStoredConnection(
@@ -201,24 +200,25 @@ public sealed class EtsyApiClient(HttpClient client)
     }
 }
 
-// Key Vault provides durable storage across Azure Container Apps replicas and restarts.
-// No token, refresh secret, or Etsy shared secret is returned to a browser.
-public sealed class EtsyTokenVault(EtsyConnectionOptions options)
+// A private Azure Blob stores rotating OAuth credentials persistently, without Key Vault.
+// The blob container must already exist and allow no anonymous public access.
+public sealed class EtsyTokenStore
 {
-    private SecretClient Client => new(
-        new Uri(options.KeyVaultUri),
-        new DefaultAzureCredential(new DefaultAzureCredentialOptions
-        {
-            ManagedIdentityClientId = string.IsNullOrWhiteSpace(options.ManagedIdentityClientId)
-                ? null : options.ManagedIdentityClientId
-        }));
+    private readonly BlobClient _blob;
+
+    public EtsyTokenStore(EtsyConnectionOptions options)
+    {
+        _blob = new BlobServiceClient(options.StorageConnectionString)
+            .GetBlobContainerClient(options.StorageContainerName)
+            .GetBlobClient(options.TokenBlobName);
+    }
 
     public async Task<EtsyStoredConnection?> LoadAsync(CancellationToken ct)
     {
         try
         {
-            var result = await Client.GetSecretAsync(options.TokenSecretName, cancellationToken: ct);
-            return JsonSerializer.Deserialize<EtsyStoredConnection>(result.Value.Value);
+            var result = await _blob.DownloadContentAsync(ct);
+            return JsonSerializer.Deserialize<EtsyStoredConnection>(result.Value.Content.ToString());
         }
         catch (RequestFailedException ex) when (ex.Status == 404)
         {
@@ -228,30 +228,30 @@ public sealed class EtsyTokenVault(EtsyConnectionOptions options)
 
     public async Task SaveAsync(EtsyStoredConnection connection, CancellationToken ct)
     {
-        await Client.SetSecretAsync(options.TokenSecretName,
-            JsonSerializer.Serialize(connection), ct);
+        var content = BinaryData.FromString(JsonSerializer.Serialize(connection));
+        await _blob.UploadAsync(content, overwrite: true, cancellationToken: ct);
     }
 }
 
 public sealed class EtsyTokenProvider(
-    EtsyConnectionOptions options, EtsyTokenVault vault, EtsyApiClient etsy)
+    EtsyConnectionOptions options, EtsyTokenStore store, EtsyApiClient etsy)
 {
     private static readonly SemaphoreSlim RefreshGate = new(1, 1);
 
     public async Task<EtsyStoredConnection?> GetValidAsync(CancellationToken ct)
     {
-        var current = await vault.LoadAsync(ct);
+        var current = await store.LoadAsync(ct);
         if (current is null || current.ExpiresAtUtc > DateTimeOffset.UtcNow.AddMinutes(5))
             return current;
 
         await RefreshGate.WaitAsync(ct);
         try
         {
-            current = await vault.LoadAsync(ct);
+            current = await store.LoadAsync(ct);
             if (current is null || current.ExpiresAtUtc > DateTimeOffset.UtcNow.AddMinutes(5))
                 return current;
             var updated = await etsy.RefreshAsync(options, current, ct);
-            await vault.SaveAsync(updated, ct);
+            await store.SaveAsync(updated, ct);
             return updated;
         }
         finally
@@ -323,7 +323,7 @@ public static class EtsyConnectionEndpoints
             HttpContext context,
             EtsyConnectionOptions settings,
             EtsyApiClient etsy,
-            EtsyTokenVault vault) =>
+            EtsyTokenStore store) =>
         {
             Harden(context);
             if (!settings.IsConfigured) return Results.StatusCode(503);
@@ -356,7 +356,7 @@ public static class EtsyConnectionEndpoints
                         StringComparison.OrdinalIgnoreCase))
                     return Results.BadRequest("Authorized account does not own the expected Etsy shop.");
 
-                await vault.SaveAsync(connection with
+                await store.SaveAsync(connection with
                 {
                     ShopId = shop.ShopId,
                     ShopName = shop.ShopName
@@ -367,10 +367,10 @@ public static class EtsyConnectionEndpoints
                     "text/html", Encoding.UTF8);
             }
             catch (Exception ex) when (ex is HttpRequestException or JsonException or
-                InvalidOperationException or RequestFailedException or Azure.Identity.AuthenticationFailedException)
+                InvalidOperationException or RequestFailedException or ArgumentException)
             {
                 // Deliberately never log or reflect authorization codes, bearer tokens or secret values.
-                return Results.Problem("Etsy connection failed. Check API and Key Vault configuration.",
+                return Results.Problem("Etsy connection failed. Check API configuration and private Blob storage.",
                     statusCode: 502);
             }
         }).RequireRateLimiting("etsy-admin");
@@ -404,7 +404,7 @@ public static class EtsyConnectionEndpoints
                     shopId = shop.ShopId, tokenExpiresAtUtc = token.ExpiresAtUtc });
             }
             catch (Exception ex) when (ex is HttpRequestException or JsonException or
-                InvalidOperationException or RequestFailedException or Azure.Identity.AuthenticationFailedException)
+                InvalidOperationException or RequestFailedException or ArgumentException)
             {
                 return Results.Problem("Unable to verify Etsy status.", statusCode: 502);
             }
