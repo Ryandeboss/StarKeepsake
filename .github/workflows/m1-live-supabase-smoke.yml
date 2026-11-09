@@ -1,0 +1,25 @@
+name: M1 Live Supabase Save/Reopen Smoke (synthetic only)
+
+on:
+  push:
+    branches:
+      - test/m1-live-supabase-smoke
+
+permissions:
+  contents: read
+
+jobs:
+  m1-live-smoke:
+    name: Save and reopen a synthetic design
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check deployed version, private save, private reopen and photo round-trip
+        env:
+          EXPECTED_DEPLOY_COMMIT: 708b8df73c83a496282e02f45bc40d8fe527c956
+          STARKEEPSAKE_API_URL: https://starkeepsake-api-dev.wittyflower-9225f265.centralus.azurecontainerapps.io
+        run: python3 scripts/m1/live_smoke.py
