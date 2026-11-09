@@ -74,3 +74,13 @@ jobs:
       - run: .venv/bin/python -m pip install -r requirements.txt
       - run: .venv/bin/python -c "from main import app; assert app.title == 'StarKeepsake Design Engine'"
       - run: .venv/bin/python -m unittest discover -s tests -v
+
+  physical-prototype:
+    name: M4 Offline Prototype
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tools/prototype/tests -v
