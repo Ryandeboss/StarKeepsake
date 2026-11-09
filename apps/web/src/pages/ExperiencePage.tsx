@@ -20,6 +20,8 @@ import { skyAboveArtworkAspect } from '../frameSkyBalance'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { createCustomerPacket, downloadFile, orderPersonalization } from '../customerOrder'
 import type { OrderPreferences } from '../customerOrder'
+import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
+import type { SavedDesignReceipt } from '../savedDesign'
 import './ExperiencePage.css'
 
 type Stage = 'welcome'|'detecting'|'choice'|'refine'|'moment'|'calculating'|'preview'|'home'
@@ -97,6 +99,11 @@ export function ExperiencePage() {
   const [inscription,setInscription]=useState('')
   const [orderBusy,setOrderBusy]=useState(false)
   const [orderError,setOrderError]=useState('')
+  const [saveBusy,setSaveBusy]=useState(false)
+  const [saveError,setSaveError]=useState('')
+  const [restoreBusy,setRestoreBusy]=useState(false)
+  const [restoreError,setRestoreError]=useState('')
+  const [savedDesign,setSavedDesign]=useState<{receipt:SavedDesignReceipt;signature:string}|null>(null)
   const [preparedOrder,setPreparedOrder]=useState<{
     key:string;packet:Awaited<ReturnType<typeof createCustomerPacket>>
   }|null>(null)
@@ -117,6 +124,76 @@ export function ExperiencePage() {
     if(overlayObject.current) URL.revokeObjectURL(overlayObject.current)
     if(cutoutObject.current) URL.revokeObjectURL(cutoutObject.current)
   },[])
+  // Opening a private design link does not require an account. A public Etsy Design ID
+  // alone is insufficient: only the 256-bit secret in the URL fragment grants read access.
+  useEffect(()=>{
+    const reference=parseDesignLink(window.location.hash)
+    if(!reference)return
+    let active=true
+    setRestoreBusy(true)
+    void (async()=>{
+      try {
+        const loaded=await reopenCustomerDesign(reference)
+        if(!active)return
+        const type=loaded.original.type||'image/jpeg'
+        const ext=type==='image/png'?'png':type==='image/webp'?'webp':'jpg'
+        const restoredPhoto=new File([loaded.original],'saved-photo.'+ext,{type})
+        const bitmap=await createImageBitmap(restoredPhoto)
+        const width=bitmap.width,height=bitmap.height
+        bitmap.close()
+        if(!active)return
+        detectionVersion.current++
+        astronomyVersion.current++
+        if(photoObject.current)URL.revokeObjectURL(photoObject.current)
+        if(cutoutObject.current)URL.revokeObjectURL(cutoutObject.current)
+        if(overlayObject.current)URL.revokeObjectURL(overlayObject.current)
+        const originalUrl=URL.createObjectURL(restoredPhoto)
+        const foregroundUrl=loaded.foreground?URL.createObjectURL(loaded.foreground):''
+        photoObject.current=originalUrl
+        cutoutObject.current=foregroundUrl
+        overlayObject.current=''
+        const p=loaded.saved.preferences
+        const d=loaded.saved.design
+        setDesign(d)
+        setPhoto(restoredPhoto)
+        setPhotoUrl(originalUrl)
+        setCutoutUrl(foregroundUrl)
+        setOverlayUrl('')
+        setSavedAlpha(null)
+        setDetected(null)
+        setDimensions({width,height})
+        setPlacement(p.layout)
+        setHeading(p.heading)
+        setPitch(p.pitch)
+        setFov(p.fov)
+        setSkyPercent(p.skyHeight)
+        setPhotoFit(p.photoFit)
+        setSkyTone(p.tone)
+        setAtmosphericGlow(p.glow)
+        setFinish(p.finish)
+        setInscription(p.inscription)
+        setDate(d.moment.date)
+        setTime(d.moment.time??'21:00')
+        setUnknownTime(d.moment.exactTimeUnknown)
+        const loc=d.moment.location
+        if(loc){
+          setSelected({...loc,source:null})
+          setQuery(loc.query||loc.displayName)
+        }
+        setSavedDesign({
+          receipt:{designId:loaded.saved.designId,accessKey:reference.accessKey,
+            createdAtUtc:loaded.saved.createdAtUtc,status:'SAVED_UNPAID'},
+          signature:designSnapshotSignature({design:d,preferences:p,
+            photoBytes:restoredPhoto.size,prepared:Boolean(loaded.foreground)}),
+        })
+        setStage('home')
+      }catch(cause){
+        if(active)setRestoreError(cause instanceof Error?cause.message:'Could not reopen your design.')
+      }finally{if(active)setRestoreBusy(false)}
+    })()
+    return ()=>{active=false}
+  },[])
+
   useEffect(()=>{
     if(stage!=='detecting'&&stage!=='calculating')return
     const timer=window.setInterval(()=>setProgress(n=>Math.min(91,n+Math.max(.6,(93-n)*.12))),190)
@@ -177,6 +254,9 @@ export function ExperiencePage() {
     setQuery('')
     setCandidates([])
     setDesign({...INITIAL_DESIGN_SPEC,stars:[],astronomy:null})
+    setSavedDesign(null)
+    setSaveError('')
+    window.history.replaceState(null,'',window.location.pathname+window.location.search)
     setStage('detecting')
     try{
       const bitmap=await createImageBitmap(file)
@@ -286,11 +366,44 @@ export function ExperiencePage() {
     layout:placement,heading,pitch,fov,skyHeight:skyPercent,
     photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
   }
+  const snapshotSignature=designSnapshotSignature({design,preferences:orderPreferences,
+    photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
+  const savedCurrent=Boolean(savedDesign&&savedDesign.signature===snapshotSignature)
   const orderKey=JSON.stringify({moment:design.moment,stars:design.stars,
-    preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl})
+    preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl,
+    storedId:savedCurrent?savedDesign?.receipt.designId:null})
   const currentOrder=preparedOrder?.key===orderKey?preparedOrder.packet:null
   const etsyLink=(import.meta.env.VITE_ETSY_LISTING_URL as string|undefined)?.trim()
   const verifiedEtsyLink=etsyLink&&/^https:\/\/(www\.)?etsy\.com\/(listing|shop)\//.test(etsyLink)?etsyLink:null
+
+  async function saveDesignNow(){
+    if(!photo||!design.astronomy||!design.moment.location){
+      setSaveError('Finish your night sky before saving.')
+      return
+    }
+    if(placement==='within'&&!cutoutUrl){
+      setSaveError('Finish and save the polished foreground first.')
+      return
+    }
+    setSaveBusy(true)
+    setSaveError('')
+    const signature=snapshotSignature
+    try{
+      let foreground:Blob|null=null
+      if(placement==='within'){
+        const response=await fetch(cutoutUrl)
+        if(!response.ok)throw new Error('Could not read the prepared foreground.')
+        foreground=await response.blob()
+      }
+      const receipt=await saveCustomerDesign({
+        design,preferences:{...orderPreferences},photo,foreground,
+      })
+      setSavedDesign({receipt,signature})
+      window.history.replaceState(null,'',privateDesignLink(window.location.href,receipt))
+    }catch(cause){
+      setSaveError(cause instanceof Error?cause.message:'Unable to save your design.')
+    }finally{setSaveBusy(false)}
+  }
 
   async function buildOrderPacket(){
     if(!photo)return
@@ -299,7 +412,8 @@ export function ExperiencePage() {
     setOrderBusy(true);setOrderError('')
     try{
       const packet=await createCustomerPacket({design,prefs:preferences,
-        photo,photoUrl,cutoutUrl})
+        photo,photoUrl,cutoutUrl,
+        savedDesignId:savedCurrent?savedDesign?.receipt.designId:undefined})
       setPreparedOrder({key,packet})
     }catch(cause){
       setOrderError(cause instanceof Error?cause.message:'Could not prepare your order files.')
@@ -321,6 +435,12 @@ export function ExperiencePage() {
       </div>)}
     </nav>
     <main className="at-main">
+      {restoreBusy&&<p role="status" className="at-design-notice">Opening your private saved design…</p>}
+      {restoreError&&<div className="at-design-notice" role="alert">
+        Could not open saved design: {restoreError}
+        <button type="button" onClick={()=>{window.history.replaceState(null,'',window.location.pathname);setRestoreError('')}}>
+          Start a new design</button>
+      </div>}
       {stage==='welcome'&&<section className="at-welcome at-appear">
         <div className="at-welcome-copy">
           <span className="at-kicker">WELCOME TO THE NIGHT ATELIER</span>
@@ -681,6 +801,23 @@ export function ExperiencePage() {
               <input id="at-order-inscription" type="text" maxLength={65}
                 value={inscription} placeholder="e.g. The night our story began"
                 onChange={event=>setInscription(event.target.value)}/>
+              <button type="button" className="at-outline at-wide" disabled={saveBusy||restoreBusy}
+                onClick={()=>void saveDesignNow()}>
+                {saveBusy?'Saving your design…':savedCurrent?'✓ Saved to StarKeepsake':'Save this design securely'}
+              </button>
+              {saveError&&<p role="alert" className="at-error">{saveError}</p>}
+              {savedCurrent&&savedDesign&&<div className="at-saved-design" role="status">
+                <strong>Design saved: {savedDesign.receipt.designId}</strong>
+                <p>Not an Etsy order or payment. Your original photo and polished foreground
+                  are stored privately so you can return to this exact design.</p>
+                <button type="button" className="at-outline" onClick={()=>
+                  void navigator.clipboard.writeText(privateDesignLink(window.location.href,savedDesign.receipt))
+                    .catch(()=>setSaveError('Copy failed. You can copy this page’s address from the browser.'))}>
+                  Copy private reopening link ↗
+                </button>
+                <small>Keep this link private. Anyone with the full link can reopen the design.
+                  Changing your choices and saving again creates a new Design ID.</small>
+              </div>}
               <button type="button" className="at-primary at-wide" disabled={orderBusy}
                 onClick={()=>void buildOrderPacket()}>
                 {orderBusy?'Preparing your keepsake…':'Get this keepsake'} <span>✦</span>
