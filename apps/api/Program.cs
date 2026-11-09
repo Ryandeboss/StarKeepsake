@@ -60,6 +60,16 @@ builder.Services.AddCors(options =>
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("etsy-admin", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 8,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
     options.AddPolicy("design-save", ctx =>
         RateLimitPartition.GetFixedWindowLimiter(
             partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -127,6 +137,16 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Etsy").Get<EtsyConnectionOptions>() ?? new EtsyConnectionOptions());
+builder.Services.AddHttpClient<EtsyApiClient>(client =>
+{
+    client.BaseAddress = new Uri("https://api.etsy.com/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
+builder.Services.AddTransient<EtsyTokenStore>();
+builder.Services.AddTransient<EtsyTokenProvider>();
+
+builder.Services.AddSingleton(
     builder.Configuration.GetSection("Designs").Get<DesignPersistenceOptions>() ??
     new DesignPersistenceOptions());
 builder.Services.AddHttpClient<DesignRepository>(client =>
@@ -145,6 +165,7 @@ var deploymentCommitSha = builder.Configuration["Deployment:CommitSha"] ?? "unkn
 app.UseCors("web");
 app.UseRateLimiter();
 app.MapDesignPersistenceEndpoints();
+app.MapEtsyConnectionEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new
 {
