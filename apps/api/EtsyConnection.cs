@@ -302,7 +302,15 @@ public static class EtsyConnectionEndpoints
             if (!form.TryGetValue("adminKey", out var value) || value.Count != 1 ||
                 !EtsyOAuthProtocol.SecureEquals(value.ToString(), settings.AdminSetupKey))
             {
-                context.Response.StatusCode = 401;
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "text/html; charset=utf-8";
+                await context.Response.WriteAsync(
+                    "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Authorization failed</title></head>" +
+                    "<body style=\"font:16px system-ui;max-width:34rem;margin:5rem auto;padding:1rem;background:#101b2b;color:#fff\">" +
+                    "<h1>Incorrect admin setup key</h1><p>Use the StarKeepsake admin setup key stored in Azure Container Apps, " +
+                    "not your Etsy Keystring or Shared Secret.</p><p><a href=\"/api/admin/etsy/connect\" " +
+                    "style=\"color:#a8d9ff\">Try again</a></p></body></html>",
+                    context.RequestAborted);
                 return;
             }
             var state = EtsyOAuthProtocol.NewState(settings.StateSigningKey, DateTimeOffset.UtcNow);
@@ -411,12 +419,18 @@ public static class EtsyConnectionEndpoints
         }).RequireRateLimiting("etsy-admin");
     }
 
+    // Browser form-action policy covers the entire form-triggered redirect chain.
+    // Our form POST stays on this host, but the final 303 navigates to Etsy.
+    // Allow only the verified Etsy OAuth host, not arbitrary third-party sites.
+    public const string ConnectionContentSecurityPolicy =
+        "default-src 'none'; style-src 'unsafe-inline'; " +
+        "form-action 'self' https://www.etsy.com; base-uri 'none'; frame-ancestors 'none'";
+
     private static void Harden(HttpContext context)
     {
         context.Response.Headers.CacheControl = "no-store";
         context.Response.Headers["Referrer-Policy"] = "no-referrer";
         context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-        context.Response.Headers["Content-Security-Policy"] =
-            "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
+        context.Response.Headers["Content-Security-Policy"] = ConnectionContentSecurityPolicy;
     }
 }
