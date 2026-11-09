@@ -55,6 +55,12 @@ Check(url.StartsWith("https://www.etsy.com/oauth/connect?") &&
       "authorization URL has Etsy endpoint, scopes, PKCE and exact redirect");
 Check(!url.Contains(options.SharedSecret) && !url.Contains(verifier),
       "no shared secret or PKCE verifier in authorization URL");
+Check(EtsyConnectionEndpoints.ConnectionContentSecurityPolicy.Contains(
+    "form-action 'self' https://www.etsy.com", StringComparison.Ordinal),
+    "browser CSP permits Etsy OAuth redirect after local form POST");
+Check(!EtsyConnectionEndpoints.ConnectionContentSecurityPolicy.Contains(
+    "form-action *", StringComparison.Ordinal),
+    "browser CSP does not permit arbitrary form navigation");
 options.RedirectUri = "http://insecure.example/api/admin/etsy/callback";
 Check(!options.IsConfigured, "insecure redirect URI rejected");
 options.RedirectUri = "https://api.example.test/api/admin/etsy/callback";
