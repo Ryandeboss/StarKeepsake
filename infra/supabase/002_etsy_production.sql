@@ -200,6 +200,14 @@ begin
       reference_state=excluded.reference_state,match_state=excluded.match_state,
       last_synced_at=now();
 
+    if v_match <> 'matched' then
+      -- A previously matched design may later be invalidated or canceled.
+      -- Never leave an old production job ready for fabrication.
+      update public.production_jobs set status='hold',updated_at=now()
+      where shop_id=shop_id_value and receipt_id=receipt_id_value
+        and transaction_id=v_transaction_id and status<>'hold';
+    end if;
+
     if v_match='matched' then
       v_matched:=v_matched+1;
       insert into public.production_jobs(shop_id,receipt_id,transaction_id,design_id)
