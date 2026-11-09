@@ -47,11 +47,16 @@ Check(!DesignSecurity.ValidDesignJson("{}", above, false),
     "incomplete design rejected");
 
 var options = new DesignPersistenceOptions {
-    SqlConnectionString = "Server=tcp:test.database.windows.net;Database=test;",
-    StorageConnectionString = "UseDevelopmentStorage=true",
-    StorageContainerName = "starkeepsake-artwork"
+    ProjectUrl = "https://example.supabase.co/",
+    SecretKey = "sb_secret_" + new string('S', 48),
+    StorageBucketName = "starkeepsake-designs"
 };
-Check(options.IsConfigured, "configured SQL + private artwork storage");
-options.SqlConnectionString = "";
-Check(!options.IsConfigured, "missing SQL fails closed");
+Check(options.IsConfigured, "configured Supabase Postgres + private Storage");
+options.SecretKey = "";
+Check(!options.IsConfigured, "missing server-side Supabase secret fails closed");
+options.SecretKey = "sb_secret_" + new string('S', 48);
+options.ProjectUrl = "http://example.supabase.co/";
+Check(!options.IsConfigured, "HTTP project URL fails closed");
+options.ProjectUrl = "https://example.supabase.co/";
+Check(options.IsConfigured, "HTTPS Supabase project URL accepted");
 Console.WriteLine("All M1 design contract tests passed.");
