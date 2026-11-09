@@ -101,7 +101,7 @@ export function ExperiencePage() {
   const [orderError,setOrderError]=useState('')
   const [saveBusy,setSaveBusy]=useState(false)
   const [saveError,setSaveError]=useState('')
-  const [restoreBusy,setRestoreBusy]=useState(false)
+  const [restoreBusy,setRestoreBusy]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
   const [restoreError,setRestoreError]=useState('')
   const [savedDesign,setSavedDesign]=useState<{receipt:SavedDesignReceipt;signature:string}|null>(null)
   const [preparedOrder,setPreparedOrder]=useState<{
@@ -130,7 +130,6 @@ export function ExperiencePage() {
     const reference=parseDesignLink(window.location.hash)
     if(!reference)return
     let active=true
-    setRestoreBusy(true)
     void (async()=>{
       try {
         const loaded=await reopenCustomerDesign(reference)
