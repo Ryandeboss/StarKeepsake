@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import './ProductionDashboardPage.css'
 
 type Receipt = {
@@ -120,7 +120,7 @@ export function ProductionDashboardPage() {
     const view = await api<Dashboard>('/api/admin/production/orders', adminKey)
     setData(view)
   }
-  async function login(event: React.FormEvent) {
+  async function login(event: FormEvent) {
     event.preventDefault()
     if (!entry.trim()) return
     setBusy(true); setFailure(''); setMessage('')
