@@ -177,6 +177,8 @@ builder.Services.AddHttpClient<EtsyProductionClient>(client =>
 builder.Services.AddHttpClient<EtsyProductionRepository>(client =>
     client.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddTransient<EtsyProductionService>();
+builder.Services.AddHttpClient<MaterialPlanningRepository>(client => client.Timeout = TimeSpan.FromSeconds(30));
+builder.Logging.AddFilter("System.Net.Http.HttpClient.MaterialPlanningRepository", LogLevel.Warning);
 builder.Logging.AddFilter("System.Net.Http.HttpClient.EtsyProductionClient", LogLevel.Warning);
 builder.Logging.AddFilter("System.Net.Http.HttpClient.EtsyProductionRepository", LogLevel.Warning);
 
@@ -201,6 +203,7 @@ app.UseRateLimiter();
 app.MapDesignPersistenceEndpoints();
 app.MapEtsyConnectionEndpoints();
 app.MapEtsyProductionEndpoints();
+app.MapMaterialPlanningEndpoints();
 
 app.MapGet("/health", () => Results.Ok(new
 {
