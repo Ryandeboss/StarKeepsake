@@ -502,7 +502,7 @@ export function ExperiencePage() {
   return <div className="at-shell">
     <div className="at-aurora" aria-hidden="true"/>
     <header className="at-header">
-      <button type="button" className="at-wordmark" onClick={()=>{if(stage!=='welcome')setStage('welcome')}} aria-label="StarKeepsake home">
+      <button type="button" className="at-wordmark" onClick={()=>goToChapter(0)} aria-label="StarKeepsake home">
         <span className="at-logo-mark">✳</span><span>STAR<span>KEEPSAKE</span><small>THE NIGHT ATELIER</small></span>
       </button>
       <nav className="at-steps" aria-label="Jump between the five workshop chapters">
@@ -514,7 +514,7 @@ export function ExperiencePage() {
           onClick={()=>goToChapter(index as ChapterIndex)}>
           <span>{index<atIndex?'✓':String(index+1).padStart(2,'0')}</span><b>{item.label}</b>
         </button>)}
-      </nav>}
+      </nav>
     </header>
     <main className="at-main">
       {chapterNotice&&<p role="status" className="at-chapter-notice">{chapterNotice}</p>}
@@ -570,7 +570,7 @@ export function ExperiencePage() {
 
       {stage==='choice'&&<section className="at-atelier-stage at-appear">
         <div className="at-stage-intro">
-          <span className="at-kicker">CHAPTER 01 / YOUR PHOTOGRAPH</span>
+          <span className="at-kicker">CHAPTER 02 / THE HORIZON</span>
           <h1>Where should<br/><em>your stars live?</em></h1>
           <p>We’ve examined your photograph for open sky. Now choose how it should meet the night you remember.</p>
         </div>
