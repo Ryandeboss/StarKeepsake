@@ -351,7 +351,7 @@ export function ExperiencePage() {
       detectionVersion.current++ // Ignore late AI results if chapter 01 was chosen.
       detectionOnDecode.current=false // Also handle an image still being decoded.
     }
-    if(stage==='calculating' && destination.stage!=='calculating'){
+    if(stage==='calculating'){
       astronomyVersion.current++ // Do not let an old computation override navigation.
     }
     if(destination.stage==='detecting'){
