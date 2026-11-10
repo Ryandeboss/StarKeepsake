@@ -40,6 +40,7 @@ jobs:
       - run: npm run test:orders
       - run: npm run test:saved-design
       - run: npm run test:sky-placement
+      - run: npm run test:chapter-nav
       - run: npm run test:showroom
       - run: npm run test:sky-dome
       - run: npm run test:photographic

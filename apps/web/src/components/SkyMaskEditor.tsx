@@ -9,6 +9,7 @@ import type { MaskPoint } from '../skyMaskMath'
 import { resampleSkyAlpha } from '../skyWorkshopMath'
 import type { SkyAlphaMask } from '../skyWorkshopMath'
 import { smartRectangleCleanup } from '../skyWorkshopMask'
+import type { ChapterIndex } from '../workshopNavigation'
 import './SkyMaskEditor.css'
 
 type Tool = 'smart' | 'brush' | 'polygon'
@@ -21,6 +22,8 @@ type Props = {
   onDismissPolishGuide?: () => void
   onApply: (png: Blob, alpha: Uint8ClampedArray) => void
   onClose: () => void
+  onChapterNavigate?: (chapter: ChapterIndex) => void
+  chapterNotice?: string | null
 }
 type LoadedPhoto = { width: number; height: number }
 const MAX_HISTORY = 12
@@ -28,7 +31,7 @@ const MAX_HISTORY = 12
 /** Photo and its undo history stay in this browser tab; no upload or image service. */
 export function SkyMaskEditor({
   file, initialMask, detectedMask, showPolishGuide = false, onDismissPolishGuide,
-  onApply, onClose,
+  onApply, onClose, onChapterNavigate, chapterNotice,
 }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const photo = useRef<Uint8ClampedArray | null>(null)
@@ -315,6 +318,15 @@ export function SkyMaskEditor({
           event.preventDefault(); redo()
         }
       }}>
+      {onChapterNavigate&&<nav className="sky-mask-chapters" aria-label="Jump to another workshop chapter">
+        {(['Photograph','Horizon','Moment','Your sky','Keepsake'] as const).map((label,index)=>
+          <button type="button" key={label} aria-label={`Chapter ${index+1}: ${label}`}
+            aria-current={index===1?'step':undefined}
+            onClick={()=>onChapterNavigate(index as ChapterIndex)}>
+            <span>{String(index+1).padStart(2,'0')}</span> {label}
+          </button>)}
+      </nav>}
+      {chapterNotice&&<p className="sky-mask-chapter-notice" role="status">{chapterNotice}</p>}
       <header className="sky-mask-header">
         <div>
           <span className="sky-mask-eyebrow">Your photo · free local editing</span>

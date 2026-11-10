@@ -144,3 +144,13 @@
   .sky-mask-gesture-tap{transform:scale(1)}
   .sky-mask-gesture-sweep{transform:scale(1)}
 }
+
+/* Horizon editor remains a full-screen modal, so duplicate chapter shortcuts
+   keep navigation accessible even while the underlying sticky header is covered. */
+.sky-mask-chapters{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;background:#0d2531;padding:10px 14px;border-radius:12px 12px 0 0;border-bottom:1px solid #41606a}
+.sky-mask-chapters button{border:1px solid #506c75;background:transparent;color:#c0d6d9;border-radius:9px;font:11px ui-monospace,monospace;padding:9px 12px;cursor:pointer}
+.sky-mask-chapters button span{color:#eccd9e;margin-right:4px}
+.sky-mask-chapters button[aria-current="step"]{background:#254956;border-color:#dbb987;color:#f2d6a0}
+.sky-mask-chapters button:hover{border-color:#ead29d;color:#fff4db}
+.sky-mask-chapter-notice{margin:8px 16px 0;border:1px solid #a48b5e;background:#352e24;color:#ffe5ba;padding:10px 14px;border-radius:9px;font-size:12px}
+@media(max-width:700px){.sky-mask-chapters{gap:5px}.sky-mask-chapters button{padding:7px 8px;font-size:10px}}
