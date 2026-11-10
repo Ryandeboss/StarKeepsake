@@ -134,7 +134,6 @@ export function ExperiencePage() {
   const [draftReady,setDraftReady]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
   const [draftNotice,setDraftNotice]=useState('')
   const [draftError,setDraftError]=useState('')
-  const localRestoreStarted=useRef(false)
 
   useEffect(()=>()=> {
     detectionVersion.current++
@@ -216,8 +215,7 @@ export function ExperiencePage() {
   // Unpaid work is never uploaded just to survive Refresh. Restore from this
   // origin's IndexedDB first; private link restoration above takes precedence.
   useEffect(()=>{
-    if(parseDesignLink(window.location.hash)||localRestoreStarted.current)return
-    localRestoreStarted.current=true
+    if(parseDesignLink(window.location.hash))return
     let active=true
     void (async()=>{
       try{
