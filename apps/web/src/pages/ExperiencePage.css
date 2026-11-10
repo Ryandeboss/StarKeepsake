@@ -120,9 +120,12 @@
 .at-detection-foot label {display:flex;gap:9px;align-items:center;font-size:12px;color:#c6dbd8;}
 .at-detection-foot input {accent-color:#e5c18c;}
 .at-detection-foot button {border:0;background:transparent;color:#efd3a0;font-size:12px;}
-.at-detection-success,.at-detection-note {font-size:12px;padding:11px 13px;border-radius:9px;
- background:#173c45;color:#d3dfd7;margin:17px 0 0;}
-.at-detection-note {background:#392b32;color:#f1c8ba;}
+.at-detection-change-photo{display:flex;align-items:center;justify-content:center;gap:11px;
+ width:100%;padding:11px 14px;margin:17px 0 0;border:1px solid #678f9e;
+ background:#173c45;color:#e6efe7;border-radius:9px;font:600 12px/1.4 'DM Sans',system-ui,sans-serif;
+ transition:background-color .15s,border-color .15s}
+.at-detection-change-photo:hover{background:#254d59;border-color:#e5c58b;color:#fff1ce}
+.at-detection-change-photo:focus-visible{outline:2px solid #e5c58b;outline-offset:3px}
 .at-decision {display:grid;gap:13px;}
 .at-decision-eyebrow {font:10px ui-monospace,monospace;letter-spacing:.16em;color:#e7c999;}
 .at-option {display:grid;grid-template-columns:85px 1fr 20px;align-items:center;gap:14px;
@@ -640,8 +643,6 @@
 .at-steps>button.is-current{background:#203c49;color:#f4d7a4}
 .at-steps>button.is-done:hover{background:#1c3b43}
 .at-chapter-notice{margin:10px 0 15px;padding:11px 15px;border-radius:10px;background:#183745;color:#f2d7a4;border:1px solid #7f735d;font-size:12px}
-.at-decision .at-choose-photo{width:100%;text-align:center;justify-content:center;padding:11px;border-color:#628895;color:#d3e6df;background:#153344}
-.at-decision .at-choose-photo:hover{background:#244755;border-color:#e5c58b}
 .at-welcome-resume{margin-left:12px;font-size:12px;padding:14px 18px}
 .at-existing-photo{background:#162d3b}
 .at-existing-photo>img{display:block;width:100%;height:100%;object-fit:contain;background:#0e1f2b;filter:none}

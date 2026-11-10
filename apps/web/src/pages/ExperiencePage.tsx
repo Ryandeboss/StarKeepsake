@@ -735,7 +735,10 @@ export function ExperiencePage() {
             onDragOver={event=>{event.preventDefault();setDragging(true)}}
             onDragLeave={()=>setDragging(false)} onDrop={onDrop}>
             <div className="at-panel-heading"><strong>YOUR PHOTOGRAPH</strong>
-              <span>{detected&&detected.skyPercent>=3?'AI HORIZON FOUND':'REVIEW NEEDED'}</span></div>
+              <span role="status">{detectorError?'DETECTION UNAVAILABLE'
+                :detected&&detected.skyPercent>=3?'AI HORIZON FOUND'
+                :savedDesign&&!detected?'SAVED COMPOSITION'
+                :'NO CLEAR SKY DETECTED'}</span></div>
             <div className="at-detection-image">
               {photoUrl&&<img src={showMask&&overlayUrl?overlayUrl:photoUrl}
                 alt={showMask&&overlayUrl?'Cyan overlay shows the sky the AI found in your photograph':'Your original photograph'}/>}
@@ -746,12 +749,10 @@ export function ExperiencePage() {
                 Show detected sky</label>
               <button type="button" onClick={()=>{if(photoUrl)void runDetection(photoUrl)}}>↻ Detect again</button>
             </div>
-            <p className={detected&&detected.skyPercent>=3?'at-detection-success':'at-detection-note'} role="status">
-              {detectorError?'The AI detector was unavailable: '+detectorError+' You can still choose a separate sky or clean up manually.'
-                :savedDesign&&!detected?'Your saved composition is ready. Run detection again if you want a new AI horizon suggestion.'
-                :detected&&detected.skyPercent>=3?`Found approximately ${detected.skyPercent}% visible sky. You can fine-tune every edge next.`
-                :'No clear sky was recognized. Choose a separate sky, or draw your own horizon in the editor.'}
-            </p>
+            <button type="button" className="at-detection-change-photo"
+              onClick={openPhotoReplacement} aria-label="Change photograph">
+              <span aria-hidden="true">⇄</span> Change photograph <span aria-hidden="true">↗</span>
+            </button>
           </div>
           <div className="at-decision">
             <div className="at-decision-eyebrow">CHOOSE YOUR COMPOSITION</div>
@@ -772,8 +773,6 @@ export function ExperiencePage() {
             <button type="button" className="at-primary at-wide" onClick={choosePlacement}>
               {placement==='within'?'Polish my horizon':'Continue with a sky above'} <span>↗</span>
             </button>
-            <button type="button" className="at-outline at-wide at-choose-photo"
-              onClick={openPhotoReplacement}>⇄ Change photograph</button>
             <p className="at-tiny-note">Sky detection runs on your device. If you choose to weave stars into the image, you’ll get a chance to tidy the edges with free editing tools.</p>
           </div>
         </div>
