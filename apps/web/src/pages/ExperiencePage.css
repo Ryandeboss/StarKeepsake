@@ -655,3 +655,16 @@
  .at-welcome-resume{display:block;margin:12px 0 0;width:max-content}
 }
 @media(prefers-reduced-motion:reduce){.at-steps>button{transition:none}.at-steps>button:hover{transform:none}}
+
+/* A private, resumable in-browser draft (no server autosave or access key). */
+.at-draft-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;gap:14px;text-align:center}
+.at-draft-loading p{color:#c9d9dc;font-size:14px}
+.at-draft-pulse{font-size:68px;color:#f0cb8b;animation:at-pulse-orbit 2s ease-in-out infinite}
+.at-local-draft-info{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:#1b403b;border:1px solid #4e8470;color:#d9f6eb;border-radius:11px;padding:11px 15px;margin:16px 0;font-size:12px}
+.at-local-draft-info button{color:#d9f6eb;background:transparent;border:0;font-size:20px}
+.at-draft-error{margin:16px 0}
+.at-reset-draft{display:block;margin-top:13px;padding:8px 0;background:transparent;border:none;color:#b3ccd0;
+  font-size:11px;text-decoration:underline;text-underline-offset:4px;text-align:left}
+.at-reset-draft:hover{color:#ffe2b0}
+@media(prefers-reduced-motion:reduce){.at-draft-pulse{animation:none}}

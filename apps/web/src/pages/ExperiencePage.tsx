@@ -10,6 +10,8 @@ import type { RoomScene } from '../components/HomeShowroomOptions'
 import { detectWorkshopSky } from '../skyBlend'
 import { recommendedSkyPlacement } from '../skyPlacement'
 import { chapterDestination } from '../workshopNavigation'
+import { clearLocalWorkshopDraft, readLocalWorkshopDraft, resumedDraftStage, writeLocalWorkshopDraft } from '../localWorkshopDraft'
+import type { LocalWorkshopDraft } from '../localWorkshopDraft'
 import type { ChapterIndex } from '../workshopNavigation'
 import type { WorkshopDetection } from '../skyBlend'
 import { FULL_PHOTO_CROP } from '../photoCrop'
@@ -129,6 +131,10 @@ export function ExperiencePage() {
   const astronomyVersion=useRef(0)
   const lookupVersion=useRef(0)
   const detectionOnDecode=useRef(true)
+  const [draftReady,setDraftReady]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
+  const [draftNotice,setDraftNotice]=useState('')
+  const [draftError,setDraftError]=useState('')
+  const localRestoreStarted=useRef(false)
 
   useEffect(()=>()=> {
     detectionVersion.current++
@@ -206,6 +212,122 @@ export function ExperiencePage() {
     })()
     return ()=>{active=false}
   },[])
+
+  // Unpaid work is never uploaded just to survive Refresh. Restore from this
+  // origin's IndexedDB first; private link restoration above takes precedence.
+  useEffect(()=>{
+    if(parseDesignLink(window.location.hash)||localRestoreStarted.current)return
+    localRestoreStarted.current=true
+    let active=true
+    void (async()=>{
+      try{
+        const draft=await readLocalWorkshopDraft()
+        if(!active)return
+        if(!draft){setDraftReady(true);return}
+        const kind=draft.photo.type
+        const extension=kind==='image/png'?'png':kind==='image/webp'?'webp':'jpg'
+        const restored=new File([draft.photo],'local-workshop-photo.'+extension,{type:kind})
+        const originalUrl=URL.createObjectURL(restored)
+        const cutoutUrl=draft.cutout?URL.createObjectURL(draft.cutout):''
+        const overlayUrl=draft.detected?URL.createObjectURL(draft.detected.overlay):''
+        if(photoObject.current)URL.revokeObjectURL(photoObject.current)
+        if(cutoutObject.current)URL.revokeObjectURL(cutoutObject.current)
+        if(overlayObject.current)URL.revokeObjectURL(overlayObject.current)
+        photoObject.current=originalUrl
+        cutoutObject.current=cutoutUrl
+        overlayObject.current=overlayUrl
+        setPhoto(restored);setPhotoUrl(originalUrl)
+        setCutoutUrl(cutoutUrl);setOverlayUrl(overlayUrl)
+        setDimensions(draft.dimensions);setDetected(draft.detected)
+        setSavedAlpha(draft.savedAlpha)
+        setDesign(draft.design)
+        setPlacement(draft.placement);setShowMask(draft.showMask)
+        setDate(draft.date);setTime(draft.time);setUnknownTime(draft.unknownTime)
+        setQuery(draft.query);setSelected(draft.selected);setOffline(draft.offline)
+        setHeading(draft.heading);setPitch(draft.pitch);setFov(draft.fov)
+        setSkyPercent(draft.skyPercent);setPhotoFit(draft.photoFit)
+        setAtmosphericGlow(draft.atmosphericGlow);setSkyTone(draft.skyTone)
+        setLightsOn(draft.lightsOn);setFinish(draft.finish);setRoom(draft.room)
+        setInscription(draft.inscription)
+        const resumed=resumedDraftStage(draft.stage,Boolean(draft.design.astronomy))
+        setStage(resumed)
+        setDraftNotice('Your previous work was restored privately from this browser.')
+        if(resumed==='detecting')void runDetection(originalUrl)
+        if(draft.stage==='calculating')
+          setChapterNotice('Your photo and moment are back. Choose Reveal my night to resume the sky calculation.')
+        setDraftReady(true)
+      }catch{
+        if(active){
+          setDraftError('This browser cannot restore the previous local draft. You can still upload a photo and use Save Design.')
+          setDraftReady(true)
+        }
+      }
+    })()
+    return ()=>{active=false}
+  },[])
+
+  // Keep just one current working draft per browser/origin. Object URLs are
+  // intentionally never persisted: only original bytes and optional cutout.
+  useEffect(()=>{
+    if(!draftReady||restoreBusy||!photo||!dimensions)return
+    let canceled=false
+    const timer=window.setTimeout(()=>{
+      void (async()=>{
+        try{
+          let cutout:Blob|null=null
+          if(cutoutUrl){
+            const response=await fetch(cutoutUrl)
+            if(!response.ok)throw new Error('Cannot read the locally prepared foreground.')
+            cutout=await response.blob()
+          }
+          if(canceled)return
+          const draft:LocalWorkshopDraft={
+            version:1,savedAtMs:Date.now(),photo,
+            dimensions,design,stage,placement,detected,cutout,savedAlpha,showMask,
+            date,time,unknownTime,query,selected,offline,heading,pitch,fov,
+            skyPercent,photoFit,atmosphericGlow,skyTone,lightsOn,finish,room,inscription,
+          }
+          await writeLocalWorkshopDraft(draft)
+          if(!canceled)setDraftError('')
+        }catch{
+          if(!canceled)setDraftError('This browser could not store your working photo. Use Save Design when it is available, or keep this tab open.')
+        }
+      })()
+    },240)
+    return ()=>{canceled=true;window.clearTimeout(timer)}
+  },[draftReady,restoreBusy,photo,dimensions,design,stage,placement,detected,
+      cutoutUrl,savedAlpha,showMask,date,time,unknownTime,query,selected,offline,
+      heading,pitch,fov,skyPercent,photoFit,atmosphericGlow,skyTone,lightsOn,
+      finish,room,inscription])
+
+  // After editing a previously saved design, do not leave the old private
+  // receipt URL in the address bar: Refresh must prefer the new local draft.
+  useEffect(()=>{
+    if(!draftReady||restoreBusy||!savedDesign)return
+    const preferences={
+      layout:placement,heading,pitch,fov,skyHeight:skyPercent,
+      photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
+    }
+    const currentSignature=designSnapshotSignature({design,preferences,
+      photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
+    if(savedDesign.signature===currentSignature)return
+    const current=parseDesignLink(window.location.hash)
+    if(current?.designId===savedDesign.receipt.designId)
+      window.history.replaceState(null,'',window.location.pathname+window.location.search)
+  },[draftReady,restoreBusy,savedDesign,placement,heading,pitch,fov,skyPercent,
+      photoFit,skyTone,atmosphericGlow,finish,inscription,design,photo,cutoutUrl])
+
+  async function discardLocalDraft(){
+    if(!window.confirm('Discard this local photo and all unsaved workshop changes? A separately saved design link will still work.'))return
+    setDraftReady(false)
+    try{
+      await clearLocalWorkshopDraft()
+      window.location.replace(window.location.pathname+window.location.search)
+    }catch{
+      setDraftReady(true)
+      setDraftError('The local draft could not be cleared. Check your browser storage settings.')
+    }
+  }
 
   useEffect(()=>{
     if(stage!=='detecting'&&stage!=='calculating')return
@@ -499,6 +621,12 @@ export function ExperiencePage() {
     }finally{setOrderBusy(false)}
   }
 
+  if(!draftReady)return <div className="at-shell at-draft-loading" role="status">
+    <span className="at-kicker">STARKEEPSAKE / YOUR WORKSHOP</span>
+    <span className="at-draft-pulse" aria-hidden="true">✦</span>
+    <p>Opening your private work in this browser…</p>
+  </div>
+
   return <div className="at-shell">
     <div className="at-aurora" aria-hidden="true"/>
     <header className="at-header">
@@ -517,6 +645,11 @@ export function ExperiencePage() {
       </nav>
     </header>
     <main className="at-main">
+      {draftNotice&&<div className="at-local-draft-info" role="status">
+        <span>✓ {draftNotice}</span>
+        <button type="button" onClick={()=>setDraftNotice('')} aria-label="Dismiss local draft notice">×</button>
+      </div>}
+      {draftError&&<p role="alert" className="at-error at-draft-error">{draftError}</p>}
       {chapterNotice&&<p role="status" className="at-chapter-notice">{chapterNotice}</p>}
       {restoreBusy&&<p role="status" className="at-design-notice">Opening your private saved design…</p>}
       {restoreError&&<div className="at-design-notice" role="alert">
@@ -536,7 +669,9 @@ export function ExperiencePage() {
             {photo?'Replace your photograph':'Choose your photograph'} <span>↗</span></button>
           {photo&&<button type="button" className="at-outline at-welcome-resume"
             onClick={()=>goToChapter(1)}>Continue with this photo ↗</button>}
-          <small>{photo?'Your existing design is preserved unless you replace this photo.':'JPG, PNG or WebP · up to 10 MB · Your image stays in your browser during sky detection.'}</small>
+          {photo&&<button type="button" className="at-reset-draft"
+            onClick={()=>void discardLocalDraft()}>Clear this device's draft and start over</button>}
+          <small>{photo?'Your photo and choices remain on this device for up to 30 days, unless you clear the draft. Other users of this browser may see them.':'JPG, PNG or WebP · up to 10 MB · Your image stays on your device during sky detection.'}</small>
           {error&&<p className="at-error" role="alert">{error}</p>}
         </div>
         <div className={`at-welcome-art ${dragging?'is-dragging':''}`}

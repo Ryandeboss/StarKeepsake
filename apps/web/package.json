@@ -31,7 +31,8 @@
     "test:showroom": "node --experimental-strip-types --test tests/showroom-plates.test.mjs",
     "test:saved-design": "node --experimental-strip-types --test tests/saved-design.test.mjs",
     "test:sky-placement": "node --experimental-strip-types --test tests/sky-placement.test.mjs",
-    "test:chapter-nav": "node --experimental-strip-types --test tests/workshop-navigation.test.mjs"
+    "test:chapter-nav": "node --experimental-strip-types --test tests/workshop-navigation.test.mjs",
+    "test:local-draft": "node --experimental-strip-types --test tests/local-workshop-draft.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
