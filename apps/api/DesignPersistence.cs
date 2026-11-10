@@ -116,6 +116,10 @@ public sealed record SavedDesignRow(
     string DesignJson, string PreferencesJson,
     string OriginalMime, string? ForegroundMime);
 
+public sealed record AdminSavedDesignSummary(
+    string DesignId, DateTimeOffset CreatedAtUtc, string Status,
+    string Layout, string Finish, bool HasPreparedForeground);
+
 // PostgREST and private Supabase Storage need only one server-side secret key.
 // New sb_secret_ keys must be sent in apikey, not as Authorization: Bearer.
 public sealed class DesignRepository
@@ -248,6 +252,36 @@ public sealed class DesignRepository
         }
     }
 
+    // Owner-only listing for support and order reconciliation. Never include
+    // customer photo bytes, access keys, full design_json, dates or locations.
+    public async Task<List<AdminSavedDesignSummary>> ListForOwnerAsync(CancellationToken ct)
+    {
+        using var request = NewRequest(HttpMethod.Get,
+            "rest/v1/customer_designs?select=design_id%2Ccreated_at%2Cpreferences_json%2Cforeground_mime&order=created_at.desc&limit=100");
+        using var response = await _http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException("Private design summary listing failed.", null, response.StatusCode);
+        using var document = await JsonDocument.ParseAsync(
+            await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+            throw new InvalidDataException("Invalid private design summary response.");
+        var summaries = new List<AdminSavedDesignSummary>();
+        foreach (var row in document.RootElement.EnumerateArray())
+        {
+            var preferences = row.GetProperty("preferences_json");
+            var layout = preferences.TryGetProperty("layout", out var l) &&
+                l.ValueKind == JsonValueKind.String ? l.GetString() ?? "unknown" : "unknown";
+            var finish = preferences.TryGetProperty("finish", out var f) &&
+                f.ValueKind == JsonValueKind.String ? f.GetString() ?? "unknown" : "unknown";
+            summaries.Add(new AdminSavedDesignSummary(
+                row.GetProperty("design_id").GetString()!,
+                row.GetProperty("created_at").GetDateTimeOffset(),
+                "SAVED_UNPAID", layout, finish,
+                row.GetProperty("foreground_mime").ValueKind != JsonValueKind.Null));
+        }
+        return summaries;
+    }
+
     public async Task<SavedDesignRow?> FindAsync(string id, CancellationToken ct)
     {
         using var request = NewRequest(HttpMethod.Get,
@@ -290,6 +324,23 @@ public static class DesignPersistenceEndpoints
 {
     public static void MapDesignPersistenceEndpoints(this IEndpointRouteBuilder app)
     {
+        app.MapGet("/api/admin/designs", async (HttpContext context,
+            EtsyConnectionOptions admin, DesignPersistenceOptions options, DesignRepository repository) =>
+        {
+            context.Response.Headers.CacheControl = "private, no-store";
+            context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+            var provided = context.Request.Headers["X-Starkeepsake-Admin-Key"].ToString();
+            if (admin.AdminSetupKey.Length < 32 ||
+                string.IsNullOrWhiteSpace(provided) ||
+                !EtsyOAuthProtocol.SecureEquals(provided, admin.AdminSetupKey))
+                return Results.Unauthorized();
+            if (!options.IsConfigured) return Results.StatusCode(503);
+            try { return Results.Ok(await repository.ListForOwnerAsync(context.RequestAborted)); }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or
+                InvalidDataException or InvalidOperationException)
+            { return Results.Problem("Saved designs listing is temporarily unavailable.", statusCode: 503); }
+        }).RequireRateLimiting("production-admin");
+
         app.MapPost("/api/designs", async (HttpContext context,
             DesignPersistenceOptions options, DesignRepository repository) =>
         {

@@ -29,7 +29,8 @@
     "test:workshop": "node --experimental-strip-types --test tests/sky-workshop-orientation.test.mjs",
     "test:orders": "node --experimental-strip-types --test tests/customer-order.test.mjs",
     "test:showroom": "node --experimental-strip-types --test tests/showroom-plates.test.mjs",
-    "test:saved-design": "node --experimental-strip-types --test tests/saved-design.test.mjs"
+    "test:saved-design": "node --experimental-strip-types --test tests/saved-design.test.mjs",
+    "test:sky-placement": "node --experimental-strip-types --test tests/sky-placement.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

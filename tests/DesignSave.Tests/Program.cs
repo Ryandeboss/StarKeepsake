@@ -59,4 +59,11 @@ options.ProjectUrl = "http://example.supabase.co/";
 Check(!options.IsConfigured, "HTTP project URL fails closed");
 options.ProjectUrl = "https://example.supabase.co/";
 Check(options.IsConfigured, "HTTPS Supabase project URL accepted");
+var summaryJson = JsonSerializer.Serialize(new AdminSavedDesignSummary(
+    "SK-0123456789ABCDEF", DateTimeOffset.UtcNow, "SAVED_UNPAID",
+    "within", "walnut", true));
+Check(summaryJson.Contains("SK-0123456789ABCDEF") &&
+    !summaryJson.Contains("AccessKey") && !summaryJson.Contains("KeyHash") &&
+    !summaryJson.Contains("location") && !summaryJson.Contains("photo"),
+    "owner summary contains only non-sensitive design fields");
 Console.WriteLine("All M1 design contract tests passed.");

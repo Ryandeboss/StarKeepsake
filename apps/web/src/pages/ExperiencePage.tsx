@@ -8,6 +8,7 @@ import { HomeShowroom } from '../components/HomeShowroom'
 import { ROOM_OPTIONS, WOOD_OPTIONS } from '../components/HomeShowroomOptions'
 import type { RoomScene } from '../components/HomeShowroomOptions'
 import { detectWorkshopSky } from '../skyBlend'
+import { recommendedSkyPlacement } from '../skyPlacement'
 import type { WorkshopDetection } from '../skyBlend'
 import { FULL_PHOTO_CROP } from '../photoCrop'
 import { INITIAL_DESIGN_SPEC, getFrameLayout, toRect } from '../designSpec'
@@ -48,7 +49,13 @@ function WizardLoader({kind,progress}: {kind:'detecting'|'calculating';progress:
   const labels=introWords[kind]
   const index=Math.min(3,Math.floor(progress/24))
   return <div className="at-loader" role="status" aria-live="polite">
-    <div className="at-loading-orbit" aria-hidden="true"><span>✦</span><i/><i/><i/></div>
+    <div className="at-loading-sky" aria-hidden="true">
+      <span className="at-loading-core">✦</span>
+      <span className="at-shooting-star"/><span className="at-shooting-star"/>
+      <span className="at-shooting-star"/><span className="at-shooting-star"/>
+      <span className="at-shooting-star"/><span className="at-shooting-star"/>
+      <span className="at-loading-sky-spark">✧</span>
+    </div>
     <span className="at-kicker">STARKEEP SAKE / THE NIGHT ATELIER</span>
     <h2>{kind==='detecting' ? 'Finding the sky in your story.' : 'Returning to your night.'}</h2>
     <p>{labels[index]}…</p>
@@ -101,6 +108,8 @@ export function ExperiencePage() {
   const [orderError,setOrderError]=useState('')
   const [saveBusy,setSaveBusy]=useState(false)
   const [saveError,setSaveError]=useState('')
+  const [copied,setCopied]=useState<'link'|'order'|null>(null)
+  const copiedTimeout=useRef<number|null>(null)
   const [restoreBusy,setRestoreBusy]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
   const [restoreError,setRestoreError]=useState('')
   const [savedDesign,setSavedDesign]=useState<{receipt:SavedDesignReceipt;signature:string}|null>(null)
@@ -120,6 +129,7 @@ export function ExperiencePage() {
   useEffect(()=>()=> {
     detectionVersion.current++
     astronomyVersion.current++
+    if(copiedTimeout.current!==null)window.clearTimeout(copiedTimeout.current)
     if(photoObject.current) URL.revokeObjectURL(photoObject.current)
     if(overlayObject.current) URL.revokeObjectURL(overlayObject.current)
     if(cutoutObject.current) URL.revokeObjectURL(cutoutObject.current)
@@ -216,11 +226,14 @@ export function ExperiencePage() {
       overlayObject.current=maskUrl
       setOverlayUrl(maskUrl)
       setDetected(result)
+      // Suggest only; the customer's explicit selection still overrides this.
+      setPlacement(recommendedSkyPlacement(result.skyPercent))
       setProgress(100)
       setStage('choice')
     } catch(cause) {
       if(version!==detectionVersion.current)return
       setDetectorError(cause instanceof Error?cause.message:'The sky detector could not run.')
+      setPlacement('above')
       setStage('choice')
     }
   }
@@ -247,7 +260,9 @@ export function ExperiencePage() {
     setSavedAlpha(null)
     setDimensions(null)
     setDetected(null)
-    setPlacement('within')
+    setPlacement('above') // No positive sky detection yet: safer initial composition.
+    setCopied(null)
+    if(copiedTimeout.current!==null)window.clearTimeout(copiedTimeout.current)
     setError('')
     setSelected(null)
     setQuery('')
@@ -404,6 +419,18 @@ export function ExperiencePage() {
     }finally{setSaveBusy(false)}
   }
 
+  async function copyWithFeedback(text:string,kind:'link'|'order'){
+    try{
+      await navigator.clipboard.writeText(text)
+      setCopied(kind)
+      if(copiedTimeout.current!==null)window.clearTimeout(copiedTimeout.current)
+      copiedTimeout.current=window.setTimeout(()=>setCopied(null),3400)
+    }catch{
+      if(kind==='link')setSaveError('Copy failed. Try copying this page address from your browser.')
+      else setOrderError('Copy failed. Download the order sheet instead.')
+    }
+  }
+
   async function buildOrderPacket(){
     if(!photo)return
     const key=orderKey
@@ -425,14 +452,17 @@ export function ExperiencePage() {
       <button type="button" className="at-wordmark" onClick={()=>{if(stage!=='welcome')setStage('welcome')}} aria-label="StarKeepsake home">
         <span className="at-logo-mark">✳</span><span>STAR<span>KEEPSAKE</span><small>THE NIGHT ATELIER</small></span>
       </button>
-      <div className="at-header-note">YOUR STORY, HELD IN THE STARS <span>✦</span> PREVIEW STUDIO</div>
+      <nav className="at-steps" aria-label="Workshop progress">
+        {STEPS.map((item,index)=><div key={item.key} className={index===atIndex?'is-current':index<atIndex?'is-done':''}
+          aria-current={index===atIndex?'step':undefined}>
+          <span>{index<atIndex?'✓':String(index+1).padStart(2,'0')}</span><b>{item.label}</b>
+        </div>)}
+      </nav>
+      {photo&&<button type="button" className="at-swap-photo" onClick={()=>upload.current?.click()}
+        title="Replace your photo and begin sky detection again">
+        <span aria-hidden="true">⇄</span> Change photo
+      </button>}
     </header>
-    <nav className="at-steps" aria-label="Workshop progress">
-      {STEPS.map((item,index)=><div key={item.key} className={index===atIndex?'is-current':index<atIndex?'is-done':''}
-        aria-current={index===atIndex?'step':undefined}>
-        <span>{index<atIndex?'✓':String(index+1).padStart(2,'0')}</span>{item.label}
-      </div>)}
-    </nav>
     <main className="at-main">
       {restoreBusy&&<p role="status" className="at-design-notice">Opening your private saved design…</p>}
       {restoreError&&<div className="at-design-notice" role="alert">
@@ -468,8 +498,16 @@ export function ExperiencePage() {
         </div>
       </section>}
 
-      {(stage==='detecting'||stage==='calculating')&&<section className="at-quiet-stage at-appear">
+      {(stage==='detecting'||stage==='calculating')&&<section className={`at-quiet-stage at-appear ${dragging?'is-dragging':''}`}
+        onDragOver={event=>{if(stage==='detecting'){event.preventDefault();setDragging(true)}}}
+        onDragLeave={()=>setDragging(false)} onDrop={event=>{if(stage==='detecting')onDrop(event)}}>
         <WizardLoader kind={stage} progress={progress}/>
+        {stage==='detecting'&&<div className="at-loading-change">
+          <button type="button" className="at-outline" onClick={()=>upload.current?.click()}>
+            ⇄ Replace this photo now
+          </button>
+          <span>Or drop a different picture here — you don't have to wait.</span>
+        </div>}
       </section>}
 
       {stage==='choice'&&<section className="at-atelier-stage at-appear">
@@ -479,7 +517,9 @@ export function ExperiencePage() {
           <p>We’ve examined your photograph for open sky. Now choose how it should meet the night you remember.</p>
         </div>
         <div className="at-choice-layout">
-          <div className="at-detection-panel">
+          <div className={`at-detection-panel ${dragging?'is-dragging':''}`}
+            onDragOver={event=>{event.preventDefault();setDragging(true)}}
+            onDragLeave={()=>setDragging(false)} onDrop={onDrop}>
             <div className="at-panel-heading"><strong>YOUR PHOTOGRAPH</strong>
               <span>{detected&&detected.skyPercent>=3?'AI HORIZON FOUND':'REVIEW NEEDED'}</span></div>
             <div className="at-detection-image">
@@ -490,7 +530,8 @@ export function ExperiencePage() {
             <div className="at-detection-foot">
               <label><input type="checkbox" checked={showMask} onChange={event=>setShowMask(event.target.checked)}/>
                 Show detected sky</label>
-              <button type="button" onClick={()=>{if(photoUrl)void runDetection(photoUrl)}}>↻ Run detection again</button>
+              <button type="button" onClick={()=>upload.current?.click()}>⇄ Change photo</button>
+              <button type="button" onClick={()=>{if(photoUrl)void runDetection(photoUrl)}}>↻ Detect again</button>
             </div>
             <p className={detected&&detected.skyPercent>=3?'at-detection-success':'at-detection-note'} role="status">
               {detectorError?'The AI detector was unavailable: '+detectorError+' You can still choose a separate sky or clean up manually.'
@@ -571,7 +612,10 @@ export function ExperiencePage() {
                     setCandidates([]);setSelected(null)}}
                   onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();void findPlace()}}}/>
                 <button type="button" onClick={()=>void findPlace()} disabled={isSearching}>
-                  {isSearching?'Searching…':'Find places'}</button>
+                  <span className="at-search-button-content">
+                {isSearching&&<span className="at-search-spinner" aria-hidden="true"/>}
+                {isSearching?'Searching the sky map…':'Find places'}
+              </span></button>
               </div>
               <p id="at-location-instructions" className="at-place-instructions">
                 <span className={selected?'is-complete':''}>1. Search for your place</span>
@@ -579,9 +623,10 @@ export function ExperiencePage() {
                   2. <strong>Select the matching location</strong> from the list
                 </span>
               </p>
-              {isSearching&&<p className="at-place-searching" role="status">
-                Finding possible locations…
-              </p>}
+              {isSearching&&<div className="at-search-pending" role="status" aria-live="polite">
+                <span className="at-search-pending-title">✦ Searching for matching places…</span>
+                <div className="at-place-skeleton" aria-hidden="true"><i/><i/><i/></div>
+              </div>}
               {candidates.length>0&&<section className="at-place-results-panel"
                 aria-label="Choose a matching search result">
                 <div className="at-place-results-header" role="status" aria-live="polite">
@@ -810,10 +855,12 @@ export function ExperiencePage() {
                 <p>Not an Etsy order or payment. Your original photo and polished foreground
                   are stored privately so you can return to this exact design.</p>
                 <button type="button" className="at-outline" onClick={()=>
-                  void navigator.clipboard.writeText(privateDesignLink(window.location.href,savedDesign.receipt))
-                    .catch(()=>setSaveError('Copy failed. You can copy this page’s address from the browser.'))}>
-                  Copy private reopening link ↗
+                  void copyWithFeedback(privateDesignLink(window.location.href,savedDesign.receipt),'link')}>
+                  {copied==='link'?'✓ Private link copied!':'Copy private reopening link ↗'}
                 </button>
+                {copied==='link'&&<span className="at-copy-confirmation" role="status">
+                  <span aria-hidden="true">✓</span> Link copied — ready to paste securely.
+                </span>}
                 <small>Keep this link private. Anyone with the full link can reopen the design.
                   Changing your choices and saving again creates a new Design ID.</small>
               </div>}
@@ -835,10 +882,13 @@ export function ExperiencePage() {
                 {currentOrder.prepared&&<button type="button"
                   onClick={()=>downloadFile(currentOrder.prepared!,'prepared-foreground.png')}>
                   ↓ Download polished foreground (PNG)</button>}
-                <button type="button" onClick={()=>{
-                  void navigator.clipboard.writeText(orderPersonalization(currentOrder.manifest))
-                    .catch(()=>setOrderError('Copy failed. Download the order sheet instead.'))
-                }}>Copy Etsy personalization details</button>
+                <button type="button" onClick={()=>
+                  void copyWithFeedback(orderPersonalization(currentOrder.manifest),'order')}>
+                  {copied==='order'?'✓ Etsy details copied!':'Copy Etsy personalization details'}
+                </button>
+                {copied==='order'&&<span className="at-copy-confirmation" role="status">
+                  <span aria-hidden="true">✓</span> Personalization text copied.
+                </span>}
                 {verifiedEtsyLink?<a className="at-etsy-checkout" href={verifiedEtsyLink}
                   target="_blank" rel="noopener noreferrer">
                   Continue to Etsy checkout ↗</a>
