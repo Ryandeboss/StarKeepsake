@@ -1,5 +1,6 @@
 """StarKeepsake M5 offline dynamic assembly workbook. No manufacturing authorization."""
 import argparse
+import hashlib
 from html import escape
 import json
 import math
@@ -131,8 +132,12 @@ def generate(mapping, review, measurements=None):
                   "instructions": body, "evidenceRequired": evidence,
                   "state": "unverified", "evidenceNotes": ""}
                  for sid, phase, title, body, evidence in steps(v)]
+    fingerprint_source=json.dumps({"reference":v["reference"],"leds":v["leds"]},
+                                  sort_keys=True,separators=(",",":"),allow_nan=False)
+    fingerprint=hashlib.sha256(fingerprint_source.encode("utf-8")).hexdigest()
     data = {"format": "starkeepsake-m5-workbook-v1",
-            "reference": v["reference"], "status": "HOLD_NOT_APPROVED",
+            "reference": v["reference"], "mapFingerprint": fingerprint,
+            "status": "HOLD_NOT_APPROVED",
             "manufacturingAuthorized": False, "paymentVerified": False,
             "nominalArtworkMm": {"width": v["nominalWidthMm"],
                                  "height": v["nominalHeightMm"]},
@@ -151,8 +156,12 @@ def generate(mapping, review, measurements=None):
         '<section class="step"><p class="kicker">' + e(s["phase"]) +
         '</p><h3>' + e(s["title"]) + '</h3><p>' + e(s["instructions"]) +
         '</p><p><strong>Evidence:</strong> ' + e(s["evidenceRequired"]) +
-        '</p><label><input type="checkbox" data-step="' + e(s["id"]) +
-        '"> Reviewed on a physical prototype</label></section>'
+        '</p><div class="review-inputs"><label>Inspection status <select data-state="' +
+        e(s["id"]) + '"><option value="unverified">Not inspected</option>' +
+        '<option value="passed">Pass — evidence required</option>' +
+        '<option value="needs_rework">Needs rework</option></select></label>' +
+        '<label>Evidence and observations <textarea data-evidence="' +
+        e(s["id"]) + '" rows="3" maxlength="1200" placeholder="Measurements, photo reference, inspector observations, issues"></textarea></label></div></section>'
         for s in checklist)
     style = """
 :root{color-scheme:dark;font-family:system-ui,Arial,sans-serif;background:#0b1523;color:#edf1f9}
@@ -166,33 +175,111 @@ table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #384d63;
 h3{margin:0;font-size:20px}label{display:flex;gap:10px;align-items:center;color:#eed4a4}
 input{width:18px;height:18px}button{background:#efd09a;border:0;border-radius:8px;padding:11px 15px;font-weight:700}
 .blocked{color:#ffcd84;font-weight:700}.step{break-inside:avoid}
+.review-inputs{display:grid;gap:14px;margin:15px 0 0}
+.review-inputs label{display:grid;gap:6px;font-size:12px}
+.review-inputs select,.review-inputs textarea,#reviewer{box-sizing:border-box;width:100%;padding:10px;border:1px solid #647d93;
+border-radius:8px;background:#081826;color:#f1f5f8;font:13px system-ui,sans-serif}
+.review-inputs textarea{resize:vertical;min-height:68px}
+#reviewer{max-width:340px;margin:4px 0 14px}
+.review-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.review-actions label{font-size:12px;display:grid;gap:5px}
+.review-actions input[type=file]{font-size:11px;max-width:230px}
+#review-status{color:#f0c890;font-size:12px;min-height:18px}
 @media(max-width:700px){.grid{grid-template-columns:1fr}h1{font-size:32px}}
-@media print{:root{color-scheme:light;background:#fff;color:#000}header,section{background:#fff;color:#000;border-color:#999}button{display:none}.blocked{color:#000}}
+@media print{:root{color-scheme:light;background:#fff;color:#000}header,section{background:#fff;color:#000;border-color:#999}
+button,.review-actions label{display:none}.blocked{color:#000}
+.review-inputs select,.review-inputs textarea,#reviewer{background:#fff;color:#000;border-color:#aaa}}
 """
     javascript = """
-const inputs = Array.from(document.querySelectorAll('input[data-step]'));
-const progress = document.getElementById('progress');
-function update(){progress.textContent = inputs.filter(x=>x.checked).length +
-  '/' + inputs.length + ' reviewed; manufacturing still NOT AUTHORIZED.';}
-inputs.forEach(x=>x.addEventListener('change',update));
+
+const fields=Array.from(document.querySelectorAll('select[data-state]'));
+const status=document.getElementById('review-status');
+const progress=document.getElementById('progress');
+const stepIds=fields.map(x=>x.dataset.state);
+const validStates=['unverified','passed','needs_rework'];
+function rows(){
+ return fields.map(field=>{
+   const id=field.dataset.state;
+   const note=document.querySelector('textarea[data-evidence="'+id+'"]');
+   return {id,state:field.value,evidenceNotes:note.value};
+ });
+}
+function refresh(){
+ const steps=rows();
+ const passed=steps.filter(x=>x.state==='passed').length;
+ const failed=steps.filter(x=>x.state==='needs_rework').length;
+ progress.textContent=passed+' passed · '+failed+' need rework · '+
+   (steps.length-passed-failed)+' not inspected; manufacturing remains BLOCKED.';
+ return steps;
+}
+fields.forEach(x=>x.addEventListener('change',()=>{status.textContent='';refresh();}));
+document.querySelectorAll('textarea[data-evidence]').forEach(x=>
+ x.addEventListener('input',()=>{status.textContent='';refresh();}));
 document.getElementById('save').addEventListener('click',()=>{
-  const item={format:'starkeepsake-m5-local-review-v1',
-    reference:document.body.dataset.ref,status:'UNVERIFIED_PROTOTYPE',
-    manufacturingAuthorized:false,paymentVerified:false,
-    reviewed:inputs.filter(x=>x.checked).map(x=>x.dataset.step),
-    exportedAtUtc:new Date().toISOString()};
-  const url=URL.createObjectURL(new Blob([JSON.stringify(item,null,2)],{type:'application/json'}));
-  const a=document.createElement('a');a.href=url;a.download='m5-local-review.json';
-  document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);
-});update();
+ const steps=refresh();
+ if(steps.some(x=>x.state==='passed'&&x.evidenceNotes.trim().length<3)){
+   status.textContent='Passed steps require an inspection evidence note.';return;
+ }
+ const reviewerName=document.getElementById('reviewer').value.slice(0,100);
+ const item={format:'starkeepsake-m5-qc-review-v1',
+   reference:document.body.dataset.ref,mapFingerprint:document.body.dataset.fingerprint,
+   status:'PROTOTYPE_REVIEW_ONLY',
+   manufacturingAuthorized:false,paymentVerified:false,
+   reviewerName,exportedAtUtc:new Date().toISOString(),steps};
+ const url=URL.createObjectURL(new Blob([JSON.stringify(item,null,2)],{type:'application/json'}));
+ const link=document.createElement('a');
+ link.href=url;link.download='m5-prototype-review.json';
+ document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
+ status.textContent='Review downloaded locally. This is NOT production approval.';
+});
+document.getElementById('load-review').addEventListener('change',async event=>{
+ const file=event.target.files?.[0];
+ event.target.value='';
+ if(!file)return;
+ if(file.size>512*1024){status.textContent='Review file too large.';return;}
+ try{
+   const item=JSON.parse(await file.text());
+   if(!item||typeof item!=='object'||item.format!=='starkeepsake-m5-qc-review-v1'||
+      item.reference!==document.body.dataset.ref||
+      item.mapFingerprint!==document.body.dataset.fingerprint||
+      item.status!=='PROTOTYPE_REVIEW_ONLY'||
+      item.manufacturingAuthorized!==false||item.paymentVerified!==false||
+      typeof item.reviewerName!=='string'||item.reviewerName.length>100||
+      !Array.isArray(item.steps)||item.steps.length!==stepIds.length||
+      !item.steps.every((step,i)=>step&&step.id===stepIds[i]&&
+        validStates.includes(step.state)&&typeof step.evidenceNotes==='string'&&
+        step.evidenceNotes.length<=1200&&
+        (step.state!=='passed'||step.evidenceNotes.trim().length>=3))){
+     throw new Error('This record does not match this prototype and star map.');
+   }
+   document.getElementById('reviewer').value=item.reviewerName;
+   item.steps.forEach(step=>{
+     document.querySelector('select[data-state="'+step.id+'"]').value=step.state;
+     document.querySelector('textarea[data-evidence="'+step.id+'"]').value=step.evidenceNotes;
+   });
+   refresh();
+   status.textContent='Review imported locally. Open problems still require inspection.';
+ }catch(e){
+   status.textContent=e instanceof Error?e.message:'The review could not be imported.';
+ }
+});
+refresh();
+
 """
     html = ('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
         '<title>StarKeepsake M5 prototype assembly</title><style>' + style +
-        '</style></head><body data-ref="' + e(v["reference"]) + '">' +
+        '</style></head><body data-ref="' + e(v["reference"]) +
+        '" data-fingerprint="' + e(fingerprint) + '">' +
         '<header><p class="kicker">STARKEEPSAKE / PRIVATE PROTOTYPE WORKBOOK</p>' +
         '<h1>Assembly & QA</h1><p>Design ' + e(v["reference"]) + ' · ' + e(v["ledCount"]) +
         ' logical LEDs</p><p class="blocked">HOLD: NOT LASER READY, NOT PAID, NOT APPROVED FOR FULFILLMENT</p>' +
-        '<p id="progress"></p><button type="button" id="save">Download local review progress</button></header>' +
+        '<label for="reviewer">Inspector name or initials</label>' +
+        '<input id="reviewer" maxlength="100" placeholder="Reviewer (kept in local review file)">' +
+        '<p id="progress" aria-live="polite"></p>' +
+        '<div class="review-actions"><button type="button" id="save">Export QA record</button>' +
+        '<label>Resume a previous review <input type="file" id="load-review" accept=".json,application/json"></label>' +
+        '<button type="button" onclick="window.print()">Print checklist</button></div>' +
+        '<p id="review-status" role="status" aria-live="polite"></p></header>' +
         '<section class="warning"><h2>Calibration warnings</h2><ul>' + alerts + '</ul></section>' +
         '<div class="grid"><section><h2>Physical measurements</h2><table>' +
         measures + '</table></section><section><h2>LED index map (mm)</h2><table><tr><th>LED</th><th>HIP</th><th>X</th><th>Y</th></tr>' +

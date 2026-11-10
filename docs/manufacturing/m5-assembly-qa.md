@@ -39,3 +39,17 @@ The offline tool writes:
 The new tests verify an M4-to-M5 roundtrip, no accidental fulfillment authorization, invalid map rejection, missing/partial measurements, nonuniform scaling detection and HTML escaping. No new secrets, Azure services, Supabase tables or production web pages.
 
 Keep M5 in a single review PR until physically measured hardware is available. When actual frame and electronics are selected, review a measured test build, then consider integration into the owner M3 production dashboard. Updates belong in the living GitHub handoff issue #58, not source documentation commits.
+
+## M5.2 — Inspection evidence records (offline)
+
+The HTML guide can now record a status and inspection note for each of the nine stages: Not inspected, Pass (requires an evidence note), or Needs rework. Enter the prototype reviewer, then use Export QA record to download m5-prototype-review.json. On a later visit, select Resume from exported record to import it into the standalone HTML page.
+
+Import is accepted only for the same saved SK design reference and an exact SHA-256 fingerprint of the M4 logical star/LED mapping. A record for a different design or mapping, or one asserting paid/manufacturing status, must be rejected. All inputs are assigned to safe form fields rather than rendered as HTML. Records are local files; do not commit reviewer notes, personal details, or customer information to GitHub.
+
+Validate a downloaded inspection record offline with:
+
+    python tools/prototype/review_validation.py --workbook output/m5/assembly_workbook.json --review path/to/m5-prototype-review.json
+
+The validator returns passed, unverified and needs-rework counts but always reports HOLD_NOT_APPROVED, even when all nine items pass. Browser import/export never verifies Etsy payment or laser/electrical safety, and never generates fabrication commands. The guide has no remote dependencies and does not auto-save: export a new record after edits.
+
+Next physical step: measure real frame opening/depth, select specific photo substrate and actual Pico 2 W LED/power components, document supervised electrical/thermal tests and build a representative prototype. M3 inventory and real production authorization remain separate.

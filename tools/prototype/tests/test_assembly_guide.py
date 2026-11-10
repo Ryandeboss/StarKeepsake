@@ -68,3 +68,75 @@ class M5Tests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+from datetime import datetime, timezone
+from tools.prototype.review_validation import check_review, ReviewError
+
+class EvidenceTests(unittest.TestCase):
+    def fixture(self):
+        a,b=inputs()
+        workbook=json.loads(generate(a,b)["assembly_workbook.json"])
+        record={"format":"starkeepsake-m5-qc-review-v1",
+            "reference":workbook["reference"],"mapFingerprint":workbook["mapFingerprint"],
+            "status":"PROTOTYPE_REVIEW_ONLY",
+            "manufacturingAuthorized":False,"paymentVerified":False,
+            "reviewerName":"Bench reviewer",
+            "exportedAtUtc":datetime.now(timezone.utc).isoformat().replace("+00:00","Z"),
+            "steps":[{"id":s["id"],"state":"unverified","evidenceNotes":""} for s in workbook["steps"]]}
+        return workbook,record
+
+    def test_html_has_editable_checks_and_import_button(self):
+        a,b=inputs()
+        files=generate(a,b)
+        guide=files["assembly_guide.html"]
+        self.assertIn('data-state=',guide)
+        self.assertIn('data-evidence=',guide)
+        self.assertIn('id="load-review"',guide)
+        self.assertIn('data-fingerprint=',guide)
+        self.assertIn("manufacturingAuthorized:false",guide)
+        self.assertNotIn("https://",guide)
+
+    def test_pass_and_needs_rework_still_hold(self):
+        workbook,record=self.fixture()
+        record["steps"][0]["state"]="passed"
+        record["steps"][0]["evidenceNotes"]="Verified reference for a test prototype"
+        record["steps"][1]["state"]="needs_rework"
+        record["steps"][1]["evidenceNotes"]="Frame dimensions need measurement"
+        result=check_review(record,workbook)
+        self.assertEqual(result["passed"],1)
+        self.assertEqual(result["needsRework"],1)
+        self.assertEqual(result["unverified"],7)
+        self.assertFalse(result["manufacturingAuthorized"])
+
+    def test_review_refuses_wrong_map_and_fake_authorization(self):
+        workbook,record=self.fixture()
+        record["mapFingerprint"]="a"*64
+        with self.assertRaises(ReviewError):check_review(record,workbook)
+        workbook,record=self.fixture()
+        record["paymentVerified"]=True
+        with self.assertRaises(ReviewError):check_review(record,workbook)
+        workbook,record=self.fixture()
+        record["manufacturingAuthorized"]=True
+        with self.assertRaises(ReviewError):check_review(record,workbook)
+
+    def test_no_empty_pass_or_unexpected_private_fields(self):
+        workbook,record=self.fixture()
+        record["steps"][0]["state"]="passed"
+        with self.assertRaises(ReviewError):check_review(record,workbook)
+        record["steps"][0]["evidenceNotes"]="Measured on bench"
+        record["customerEmail"]="private@example.com"
+        with self.assertRaises(ReviewError):check_review(record,workbook)
+        workbook,record=self.fixture()
+        record["steps"][0]["evidenceNotes"]="x"*1201
+        with self.assertRaises(ReviewError):check_review(record,workbook)
+
+    def test_full_review_still_does_not_authorize_manufacturing(self):
+        workbook,record=self.fixture()
+        for step in record["steps"]:
+            step["state"]="passed"
+            step["evidenceNotes"]="Inspection evidence on the physical prototype"
+        result=check_review(record,workbook)
+        self.assertEqual(result["passed"],9)
+        self.assertEqual(result["unresolvedStepIds"],[])
+        self.assertEqual(result["status"],"HOLD_NOT_APPROVED")
+        self.assertFalse(result["paymentVerified"])
