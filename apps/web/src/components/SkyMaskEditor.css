@@ -162,3 +162,30 @@
 .sky-mask-polygon-overlay polygon{filter:drop-shadow(0 0 4px rgba(44,225,244,.3))}
 .sky-mask-history button{white-space:normal}
 @media(max-width:760px){.sky-mask-actions{margin-left:0}.sky-mask-polygon-buttons{width:100%}}
+
+/* The manual brush obeys Add to sky / Keep in photo directly. Display its true
+   diameter and put revision controls beside those two paint actions. */
+.sky-mask-edit-row{display:flex;align-items:center;flex-wrap:wrap;gap:9px 14px;width:100%}
+.sky-mask-actions{margin-left:0}
+.sky-mask-actions button{min-width:112px}
+.sky-mask-quick-history{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sky-mask-quick-history button{padding:9px 10px;font-size:11px;background:#1b3c49}
+.sky-mask-quick-history button:hover:not(:disabled){background:#315b67;border-color:#d8b982}
+.sky-mask-quick-history button:disabled{opacity:.42;cursor:not-allowed}
+.sky-mask-brush-settings{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;color:#e3edee;font-size:12px}
+.sky-mask-brush-settings label{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.sky-mask-brush-settings input[type=range]{width:clamp(125px,17vw,250px)}
+.sky-mask-brush-settings small{color:#b4d1d5}
+.sky-mask-brush-cursor{position:absolute;pointer-events:none;z-index:6;aspect-ratio:1;
+  border:2px solid #fff8d6;border-radius:50%;transform:translate(-50%,-50%);
+  box-shadow:0 0 0 1px #173c48,0 0 7px #05242b80}
+.sky-mask-brush-cursor.is-sky{background:#31cbdf42;border-color:#a1f1ee}
+.sky-mask-brush-cursor.is-photo{background:#e3c27835;border-color:#ffe2ac}
+.sky-mask-footer-tip{color:#b4cacf;font-size:11px;line-height:1.5;max-width:410px;margin:0}
+.sky-mask-canvas-shell canvas{cursor:crosshair}
+@media(max-width:760px){
+ .sky-mask-edit-row{gap:9px}
+ .sky-mask-quick-history{width:100%}
+ .sky-mask-quick-history button{flex:1 1 auto}
+ .sky-mask-brush-settings small{width:100%}
+}
