@@ -123,6 +123,7 @@ export function ExperiencePage() {
   const [error,setError]=useState('')
   const [chapterNotice,setChapterNotice]=useState<string|null>(null)
   const [dragging,setDragging]=useState(false)
+  const [photoDecodeBusy,setPhotoDecodeBusy]=useState(false)
   const upload=useRef<HTMLInputElement>(null)
   const photoObject=useRef('')
   const overlayObject=useRef('')
@@ -362,6 +363,20 @@ export function ExperiencePage() {
     }
   }
 
+  function openPhotoReplacement(){
+    if(stage==='refine' && !window.confirm('Leave the horizon editor? Unsaved brush or lasso changes will be lost.'))return
+    if(stage==='calculating')astronomyVersion.current++
+    if(stage==='detecting'){
+      detectionVersion.current++ // Old detection cannot navigate away after the picker opens.
+      detectionOnDecode.current=false
+    }
+    setStage('welcome')
+    setPhotoDecodeBusy(false)
+    setChapterNotice('Choose a new photograph. Your current image stays here if you cancel the picker.')
+    window.scrollTo({top:0,behavior:'smooth'})
+    upload.current?.click()
+  }
+
   async function acceptPhoto(file?:File) {
     if(!file)return
     if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>MAX_PHOTO){
@@ -397,7 +412,8 @@ export function ExperiencePage() {
     setSavedDesign(null)
     setSaveError('')
     window.history.replaceState(null,'',window.location.pathname+window.location.search)
-    setStage('detecting')
+    setPhotoDecodeBusy(true)
+    setStage('welcome')
     try{
       const bitmap=await createImageBitmap(file)
       const width=bitmap.width, height=bitmap.height
@@ -406,6 +422,7 @@ export function ExperiencePage() {
       const ratio=Math.max(.35,Math.min(3,width/height))
       const {physicalArtwork,regions}=getFrameLayout('auto',ratio)
       setDimensions({width,height})
+      setPhotoDecodeBusy(false)
       setDesign(current=>({...current,framePresetId:'auto',photoAspectRatio:ratio,
         physicalArtwork,regions,photo:{...current.photo,assetId:'local-photo',
           fitMode:'contain',crop:FULL_PHOTO_CROP,positionMm:toRect(regions.engravingPhoto)},
@@ -413,6 +430,7 @@ export function ExperiencePage() {
       if(detectionOnDecode.current)await runDetection(url)
     }catch(cause){
       if(photoObject.current!==url)return
+      setPhotoDecodeBusy(false)
       setError(cause instanceof Error?cause.message:'The photograph could not be opened.')
       setStage('welcome')
     }
@@ -669,6 +687,11 @@ export function ExperiencePage() {
             onClick={()=>goToChapter(1)}>Continue with this photo ↗</button>}
           {photo&&<button type="button" className="at-reset-draft"
             onClick={()=>void discardLocalDraft()}>Clear this device's draft and start over</button>}
+          {photoDecodeBusy&&<div className="at-photo-replacement-loader" role="status" aria-live="polite">
+            <span className="at-photo-loader-orbit" aria-hidden="true">✦</span>
+            <span><strong>Preparing your new photograph…</strong>
+              <small>Reading its size and getting the sky detector ready.</small></span>
+          </div>}
           <small>{photo?'Your photo and choices remain on this device for up to 30 days, unless you clear the draft. Other users of this browser may see them.':'JPG, PNG or WebP · up to 10 MB · Your image stays on your device during sky detection.'}</small>
           {error&&<p className="at-error" role="alert">{error}</p>}
         </div>
@@ -694,7 +717,7 @@ export function ExperiencePage() {
         onDragLeave={()=>setDragging(false)} onDrop={event=>{if(stage==='detecting')onDrop(event)}}>
         <WizardLoader kind={stage} progress={progress}/>
         {stage==='detecting'&&<div className="at-loading-change">
-          <button type="button" className="at-outline" onClick={()=>upload.current?.click()}>
+          <button type="button" className="at-outline" onClick={openPhotoReplacement}>
             ⇄ Replace this photo now
           </button>
           <span>Or drop a different picture here — you don't have to wait.</span>
@@ -750,7 +773,7 @@ export function ExperiencePage() {
               {placement==='within'?'Polish my horizon':'Continue with a sky above'} <span>↗</span>
             </button>
             <button type="button" className="at-outline at-wide at-choose-photo"
-              onClick={()=>upload.current?.click()}>⇄ Change photograph</button>
+              onClick={openPhotoReplacement}>⇄ Change photograph</button>
             <p className="at-tiny-note">Sky detection runs on your device. If you choose to weave stars into the image, you’ll get a chance to tidy the edges with free editing tools.</p>
           </div>
         </div>
@@ -921,7 +944,7 @@ export function ExperiencePage() {
               <button type="button" onClick={editMoment}>✎ Change date or location</button>
               <button type="button" onClick={()=>setStage('choice')}>✎ Change photo composition</button>
               {placement==='within'&&<button type="button" onClick={()=>setStage('refine')}>✎ Refine the horizon again</button>}
-              <button type="button" onClick={()=>upload.current?.click()}>＋ Choose another photograph</button>
+              <button type="button" onClick={openPhotoReplacement}>＋ Choose another photograph</button>
             </div>
           </div>
         </div>

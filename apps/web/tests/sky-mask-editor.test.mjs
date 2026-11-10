@@ -232,3 +232,50 @@ test('manual restored regions cannot be recolored by the thin-branch pass',()=>{
   const corrected=refineThinBranchFringes(original,original,a,w,h,auto)
   assert.equal(corrected[(1*w+2)*4],230,'restored original edge not recolored')
 })
+
+import { appendFreehandPoint,isUsableFreehandArea,pointInMaskPolygon,paintLikelySkyLine } from '../src/skyMaskMath.ts'
+
+test('freehand trace samples drag points and closes a valid outlined area',()=>{
+  let outline=[{x:2,y:2}]
+  for(const p of [{x:2,y:2},{x:12,y:2},{x:12,y:12},{x:2,y:12}]){
+    outline=appendFreehandPoint(outline,p,2)
+  }
+  assert.equal(outline.length,4)
+  assert.equal(isUsableFreehandArea(outline),true)
+  assert.equal(pointInMaskPolygon({x:7,y:7},outline),true)
+  assert.equal(pointInMaskPolygon({x:20,y:20},outline),false)
+  assert.equal(isUsableFreehandArea([{x:0,y:0},{x:1,y:1},{x:2,y:2}]),false)
+  const before=outline.length
+  outline=appendFreehandPoint(outline,{x:2,y:12},2)
+  assert.equal(outline.length,before,'tiny movement is ignored')
+  const capped=Array.from({length:900},(_,i)=>({x:i,y:0}))
+  assert.equal(appendFreehandPoint(capped,{x:900,y:0}).length,900)
+})
+test('freehand lasso add-to-sky and restore preserve surrounding objects',()=>{
+  const {pixels,w,h}=image(Array.from({length:18},()=>Array.from({length:18},()=>DARK)))
+  const alpha=getAlpha(pixels)
+  const trace=[{x:3,y:3},{x:14,y:3},{x:14,y:14},{x:3,y:14}]
+  assert.equal(isUsableFreehandArea(trace),true)
+  assert.ok(fillMaskPolygon(alpha,pixels,w,h,trace,false)>0)
+  assert.equal(alpha[9*w+9],0)
+  assert.equal(alpha[1*w+1],255)
+  fillMaskPolygon(alpha,pixels,w,h,trace,true)
+  assert.equal(alpha[9*w+9],255)
+})
+test('fine sky brush removes likely sky pixels but preserves dark tree and skin-like foreground',()=>{
+  const {pixels,w,h}=image([
+    [WHITE,WHITE,WHITE,WHITE,WHITE],
+    [WHITE,WHITE,DARK,WHITE,WHITE],
+    [WHITE,WHITE,DARK,WHITE,WHITE],
+    [WHITE,WHITE,DARK,[166,113,94],WHITE],
+    [WHITE,WHITE,WHITE,WHITE,WHITE]
+  ])
+  const alpha=getAlpha(pixels)
+  alpha[0]=0
+  const changed=paintLikelySkyLine(alpha,pixels,w,h,1,1,4,3,1.7,false)
+  assert.ok(changed>0)
+  assert.equal(alpha[1*w+2],255,'tree silhouette protected')
+  assert.equal(alpha[3*w+3],255,'subject/skin-like pixels protected')
+  paintLikelySkyLine(alpha,pixels,w,h,1,1,4,3,1.7,true)
+  assert.equal(alpha[1*w+1],255,'original restored')
+})

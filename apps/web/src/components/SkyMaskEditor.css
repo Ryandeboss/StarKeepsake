@@ -154,3 +154,11 @@
 .sky-mask-chapters button:hover{border-color:#ead29d;color:#fff4db}
 .sky-mask-chapter-notice{margin:8px 16px 0;border:1px solid #a48b5e;background:#352e24;color:#ffe5ba;padding:10px 14px;border-radius:9px;font-size:12px}
 @media(max-width:700px){.sky-mask-chapters{gap:5px}.sky-mask-chapters button{padding:7px 8px;font-size:10px}}
+
+/* Freehand lasso exposes its final closed area while keeping the canvas usable. */
+.sky-mask-polygon-buttons{flex-wrap:wrap;max-width:100%}
+.sky-mask-polygon-buttons>span{color:#f4d8a5;font-size:11px}
+.sky-mask-polygon-buttons button:disabled{opacity:.45}
+.sky-mask-polygon-overlay polygon{filter:drop-shadow(0 0 4px rgba(44,225,244,.3))}
+.sky-mask-history button{white-space:normal}
+@media(max-width:760px){.sky-mask-actions{margin-left:0}.sky-mask-polygon-buttons{width:100%}}

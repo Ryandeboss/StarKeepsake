@@ -345,3 +345,74 @@ export function maskWorkingDimensions(
     height: Math.max(1, Math.round(originalHeight * scale)),
   }
 }
+
+/** Press-and-drag freehand lasso; downsample only redundant points so
+ * long mouse paths cannot produce unbounded SVG/geometry allocations. */
+export function appendFreehandPoint(
+  points: MaskPoint[], point: MaskPoint, distance = 2, maxPoints = 900,
+): MaskPoint[] {
+  if (points.length >= maxPoints) return points
+  const last = points[points.length - 1]
+  if (last && Math.hypot(last.x-point.x,last.y-point.y) < distance) return points
+  return [...points,point]
+}
+export function isUsableFreehandArea(points: MaskPoint[]): boolean {
+  if (points.length < 3) return false
+  const xs=points.map(p=>p.x), ys=points.map(p=>p.y)
+  if (Math.max(...xs)-Math.min(...xs) < 5 || Math.max(...ys)-Math.min(...ys) < 5) return false
+  let area=0
+  for(let i=0;i<points.length;i++){
+    const a=points[i], b=points[(i+1)%points.length]
+    area+=a.x*b.y-b.x*a.y
+  }
+  return Math.abs(area)/2 >= 20
+}
+export function pointInMaskPolygon(point: MaskPoint, vertices: MaskPoint[]): boolean {
+  if(vertices.length<3)return false
+  let inside=false
+  for(let i=0,j=vertices.length-1;i<vertices.length;j=i++){
+    const a=vertices[i],b=vertices[j]
+    if((a.y>point.y)!==(b.y>point.y) &&
+      point.x < (b.x-a.x)*(point.y-a.y)/(b.y-a.y)+a.x)inside=!inside
+  }
+  return inside
+}
+
+/** Sky-aware edge touch-up: only colors consistent with sky are removed.
+ * Unlike manual lasso, this intentionally declines dark trees, people and
+ * solid objects. A click/brush cannot turn arbitrary foreground into sky. */
+export function paintLikelySkyLine(
+  alpha: Uint8ClampedArray, original: Uint8ClampedArray, width:number,height:number,
+  x1:number,y1:number,x2:number,y2:number,radius:number,restore:boolean,
+): number {
+  if(width<=0||height<=0||alpha.length!==width*height||original.length!==width*height*4)
+    throw new Error('Image dimensions do not match')
+  const r=Math.max(1,Math.min(65,radius))
+  const dist=Math.hypot(x2-x1,y2-y1)
+  const steps=Math.max(1,Math.ceil(dist/Math.max(1,r/2)))
+  let changed=0
+  for(let step=0;step<=steps;step++){
+    const t=step/steps,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t
+    for(let yy=Math.max(0,Math.floor(y-r));yy<=Math.min(height-1,Math.ceil(y+r));yy++){
+      for(let xx=Math.max(0,Math.floor(x-r));xx<=Math.min(width-1,Math.ceil(x+r));xx++){
+        if((xx-x)**2+(yy-y)**2>r*r)continue
+        const i=yy*width+xx,j=i*4
+        if(!restore){
+          const red=original[j],green=original[j+1],blue=original[j+2]
+          const luminance=(77*red+150*green+29*blue)/256
+          const chroma=Math.max(red,green,blue)-Math.min(red,green,blue)
+          const strongBlue=blue>red*1.23&&blue>green*1.08&&blue>105&&green>48
+          const brightSky=luminance>185&&chroma<66
+          const nearbySky=(
+            (xx>0&&alpha[i-1]<85)||(xx+1<width&&alpha[i+1]<85)||
+            (yy>0&&alpha[i-width]<85)||(yy+1<height&&alpha[i+width]<85)
+          )
+          if(!(strongBlue||(brightSky&&nearbySky)))continue
+        }
+        const next=restore?original[j+3]:0
+        if(alpha[i]!==next){alpha[i]=next;changed++}
+      }
+    }
+  }
+  return changed
+}
