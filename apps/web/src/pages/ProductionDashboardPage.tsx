@@ -1,5 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import './ProductionDashboardPage.css'
+import { MaterialsPanel } from './MaterialsPanel'
+import { ProcurementPanel } from './ProcurementPanel'
 
 type Receipt = {
   shop_id: number
@@ -33,6 +35,14 @@ type Job = {
   created_at: string
 }
 type Dashboard = { shopId: number; receipts: Receipt[]; items: Item[]; jobs: Job[] }
+type SavedDesignSummary = {
+  designId: string
+  createdAtUtc: string
+  status: string
+  layout: 'above'|'within'|'unknown'
+  finish: string
+  hasPreparedForeground: boolean
+}
 type Filter = 'all' | 'review' | 'ready' | 'canceled'
 const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
@@ -92,6 +102,8 @@ export function ProductionDashboardPage() {
   const [entry, setEntry] = useState('')
   const [key, setKey] = useState('') // Kept in memory only; never URLs, storage or logs.
   const [data, setData] = useState<Dashboard | null>(null)
+  const [savedDesigns, setSavedDesigns] = useState<SavedDesignSummary[]>([])
+  const [savedDesignsError, setSavedDesignsError] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [selected, setSelected] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
@@ -119,6 +131,15 @@ export function ProductionDashboardPage() {
   async function load(adminKey: string) {
     const view = await api<Dashboard>('/api/admin/production/orders', adminKey)
     setData(view)
+    // A drafts listing outage must not prevent the separate Etsy dashboard from opening.
+    try {
+      const drafts = await api<SavedDesignSummary[]>('/api/admin/designs', adminKey)
+      setSavedDesigns(drafts)
+      setSavedDesignsError('')
+    } catch {
+      setSavedDesigns([])
+      setSavedDesignsError('Saved designs could not be loaded right now.')
+    }
   }
   async function login(event: FormEvent) {
     event.preventDefault()
@@ -181,7 +202,8 @@ export function ProductionDashboardPage() {
           <p className="production-subtitle">Verified Etsy orders, custom designs and manufacturing readiness.</p>
         </div>
         {key && <button type="button" className="production-ghost" onClick={() => {
-          setKey(''); setData(null); setSelected(null); setFailure(''); setMessage('')
+          setKey(''); setData(null); setSavedDesigns([]); setSelected(null);
+          setFailure(''); setSavedDesignsError(''); setMessage('')
         }}>Lock studio</button>}
       </header>
       {!key ? <section className="production-login">
@@ -205,6 +227,32 @@ export function ProductionDashboardPage() {
           <article><span>Paid receipts</span><strong>{paidCount}</strong></article>
           <article><span>Needs review</span><strong>{reviewCount}</strong></article>
           <article><span>Production jobs</span><strong>{data?.jobs.length ?? 0}</strong></article>
+        </section>
+        <section className="production-data production-designs" aria-label="Recent saved designs">
+          <div className="production-actions">
+            <div><h2>Recently saved designs</h2>
+              <p>Latest 100 private design records. Saving is not a purchase and does not create an Etsy production job.</p></div>
+            <span className="production-design-count">{savedDesigns.length} saved</span>
+          </div>
+          {savedDesignsError&&<p className="production-error" role="alert">{savedDesignsError}</p>}
+          <div className="production-table-scroll">
+            <table className="production-table">
+              <thead><tr><th>DESIGN ID</th><th>SAVED</th><th>COMPOSITION</th><th>WOOD FINISH</th><th>STATUS</th></tr></thead>
+              <tbody>{savedDesigns.map(item=><tr key={item.designId}>
+                <td><strong>{item.designId}</strong></td>
+                <td>{dateLabel(item.createdAtUtc)}</td>
+                <td>{item.layout==='within'?'Stars woven into photo':item.layout==='above'?'Sky above photo':'Unknown'}</td>
+                <td>{item.finish}</td>
+                <td><span className="production-status">Saved · unpaid</span></td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          {!savedDesigns.length&&!savedDesignsError&&<div className="production-empty">
+            <h3>No saved designs yet</h3>
+            <p>Customer designs appear here after a successful private save; paid Etsy orders appear in the register below.</p>
+          </div>}
+          <p className="production-design-privacy">Only IDs and basic layout settings are shown.
+            Photos and private reopening keys remain inaccessible from this list.</p>
         </section>
         <section className="production-data">
           <div className="production-actions">
@@ -274,6 +322,8 @@ export function ProductionDashboardPage() {
           })}
           {!selectedRow.items.length && <p>There are no Etsy transactions saved for this receipt yet.</p>}
         </section>}
+        <MaterialsPanel adminKey={key} />
+        <ProcurementPanel adminKey={key} />
         <p className="production-footnote">This studio never places purchases, changes Etsy orders,
           or launches fabrication. Order amounts include Etsy receipt totals, not net profit.</p>
       </>}

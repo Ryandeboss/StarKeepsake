@@ -232,3 +232,83 @@ test('manual restored regions cannot be recolored by the thin-branch pass',()=>{
   const corrected=refineThinBranchFringes(original,original,a,w,h,auto)
   assert.equal(corrected[(1*w+2)*4],230,'restored original edge not recolored')
 })
+
+import { appendFreehandPoint,isUsableFreehandArea,pointInMaskPolygon,paintLikelySkyLine } from '../src/skyMaskMath.ts'
+
+test('freehand trace samples drag points and closes a valid outlined area',()=>{
+  let outline=[{x:2,y:2}]
+  for(const p of [{x:2,y:2},{x:12,y:2},{x:12,y:12},{x:2,y:12}]){
+    outline=appendFreehandPoint(outline,p,2)
+  }
+  assert.equal(outline.length,4)
+  assert.equal(isUsableFreehandArea(outline),true)
+  assert.equal(pointInMaskPolygon({x:7,y:7},outline),true)
+  assert.equal(pointInMaskPolygon({x:20,y:20},outline),false)
+  assert.equal(isUsableFreehandArea([{x:0,y:0},{x:1,y:1},{x:2,y:2}]),false)
+  const before=outline.length
+  outline=appendFreehandPoint(outline,{x:2,y:12},2)
+  assert.equal(outline.length,before,'tiny movement is ignored')
+  const capped=Array.from({length:900},(_,i)=>({x:i,y:0}))
+  assert.equal(appendFreehandPoint(capped,{x:900,y:0}).length,900)
+})
+test('freehand lasso add-to-sky and restore preserve surrounding objects',()=>{
+  const {pixels,w,h}=image(Array.from({length:18},()=>Array.from({length:18},()=>DARK)))
+  const alpha=getAlpha(pixels)
+  const trace=[{x:3,y:3},{x:14,y:3},{x:14,y:14},{x:3,y:14}]
+  assert.equal(isUsableFreehandArea(trace),true)
+  assert.ok(fillMaskPolygon(alpha,pixels,w,h,trace,false)>0)
+  assert.equal(alpha[9*w+9],0)
+  assert.equal(alpha[1*w+1],255)
+  fillMaskPolygon(alpha,pixels,w,h,trace,true)
+  assert.equal(alpha[9*w+9],255)
+})
+test('fine sky brush removes likely sky pixels but preserves dark tree and skin-like foreground',()=>{
+  const {pixels,w,h}=image([
+    [WHITE,WHITE,WHITE,WHITE,WHITE],
+    [WHITE,WHITE,DARK,WHITE,WHITE],
+    [WHITE,WHITE,DARK,WHITE,WHITE],
+    [WHITE,WHITE,DARK,[166,113,94],WHITE],
+    [WHITE,WHITE,WHITE,WHITE,WHITE]
+  ])
+  const alpha=getAlpha(pixels)
+  alpha[0]=0
+  const changed=paintLikelySkyLine(alpha,pixels,w,h,1,1,4,3,1.7,false)
+  assert.ok(changed>0)
+  assert.equal(alpha[1*w+2],255,'tree silhouette protected')
+  assert.equal(alpha[3*w+3],255,'subject/skin-like pixels protected')
+  paintLikelySkyLine(alpha,pixels,w,h,1,1,4,3,1.7,true)
+  assert.equal(alpha[1*w+1],255,'original restored')
+})
+
+
+test('manual brush can mark dark foreground as sky even when sky-aware AI brush refuses it', () => {
+  const {pixels,w,h}=image(Array.from({length:14},()=>
+    Array.from({length:14},()=>DARK)))
+  const mask=getAlpha(pixels)
+  const original=new Uint8ClampedArray(pixels)
+  paintLikelySkyLine(mask,pixels,w,h,2,7,11,7,2,false)
+  assert.equal(mask[7*w+7],255,'AI-aware brush declines dark pixels')
+  paintAlphaLine(mask,pixels,w,h,2,7,11,7,2,false)
+  assert.equal(mask[7*w+7],0,'manual brush overrides AI judgment')
+  assert.equal(mask[0],255,'unbrushed foreground stays opaque')
+  assert.deepEqual(pixels,original,'manual painting does not alter the source photo')
+})
+test('manual Keep in photo brush restores original alpha after Add to sky', () => {
+  const {pixels,w,h}=image(Array.from({length:16},()=>Array.from({length:16},()=>DARK)))
+  const mask=getAlpha(pixels)
+  paintAlphaLine(mask,pixels,w,h,2,8,13,8,2.5,false)
+  assert.equal(mask[8*w+7],0)
+  paintAlphaLine(mask,pixels,w,h,6,8,9,8,2.5,true)
+  assert.equal(mask[8*w+7],255,'painted foreground returns on same original pixels')
+  assert.equal(mask[8*w+3],0,'other sky remains transparent')
+  assert.equal(mask[1*w+1],255,'unpainted areas remain untouched')
+})
+test('manual brush supports single-click and continuous drag regardless of color', () => {
+  const {pixels,w,h}=image(Array.from({length:20},()=>Array.from({length:20},()=>[181,91,75])))
+  const mask=getAlpha(pixels)
+  paintAlphaLine(mask,pixels,w,h,5,5,5,5,1.5,false)
+  assert.equal(mask[5*w+5],0,'a single click paints')
+  paintAlphaLine(mask,pixels,w,h,5,5,15,15,1.5,false)
+  assert.equal(mask[10*w+10],0,'a drag fills between pointer events')
+  assert.equal(mask[5*w+15],255,'diagonal brush does not alter distant pixels')
+})

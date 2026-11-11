@@ -11,6 +11,9 @@ export type OrderManifest={
   format:'starkeepsake-order-v1'; reference:string; status:'UNPAID_PREVIEW'
   generatedAt:string; design:DesignSpec; preferences:OrderPreferences
   original:{name:string;bytes:number;mime:string}
+  /** Historical website estimate only; not proof of payment or the Etsy sale price. */
+  pricing?:{priceCents:number;currency:'USD';mode:'planning'|'catalog';
+    revision:string;updatedAtUtc:string|null;binding:false}
   expectedFiles:string[]
 }
 const encoder=new TextEncoder()
