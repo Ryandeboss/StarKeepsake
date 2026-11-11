@@ -161,7 +161,8 @@ export function ManualAmazonPurchasingPanel({adminKey,refreshVersion}:{adminKey:
       <th>PART</th><th>REQUIRED</th><th>ON HAND</th><th>ON ORDER</th><th>BUY MORE</th><th>AMAZON</th><th>ACTION</th>
     </tr></thead><tbody>
       {queue?.parts.map(p=><tr key={p.sku}>
-        <td><strong>{p.sku}</strong><small>{p.name}</small></td>
+        <td><strong>{p.sku}</strong><small>{p.name}</small>
+          <small>M3 catalog cost: {money(p.unitCostCents)} per {p.unit} (not an Amazon quote)</small></td>
         <td>{qty(p.required)} {p.unit}</td><td>{qty(p.onHand)}</td>
         <td>{qty(p.pending)}</td><td><strong>{qty(p.additionalNeeded)} {p.unit}</strong>
           {p.estimatedPacks!==null&&p.additionalNeeded>0&&
