@@ -8,6 +8,11 @@ import { HomeShowroom } from '../components/HomeShowroom'
 import { ROOM_OPTIONS, WOOD_OPTIONS } from '../components/HomeShowroomOptions'
 import type { RoomScene } from '../components/HomeShowroomOptions'
 import { detectWorkshopSky } from '../skyBlend'
+import { recommendedSkyPlacement } from '../skyPlacement'
+import { chapterDestination } from '../workshopNavigation'
+import { clearLocalWorkshopDraft, readLocalWorkshopDraft, resumedDraftStage, writeLocalWorkshopDraft } from '../localWorkshopDraft'
+import type { LocalWorkshopDraft } from '../localWorkshopDraft'
+import type { ChapterIndex } from '../workshopNavigation'
 import type { WorkshopDetection } from '../skyBlend'
 import { FULL_PHOTO_CROP } from '../photoCrop'
 import { INITIAL_DESIGN_SPEC, getFrameLayout, toRect } from '../designSpec'
@@ -22,7 +27,7 @@ import { createCustomerPacket, downloadFile, orderPersonalization } from '../cus
 import type { OrderPreferences } from '../customerOrder'
 import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
 import type { SavedDesignReceipt } from '../savedDesign'
-import { PREVIEW_FRAME_QUOTES,frameQuoteFor,loadFramePrices,moneyUsd } from '../storefrontPricing'
+import { PREVIEW_FRAME_QUOTES, frameQuoteFor, loadFramePrices, moneyUsd } from '../storefrontPricing'
 import type { FrameQuote } from '../storefrontPricing'
 import './ExperiencePage.css'
 
@@ -50,7 +55,13 @@ function WizardLoader({kind,progress}: {kind:'detecting'|'calculating';progress:
   const labels=introWords[kind]
   const index=Math.min(3,Math.floor(progress/24))
   return <div className="at-loader" role="status" aria-live="polite">
-    <div className="at-loading-orbit" aria-hidden="true"><span>✦</span><i/><i/><i/></div>
+    <div className="at-loading-sky" aria-hidden="true">
+      <span className="at-loading-core">✦</span>
+      <span className="at-shooting-star"/><span className="at-shooting-star"/>
+      <span className="at-shooting-star"/><span className="at-shooting-star"/>
+      <span className="at-shooting-star"/><span className="at-shooting-star"/>
+      <span className="at-loading-sky-spark">✧</span>
+    </div>
     <span className="at-kicker">STARKEEP SAKE / THE NIGHT ATELIER</span>
     <h2>{kind==='detecting' ? 'Finding the sky in your story.' : 'Returning to your night.'}</h2>
     <p>{labels[index]}…</p>
@@ -106,6 +117,8 @@ export function ExperiencePage() {
   const [orderError,setOrderError]=useState('')
   const [saveBusy,setSaveBusy]=useState(false)
   const [saveError,setSaveError]=useState('')
+  const [copied,setCopied]=useState<'link'|'order'|null>(null)
+  const copiedTimeout=useRef<number|null>(null)
   const [restoreBusy,setRestoreBusy]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
   const [restoreError,setRestoreError]=useState('')
   const [savedDesign,setSavedDesign]=useState<{receipt:SavedDesignReceipt;signature:string}|null>(null)
@@ -113,7 +126,9 @@ export function ExperiencePage() {
     key:string;packet:Awaited<ReturnType<typeof createCustomerPacket>>
   }|null>(null)
   const [error,setError]=useState('')
+  const [chapterNotice,setChapterNotice]=useState<string|null>(null)
   const [dragging,setDragging]=useState(false)
+  const [photoDecodeBusy,setPhotoDecodeBusy]=useState(false)
   const upload=useRef<HTMLInputElement>(null)
   const photoObject=useRef('')
   const overlayObject=useRef('')
@@ -121,20 +136,27 @@ export function ExperiencePage() {
   const detectionVersion=useRef(0)
   const astronomyVersion=useRef(0)
   const lookupVersion=useRef(0)
+  const detectionOnDecode=useRef(true)
+  const [draftReady,setDraftReady]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
+  const [draftNotice,setDraftNotice]=useState('')
+  const [draftError,setDraftError]=useState('')
 
   useEffect(()=>()=> {
     detectionVersion.current++
     astronomyVersion.current++
+    if(copiedTimeout.current!==null)window.clearTimeout(copiedTimeout.current)
     if(photoObject.current) URL.revokeObjectURL(photoObject.current)
     if(overlayObject.current) URL.revokeObjectURL(overlayObject.current)
     if(cutoutObject.current) URL.revokeObjectURL(cutoutObject.current)
   },[])
+  // Pricing refresh only while the customer is choosing a physical frame.
   useEffect(()=>{
     if(stage!=='home')return
     let alive=true
     const refresh=()=>{
-      void loadFramePrices().then(prices=>{if(alive)setFrameQuotes(prices)})
-        .catch(()=>{if(alive)setPriceNotice('Supplier cost catalog unavailable; showing estimates.')})
+      void loadFramePrices().then(prices=>{
+        if(alive){setFrameQuotes(prices);setPriceNotice('')}
+      }).catch(()=>{if(alive)setPriceNotice('Supplier cost catalog unavailable; showing estimates.')})
     }
     refresh()
     const timer=window.setInterval(refresh,180000)
@@ -215,6 +237,121 @@ export function ExperiencePage() {
     return ()=>{active=false}
   },[])
 
+  // Unpaid work is never uploaded just to survive Refresh. Restore from this
+  // origin's IndexedDB first; private link restoration above takes precedence.
+  useEffect(()=>{
+    if(parseDesignLink(window.location.hash))return
+    let active=true
+    void (async()=>{
+      try{
+        const draft=await readLocalWorkshopDraft()
+        if(!active)return
+        if(!draft){setDraftReady(true);return}
+        const kind=draft.photo.type
+        const extension=kind==='image/png'?'png':kind==='image/webp'?'webp':'jpg'
+        const restored=new File([draft.photo],'local-workshop-photo.'+extension,{type:kind})
+        const originalUrl=URL.createObjectURL(restored)
+        const cutoutUrl=draft.cutout?URL.createObjectURL(draft.cutout):''
+        const overlayUrl=draft.detected?URL.createObjectURL(draft.detected.overlay):''
+        if(photoObject.current)URL.revokeObjectURL(photoObject.current)
+        if(cutoutObject.current)URL.revokeObjectURL(cutoutObject.current)
+        if(overlayObject.current)URL.revokeObjectURL(overlayObject.current)
+        photoObject.current=originalUrl
+        cutoutObject.current=cutoutUrl
+        overlayObject.current=overlayUrl
+        setPhoto(restored);setPhotoUrl(originalUrl)
+        setCutoutUrl(cutoutUrl);setOverlayUrl(overlayUrl)
+        setDimensions(draft.dimensions);setDetected(draft.detected)
+        setSavedAlpha(draft.savedAlpha)
+        setDesign(draft.design)
+        setPlacement(draft.placement);setShowMask(draft.showMask)
+        setDate(draft.date);setTime(draft.time);setUnknownTime(draft.unknownTime)
+        setQuery(draft.query);setSelected(draft.selected);setOffline(draft.offline)
+        setHeading(draft.heading);setPitch(draft.pitch);setFov(draft.fov)
+        setSkyPercent(draft.skyPercent);setPhotoFit(draft.photoFit)
+        setAtmosphericGlow(draft.atmosphericGlow);setSkyTone(draft.skyTone)
+        setLightsOn(draft.lightsOn);setFinish(draft.finish);setRoom(draft.room)
+        setInscription(draft.inscription)
+        const resumed=resumedDraftStage(draft.stage,Boolean(draft.design.astronomy))
+        setStage(resumed)
+        setDraftNotice('Your previous work was restored privately from this browser.')
+        if(resumed==='detecting')void runDetection(originalUrl)
+        if(draft.stage==='calculating')
+          setChapterNotice('Your photo and moment are back. Choose Reveal my night to resume the sky calculation.')
+        setDraftReady(true)
+      }catch{
+        if(active){
+          setDraftError('This browser cannot restore the previous local draft. You can still upload a photo and use Save Design.')
+          setDraftReady(true)
+        }
+      }
+    })()
+    return ()=>{active=false}
+  },[])
+
+  // Keep just one current working draft per browser/origin. Object URLs are
+  // intentionally never persisted: only original bytes and optional cutout.
+  useEffect(()=>{
+    if(!draftReady||restoreBusy||!photo||!dimensions)return
+    let canceled=false
+    const timer=window.setTimeout(()=>{
+      void (async()=>{
+        try{
+          let cutout:Blob|null=null
+          if(cutoutUrl){
+            const response=await fetch(cutoutUrl)
+            if(!response.ok)throw new Error('Cannot read the locally prepared foreground.')
+            cutout=await response.blob()
+          }
+          if(canceled)return
+          const draft:LocalWorkshopDraft={
+            version:1,savedAtMs:Date.now(),photo,
+            dimensions,design,stage,placement,detected,cutout,savedAlpha,showMask,
+            date,time,unknownTime,query,selected,offline,heading,pitch,fov,
+            skyPercent,photoFit,atmosphericGlow,skyTone,lightsOn,finish,room,inscription,
+          }
+          await writeLocalWorkshopDraft(draft)
+          if(!canceled)setDraftError('')
+        }catch{
+          if(!canceled)setDraftError('This browser could not store your working photo. Use Save Design when it is available, or keep this tab open.')
+        }
+      })()
+    },240)
+    return ()=>{canceled=true;window.clearTimeout(timer)}
+  },[draftReady,restoreBusy,photo,dimensions,design,stage,placement,detected,
+      cutoutUrl,savedAlpha,showMask,date,time,unknownTime,query,selected,offline,
+      heading,pitch,fov,skyPercent,photoFit,atmosphericGlow,skyTone,lightsOn,
+      finish,room,inscription])
+
+  // After editing a previously saved design, do not leave the old private
+  // receipt URL in the address bar: Refresh must prefer the new local draft.
+  useEffect(()=>{
+    if(!draftReady||restoreBusy||!savedDesign)return
+    const preferences={
+      layout:placement,heading,pitch,fov,skyHeight:skyPercent,
+      photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
+    }
+    const currentSignature=designSnapshotSignature({design,preferences,
+      photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
+    if(savedDesign.signature===currentSignature)return
+    const current=parseDesignLink(window.location.hash)
+    if(current?.designId===savedDesign.receipt.designId)
+      window.history.replaceState(null,'',window.location.pathname+window.location.search)
+  },[draftReady,restoreBusy,savedDesign,placement,heading,pitch,fov,skyPercent,
+      photoFit,skyTone,atmosphericGlow,finish,inscription,design,photo,cutoutUrl])
+
+  async function discardLocalDraft(){
+    if(!window.confirm('Discard this local photo and all unsaved workshop changes? A separately saved design link will still work.'))return
+    setDraftReady(false)
+    try{
+      await clearLocalWorkshopDraft()
+      window.location.replace(window.location.pathname+window.location.search)
+    }catch{
+      setDraftReady(true)
+      setDraftError('The local draft could not be cleared. Check your browser storage settings.')
+    }
+  }
+
   useEffect(()=>{
     if(stage!=='detecting'&&stage!=='calculating')return
     const timer=window.setInterval(()=>setProgress(n=>Math.min(91,n+Math.max(.6,(93-n)*.12))),190)
@@ -238,13 +375,30 @@ export function ExperiencePage() {
       overlayObject.current=maskUrl
       setOverlayUrl(maskUrl)
       setDetected(result)
+      // Suggest only; the customer's explicit selection still overrides this.
+      setPlacement(recommendedSkyPlacement(result.skyPercent))
       setProgress(100)
       setStage('choice')
     } catch(cause) {
       if(version!==detectionVersion.current)return
       setDetectorError(cause instanceof Error?cause.message:'The sky detector could not run.')
+      setPlacement('above')
       setStage('choice')
     }
+  }
+
+  function openPhotoReplacement(){
+    if(stage==='refine' && !window.confirm('Leave the horizon editor? Unsaved brush or lasso changes will be lost.'))return
+    if(stage==='calculating')astronomyVersion.current++
+    if(stage==='detecting'){
+      detectionVersion.current++ // Old detection cannot navigate away after the picker opens.
+      detectionOnDecode.current=false
+    }
+    setStage('welcome')
+    setPhotoDecodeBusy(false)
+    setChapterNotice('Choose a new photograph. Your current image stays here if you cancel the picker.')
+    window.scrollTo({top:0,behavior:'smooth'})
+    upload.current?.click()
   }
 
   async function acceptPhoto(file?:File) {
@@ -255,6 +409,7 @@ export function ExperiencePage() {
     }
     detectionVersion.current++
     astronomyVersion.current++
+    detectionOnDecode.current=true
     if(photoObject.current)URL.revokeObjectURL(photoObject.current)
     if(overlayObject.current)URL.revokeObjectURL(overlayObject.current)
     if(cutoutObject.current)URL.revokeObjectURL(cutoutObject.current)
@@ -269,8 +424,11 @@ export function ExperiencePage() {
     setSavedAlpha(null)
     setDimensions(null)
     setDetected(null)
-    setPlacement('within')
+    setPlacement('above') // No positive sky detection yet: safer initial composition.
+    setCopied(null)
+    if(copiedTimeout.current!==null)window.clearTimeout(copiedTimeout.current)
     setError('')
+    setChapterNotice(null)
     setSelected(null)
     setQuery('')
     setCandidates([])
@@ -278,7 +436,8 @@ export function ExperiencePage() {
     setSavedDesign(null)
     setSaveError('')
     window.history.replaceState(null,'',window.location.pathname+window.location.search)
-    setStage('detecting')
+    setPhotoDecodeBusy(true)
+    setStage('welcome')
     try{
       const bitmap=await createImageBitmap(file)
       const width=bitmap.width, height=bitmap.height
@@ -287,13 +446,15 @@ export function ExperiencePage() {
       const ratio=Math.max(.35,Math.min(3,width/height))
       const {physicalArtwork,regions}=getFrameLayout('auto',ratio)
       setDimensions({width,height})
+      setPhotoDecodeBusy(false)
       setDesign(current=>({...current,framePresetId:'auto',photoAspectRatio:ratio,
         physicalArtwork,regions,photo:{...current.photo,assetId:'local-photo',
           fitMode:'contain',crop:FULL_PHOTO_CROP,positionMm:toRect(regions.engravingPhoto)},
         customText:{...current.customText,positionMm:toRect(regions.text)},stars:[],astronomy:null}))
-      await runDetection(url)
+      if(detectionOnDecode.current)await runDetection(url)
     }catch(cause){
       if(photoObject.current!==url)return
+      setPhotoDecodeBusy(false)
       setError(cause instanceof Error?cause.message:'The photograph could not be opened.')
       setStage('welcome')
     }
@@ -306,6 +467,7 @@ export function ExperiencePage() {
   }
   function choosePlacement(){
     setError('')
+    setChapterNotice(null)
     setStage(placement==='within'?'refine':'moment')
   }
   function saveMask(blob:Blob,alpha:Uint8ClampedArray){
@@ -321,6 +483,51 @@ export function ExperiencePage() {
     setError('')
     setStage('moment')
   }
+  /** Top chapter navigation is intentionally not tied to linear progress.
+   * Revisiting completed chapters keeps the selected photo, sky and finish.
+   * Moving forward routes to the closest missing prerequisite when needed. */
+  function goToChapter(index:ChapterIndex){
+    if(restoreBusy){
+      setChapterNotice('Your saved design is still opening. Try again once it is ready.')
+      return
+    }
+    const savedMoment=design.moment
+    const location=savedMoment.location
+    const hasCurrentSky=Boolean(design.astronomy && location && selected &&
+      savedMoment.date===date &&
+      savedMoment.exactTimeUnknown===unknownTime &&
+      (unknownTime || savedMoment.time===time) &&
+      Math.abs(location.latitude-selected.latitude)<.000001 &&
+      Math.abs(location.longitude-selected.longitude)<.000001)
+    const destination=chapterDestination(index,{
+      hasPhoto:Boolean(photo),
+      hasDimensions:Boolean(dimensions),
+      detectionReady:Boolean(detected || detectorError || cutoutUrl || savedDesign),
+      placement,hasForeground:Boolean(cutoutUrl),skyCurrent:hasCurrentSky,
+    })
+    if(stage==='refine' && destination.stage!=='refine' &&
+       !window.confirm('Leave the horizon editor? Any unsaved brush or mask changes will be lost.')){
+      return
+    }
+    if(stage==='detecting' && destination.stage!=='detecting'){
+      detectionVersion.current++ // Ignore late AI results if chapter 01 was chosen.
+      detectionOnDecode.current=false // Also handle an image still being decoded.
+    }
+    if(stage==='calculating'){
+      astronomyVersion.current++ // Do not let an old computation override navigation.
+    }
+    if(destination.stage==='detecting'){
+      detectionOnDecode.current=true
+      // If image decoding is in progress acceptPhoto will run detection on completion.
+      // If decoding finished and we deliberately left this stage, restart detection.
+      if(stage!=='detecting' && dimensions && photoUrl)void runDetection(photoUrl)
+    }
+    setChapterNotice(destination.notice)
+    setError('')
+    setStage(destination.stage)
+    window.scrollTo({top:0,behavior:'smooth'})
+  }
+
   async function findPlace(){
     const term=query.trim()
     if(term.length<2){setError('Enter at least two characters for your place.');return}
@@ -349,6 +556,7 @@ export function ExperiencePage() {
     }
   }
   async function revealNight(){
+    setChapterNotice(null)
     if(!photo||!dimensions){setError('Choose a photograph first.');return}
     if(placement==='within'&&!cutoutUrl){setError('Please save your sky cleanup first.');setStage('refine');return}
     if(!date){setError('Choose your special date.');return}
@@ -428,6 +636,18 @@ export function ExperiencePage() {
     }finally{setSaveBusy(false)}
   }
 
+  async function copyWithFeedback(text:string,kind:'link'|'order'){
+    try{
+      await navigator.clipboard.writeText(text)
+      setCopied(kind)
+      if(copiedTimeout.current!==null)window.clearTimeout(copiedTimeout.current)
+      copiedTimeout.current=window.setTimeout(()=>setCopied(null),3400)
+    }catch{
+      if(kind==='link')setSaveError('Copy failed. Try copying this page address from your browser.')
+      else setOrderError('Copy failed. Download the order sheet instead.')
+    }
+  }
+
   async function buildOrderPacket(){
     if(!photo)return
     const key=orderKey
@@ -443,21 +663,36 @@ export function ExperiencePage() {
     }finally{setOrderBusy(false)}
   }
 
+  if(!draftReady)return <div className="at-shell at-draft-loading" role="status">
+    <span className="at-kicker">STARKEEPSAKE / YOUR WORKSHOP</span>
+    <span className="at-draft-pulse" aria-hidden="true">✦</span>
+    <p>Opening your private work in this browser…</p>
+  </div>
+
   return <div className="at-shell">
     <div className="at-aurora" aria-hidden="true"/>
     <header className="at-header">
-      <button type="button" className="at-wordmark" onClick={()=>{if(stage!=='welcome')setStage('welcome')}} aria-label="StarKeepsake home">
+      <button type="button" className="at-wordmark" onClick={()=>goToChapter(0)} aria-label="StarKeepsake home">
         <span className="at-logo-mark">✳</span><span>STAR<span>KEEPSAKE</span><small>THE NIGHT ATELIER</small></span>
       </button>
-      <div className="at-header-note">YOUR STORY, HELD IN THE STARS <span>✦</span> PREVIEW STUDIO</div>
+      <nav className="at-steps" aria-label="Jump between the five workshop chapters">
+        {STEPS.map((item,index)=><button type="button" key={item.key}
+          className={index===atIndex?'is-current':index<atIndex?'is-done':''}
+          aria-current={index===atIndex?'step':undefined}
+          aria-label={`Chapter ${index+1}: ${item.label}`}
+          title={`Go to chapter ${index+1}: ${item.label.toLowerCase()}`}
+          onClick={()=>goToChapter(index as ChapterIndex)}>
+          <span>{index<atIndex?'✓':String(index+1).padStart(2,'0')}</span><b>{item.label}</b>
+        </button>)}
+      </nav>
     </header>
-    <nav className="at-steps" aria-label="Workshop progress">
-      {STEPS.map((item,index)=><div key={item.key} className={index===atIndex?'is-current':index<atIndex?'is-done':''}
-        aria-current={index===atIndex?'step':undefined}>
-        <span>{index<atIndex?'✓':String(index+1).padStart(2,'0')}</span>{item.label}
-      </div>)}
-    </nav>
     <main className="at-main">
+      {draftNotice&&<div className="at-local-draft-info" role="status">
+        <span>✓ {draftNotice}</span>
+        <button type="button" onClick={()=>setDraftNotice('')} aria-label="Dismiss local draft notice">×</button>
+      </div>}
+      {draftError&&<p role="alert" className="at-error at-draft-error">{draftError}</p>}
+      {chapterNotice&&<p role="status" className="at-chapter-notice">{chapterNotice}</p>}
       {restoreBusy&&<p role="status" className="at-design-notice">Opening your private saved design…</p>}
       {restoreError&&<div className="at-design-notice" role="alert">
         Could not open saved design: {restoreError}
@@ -473,39 +708,63 @@ export function ExperiencePage() {
           <div className="at-welcome-caption"><span>01 / BEGIN WITH A PHOTOGRAPH</span>
             <span>02 / WE’LL FIND YOUR SKY</span><span>03 / MAKE IT YOURS</span></div>
           <button type="button" className="at-primary" onClick={()=>upload.current?.click()}>
-            Choose your photograph <span>↗</span></button>
-          <small>JPG, PNG or WebP · up to 10 MB · Your image stays in your browser during sky detection.</small>
+            {photo?'Replace your photograph':'Choose your photograph'} <span>↗</span></button>
+          {photo&&<button type="button" className="at-outline at-welcome-resume"
+            onClick={()=>goToChapter(1)}>Continue with this photo ↗</button>}
+          {photo&&<button type="button" className="at-reset-draft"
+            onClick={()=>void discardLocalDraft()}>Clear this device's draft and start over</button>}
+          {photoDecodeBusy&&<div className="at-photo-replacement-loader" role="status" aria-live="polite">
+            <span className="at-photo-loader-orbit" aria-hidden="true">✦</span>
+            <span><strong>Preparing your new photograph…</strong>
+              <small>Reading its size and getting the sky detector ready.</small></span>
+          </div>}
+          <small>{photo?'Your photo and choices remain on this device for up to 30 days, unless you clear the draft. Other users of this browser may see them.':'JPG, PNG or WebP · up to 10 MB · Your image stays on your device during sky detection.'}</small>
           {error&&<p className="at-error" role="alert">{error}</p>}
         </div>
         <div className={`at-welcome-art ${dragging?'is-dragging':''}`}
           onDragOver={event=>{event.preventDefault();setDragging(true)}}
           onDragLeave={()=>setDragging(false)} onDrop={onDrop}>
           <div className="at-orbit-ring" aria-hidden="true"><i/><i/></div>
-          <div className="at-sample-frame" aria-hidden="true">
-            <div className="at-sample-sky"><span>✦</span><span>·</span><span>✧</span><span>·</span></div>
-            <div className="at-sample-landscape"/>
-            <span className="at-sample-signature">A NIGHT TO REMEMBER</span>
+          <div className={`at-sample-frame ${photoUrl?'at-existing-photo':''}`} aria-hidden="true">
+            {photoUrl?<img src={photoUrl} alt=""/>:<>
+              <div className="at-sample-sky"><span>✦</span><span>·</span><span>✧</span><span>·</span></div>
+              <div className="at-sample-landscape"/>
+            </>}
+            <span className="at-sample-signature">{photoUrl?'CURRENT PHOTOGRAPH':'A NIGHT TO REMEMBER'}</span>
           </div>
           <button type="button" onClick={()=>upload.current?.click()}>
-            <span>＋</span> {dragging?'Drop your photograph here':'Or drop your image here'}
+            <span>＋</span> {dragging?'Drop your photograph here':photo?'Change this photograph':'Or drop your image here'}
           </button>
         </div>
       </section>}
 
-      {(stage==='detecting'||stage==='calculating')&&<section className="at-quiet-stage at-appear">
+      {(stage==='detecting'||stage==='calculating')&&<section className={`at-quiet-stage at-appear ${dragging?'is-dragging':''}`}
+        onDragOver={event=>{if(stage==='detecting'){event.preventDefault();setDragging(true)}}}
+        onDragLeave={()=>setDragging(false)} onDrop={event=>{if(stage==='detecting')onDrop(event)}}>
         <WizardLoader kind={stage} progress={progress}/>
+        {stage==='detecting'&&<div className="at-loading-change">
+          <button type="button" className="at-outline" onClick={openPhotoReplacement}>
+            ⇄ Replace this photo now
+          </button>
+          <span>Or drop a different picture here — you don't have to wait.</span>
+        </div>}
       </section>}
 
       {stage==='choice'&&<section className="at-atelier-stage at-appear">
         <div className="at-stage-intro">
-          <span className="at-kicker">CHAPTER 01 / YOUR PHOTOGRAPH</span>
+          <span className="at-kicker">CHAPTER 02 / THE HORIZON</span>
           <h1>Where should<br/><em>your stars live?</em></h1>
           <p>We’ve examined your photograph for open sky. Now choose how it should meet the night you remember.</p>
         </div>
         <div className="at-choice-layout">
-          <div className="at-detection-panel">
+          <div className={`at-detection-panel ${dragging?'is-dragging':''}`}
+            onDragOver={event=>{event.preventDefault();setDragging(true)}}
+            onDragLeave={()=>setDragging(false)} onDrop={onDrop}>
             <div className="at-panel-heading"><strong>YOUR PHOTOGRAPH</strong>
-              <span>{detected&&detected.skyPercent>=3?'AI HORIZON FOUND':'REVIEW NEEDED'}</span></div>
+              <span role="status">{detectorError?'DETECTION UNAVAILABLE'
+                :detected&&detected.skyPercent>=3?'AI HORIZON FOUND'
+                :savedDesign&&!detected?'SAVED COMPOSITION'
+                :'NO CLEAR SKY DETECTED'}</span></div>
             <div className="at-detection-image">
               {photoUrl&&<img src={showMask&&overlayUrl?overlayUrl:photoUrl}
                 alt={showMask&&overlayUrl?'Cyan overlay shows the sky the AI found in your photograph':'Your original photograph'}/>}
@@ -514,13 +773,12 @@ export function ExperiencePage() {
             <div className="at-detection-foot">
               <label><input type="checkbox" checked={showMask} onChange={event=>setShowMask(event.target.checked)}/>
                 Show detected sky</label>
-              <button type="button" onClick={()=>{if(photoUrl)void runDetection(photoUrl)}}>↻ Run detection again</button>
+              <button type="button" onClick={()=>{if(photoUrl)void runDetection(photoUrl)}}>↻ Detect again</button>
             </div>
-            <p className={detected&&detected.skyPercent>=3?'at-detection-success':'at-detection-note'} role="status">
-              {detectorError?'The AI detector was unavailable: '+detectorError+' You can still choose a separate sky or clean up manually.'
-                :detected&&detected.skyPercent>=3?`Found approximately ${detected.skyPercent}% visible sky. You can fine-tune every edge next.`
-                :'No clear sky was recognized. Choose a separate sky, or draw your own horizon in the editor.'}
-            </p>
+            <button type="button" className="at-detection-change-photo"
+              onClick={openPhotoReplacement} aria-label="Change photograph">
+              <span aria-hidden="true">⇄</span> Change photograph <span aria-hidden="true">↗</span>
+            </button>
           </div>
           <div className="at-decision">
             <div className="at-decision-eyebrow">CHOOSE YOUR COMPOSITION</div>
@@ -595,7 +853,10 @@ export function ExperiencePage() {
                     setCandidates([]);setSelected(null)}}
                   onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();void findPlace()}}}/>
                 <button type="button" onClick={()=>void findPlace()} disabled={isSearching}>
-                  {isSearching?'Searching…':'Find places'}</button>
+                  <span className="at-search-button-content">
+                {isSearching&&<span className="at-search-spinner" aria-hidden="true"/>}
+                {isSearching?'Searching the sky map…':'Find places'}
+              </span></button>
               </div>
               <p id="at-location-instructions" className="at-place-instructions">
                 <span className={selected?'is-complete':''}>1. Search for your place</span>
@@ -603,9 +864,10 @@ export function ExperiencePage() {
                   2. <strong>Select the matching location</strong> from the list
                 </span>
               </p>
-              {isSearching&&<p className="at-place-searching" role="status">
-                Finding possible locations…
-              </p>}
+              {isSearching&&<div className="at-search-pending" role="status" aria-live="polite">
+                <span className="at-search-pending-title">✦ Searching for matching places…</span>
+                <div className="at-place-skeleton" aria-hidden="true"><i/><i/><i/></div>
+              </div>}
               {candidates.length>0&&<section className="at-place-results-panel"
                 aria-label="Choose a matching search result">
                 <div className="at-place-results-header" role="status" aria-live="polite">
@@ -707,7 +969,7 @@ export function ExperiencePage() {
               <button type="button" onClick={editMoment}>✎ Change date or location</button>
               <button type="button" onClick={()=>setStage('choice')}>✎ Change photo composition</button>
               {placement==='within'&&<button type="button" onClick={()=>setStage('refine')}>✎ Refine the horizon again</button>}
-              <button type="button" onClick={()=>upload.current?.click()}>＋ Choose another photograph</button>
+              <button type="button" onClick={openPhotoReplacement}>＋ Choose another photograph</button>
             </div>
           </div>
         </div>
@@ -849,10 +1111,12 @@ export function ExperiencePage() {
                 <p>Not an Etsy order or payment. Your original photo and polished foreground
                   are stored privately so you can return to this exact design.</p>
                 <button type="button" className="at-outline" onClick={()=>
-                  void navigator.clipboard.writeText(privateDesignLink(window.location.href,savedDesign.receipt))
-                    .catch(()=>setSaveError('Copy failed. You can copy this page’s address from the browser.'))}>
-                  Copy private reopening link ↗
+                  void copyWithFeedback(privateDesignLink(window.location.href,savedDesign.receipt),'link')}>
+                  {copied==='link'?'✓ Private link copied!':'Copy private reopening link ↗'}
                 </button>
+                {copied==='link'&&<span className="at-copy-confirmation" role="status">
+                  <span aria-hidden="true">✓</span> Link copied — ready to paste securely.
+                </span>}
                 <small>Keep this link private. Anyone with the full link can reopen the design.
                   Changing your choices and saving again creates a new Design ID.</small>
               </div>}
@@ -874,10 +1138,13 @@ export function ExperiencePage() {
                 {currentOrder.prepared&&<button type="button"
                   onClick={()=>downloadFile(currentOrder.prepared!,'prepared-foreground.png')}>
                   ↓ Download polished foreground (PNG)</button>}
-                <button type="button" onClick={()=>{
-                  void navigator.clipboard.writeText(orderPersonalization(currentOrder.manifest))
-                    .catch(()=>setOrderError('Copy failed. Download the order sheet instead.'))
-                }}>Copy Etsy personalization details</button>
+                <button type="button" onClick={()=>
+                  void copyWithFeedback(orderPersonalization(currentOrder.manifest),'order')}>
+                  {copied==='order'?'✓ Etsy details copied!':'Copy Etsy personalization details'}
+                </button>
+                {copied==='order'&&<span className="at-copy-confirmation" role="status">
+                  <span aria-hidden="true">✓</span> Personalization text copied.
+                </span>}
                 {verifiedEtsyLink?<a className="at-etsy-checkout" href={verifiedEtsyLink}
                   target="_blank" rel="noopener noreferrer">
                   Continue to Etsy checkout ↗</a>
@@ -897,6 +1164,7 @@ export function ExperiencePage() {
     {stage==='refine'&&photo&&<SkyMaskEditor key={photoUrl} file={photo}
       initialMask={savedAlpha} detectedMask={detected}
       showPolishGuide={showPolishGuide} onDismissPolishGuide={()=>setShowPolishGuide(false)}
+      onChapterNavigate={goToChapter} chapterNotice={chapterNotice}
       onApply={saveMask} onClose={()=>setStage('choice')}/>}
     <input ref={upload} type="file" accept="image/jpeg,image/png,image/webp"
       className="at-hidden-file" aria-label="Upload your photograph"
