@@ -3,6 +3,8 @@ import './ProductionDashboardPage.css'
 import { MaterialsPanel } from './MaterialsPanel'
 import { ProcurementPanel } from './ProcurementPanel'
 import { ManualAmazonPurchasingPanel } from './ManualAmazonPurchasingPanel'
+import type { MaterialSnapshot } from '../manualAmazonQueue'
+import { materialsForProductionJob } from '../orderFulfillment'
 
 type Receipt = {
   shop_id: number
@@ -111,6 +113,8 @@ export function ProductionDashboardPage() {
   const [message, setMessage] = useState('')
   const [failure, setFailure] = useState('')
   const [manualQueueVersion,setManualQueueVersion]=useState(0)
+  const [materials,setMaterials]=useState<MaterialSnapshot|null>(null)
+  const [materialsError,setMaterialsError]=useState('')
   const rows = useMemo(() => {
     if (!data) return []
     return data.receipts.map(receipt => ({
@@ -125,6 +129,12 @@ export function ProductionDashboardPage() {
     })
   }, [data, filter])
   const selectedRow = rows.find(x => x.receipt.receipt_id === selected)
+  const paidDesignIds = useMemo(()=>{
+    if(!data)return new Set<string>()
+    const paid=new Set(data.receipts.filter(r=>receiptStatus(r)==='Paid').map(r=>r.receipt_id))
+    return new Set(data.items.filter(item=>paid.has(item.receipt_id)&&
+      item.match_state==='matched'&&item.design_id).map(item=>item.design_id!))
+  },[data])
   const paidCount = data?.receipts.filter(r => receiptStatus(r) === 'Paid').length ?? 0
   const reviewCount = data?.receipts.filter(r =>
     ['Review design','Refund review','Not paid','On hold'].includes(
@@ -141,6 +151,14 @@ export function ProductionDashboardPage() {
     } catch {
       setSavedDesigns([])
       setSavedDesignsError('Saved designs could not be loaded right now.')
+    }
+    // Keep the order register available even when the inventory service is down.
+    try {
+      setMaterials(await api<MaterialSnapshot>('/api/admin/materials', adminKey))
+      setMaterialsError('')
+    } catch {
+      setMaterials(null)
+      setMaterialsError('Materials are temporarily unavailable. Verify parts in M3 before purchasing.')
     }
   }
   async function login(event: FormEvent) {
@@ -205,7 +223,7 @@ export function ProductionDashboardPage() {
           <p className="production-subtitle">Verified Etsy orders, custom designs and manufacturing readiness.</p>
         </div>
         {key && <button type="button" className="production-ghost" onClick={() => {
-          setKey(''); setData(null); setSavedDesigns([]); setSelected(null);
+          setKey(''); setData(null); setSavedDesigns([]); setMaterials(null); setSelected(null);
           setFailure(''); setSavedDesignsError(''); setMessage('')
         }}>Lock studio</button>}
       </header>
@@ -246,7 +264,9 @@ export function ProductionDashboardPage() {
                 <td>{dateLabel(item.createdAtUtc)}</td>
                 <td>{item.layout==='within'?'Stars woven into photo':item.layout==='above'?'Sky above photo':'Unknown'}</td>
                 <td>{item.finish}</td>
-                <td><span className="production-status">Saved · unpaid</span></td>
+                <td><span className="production-status">
+                  {paidDesignIds.has(item.designId)?'Paid Etsy order matched':'Saved · no matched payment'}
+                </span></td>
               </tr>)}</tbody>
             </table>
           </div>
@@ -310,17 +330,51 @@ export function ProductionDashboardPage() {
               <h2>Etsy #{selectedRow.receipt.receipt_id}</h2></div>
             <button type="button" className="production-ghost" onClick={() => setSelected(null)}>Close ×</button>
           </div>
+          {materialsError&&<p role="alert" className="production-error">{materialsError}</p>}
           {selectedRow.items.map(item => {
             const job = selectedRow.jobs.find(x => x.transaction_id === item.transaction_id)
-            return <article key={item.transaction_id} className="production-item">
+            const design = savedDesigns.find(x=>x.designId===item.design_id)
+            const eligible = receiptStatus(selectedRow.receipt)==='Paid' &&
+              item.match_state==='matched'&&item.quantity===1&&Boolean(job)&&
+              job?.status!=='hold'&&job?.status!=='complete'
+            const bom=eligible?materialsForProductionJob(materials,
+              selectedRow.receipt.shop_id,selectedRow.receipt.receipt_id,item.transaction_id):null
+            return <article key={item.transaction_id} className="production-item production-item-with-parts">
               <div><h3>{item.title}</h3>
                 <p>Transaction #{item.transaction_id} · Quantity {item.quantity}</p>
                 <p>Design: <strong>{item.design_id ?? 'No verified design linked'}</strong></p>
+                {design&&<p className="production-design-spec">
+                  Frame: <strong>{design.finish==='ebony'?'Matte black':design.finish==='walnut'?'Two-tone walnut':design.finish}</strong>
+                  {' · '}{design.layout==='within'?'Stars within photograph':'Sky above photograph'}
+                </p>}
               </div>
               <div><p>Design match: <strong>{item.match_state.replace(/_/g, ' ')}</strong></p>
                 <p>Job: <strong>{job?.status.replace(/_/g, ' ') ?? 'Not created'}</strong></p>
-                {job && <small>Pending your manual production review. No parts are ordered automatically.</small>}
+                {!eligible&&<small>Do not purchase materials for this item until it has
+                  a verified paid, matched, active production job.</small>}
+                {eligible&&<small>Match the saved frame finish to the variation the buyer
+                  selected on Etsy before preparing this physical order.</small>}
               </div>
+              {eligible&&<div className="production-job-bom">
+                <h4>Materials for this Etsy order</h4>
+                {!bom?.prepared
+                  ?<p>{bom?.note??'Load M3 inventory before preparing a shopping list.'}
+                    {' '}<a href="#materials-planning">Prepare a matching frame BOM in M3</a></p>
+                  :<>
+                    <p>{bom.note}</p>
+                    <div className="production-table-scroll"><table className="production-table">
+                      <thead><tr><th>PART</th><th>JOB REQUIREMENT</th><th>GLOBAL STOCK</th><th>ON ORDER</th></tr></thead>
+                      <tbody>{bom.rows.map(row=><tr key={row.sku}>
+                        <td><strong>{row.name}</strong><small>{row.sku}</small></td>
+                        <td>{row.required} {row.unit}</td>
+                        <td>{row.physicalOnHand} {row.unit}</td>
+                        <td>{row.pendingFromSuppliers} {row.unit}</td>
+                      </tr>)}</tbody>
+                    </table></div>
+                    <p><a href="#manual-amazon-purchasing">
+                      View combined Amazon shopping checklist and manually record orders</a></p>
+                  </>}
+              </div>}
             </article>
           })}
           {!selectedRow.items.length && <p>There are no Etsy transactions saved for this receipt yet.</p>}
