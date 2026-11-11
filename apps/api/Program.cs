@@ -179,6 +179,7 @@ builder.Services.AddHttpClient<EtsyProductionRepository>(client =>
 builder.Services.AddTransient<EtsyProductionService>();
 builder.Services.AddHttpClient<MaterialPlanningRepository>(client=>client.Timeout=TimeSpan.FromSeconds(30));
 builder.Services.AddHttpClient<ProcurementRepository>(client=>client.Timeout=TimeSpan.FromSeconds(20));
+builder.Services.AddHttpClient<M6SimulationRepository>(client=>client.Timeout=TimeSpan.FromSeconds(20));
 // Amazon Business Product Search is strictly read-only; endpoints/hostnames are fixed.
 // Azure secrets stay exclusively server-side; no browser tokens or buyer email.
 builder.Services.AddSingleton(
@@ -226,6 +227,7 @@ app.MapEtsyConnectionEndpoints();
 app.MapEtsyProductionEndpoints();
 app.MapMaterialPlanningEndpoints();
 app.MapProcurementEndpoints();
+app.MapM6SimulationEndpoints();
 app.MapGet("/api/storefront/frame-prices",async (HttpContext ctx,FramePricingService service)=>{
     ctx.Response.Headers.CacheControl="no-store";
     return Results.Ok(await service.QuotesAsync(ctx.RequestAborted));
