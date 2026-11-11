@@ -35,7 +35,8 @@
     "test:local-draft": "node --experimental-strip-types --test tests/local-workshop-draft.test.mjs",
     "test:pricing": "node --experimental-strip-types --test tests/storefront-pricing.test.mjs",
     "test:studio-preservation": "node --test tests/studio-preservation.test.mjs",
-    "test:manual-amazon": "node --experimental-strip-types --test tests/manual-amazon-queue.test.mjs"
+    "test:manual-amazon": "node --experimental-strip-types --test tests/manual-amazon-queue.test.mjs",
+    "test:etsy-checkout": "node --experimental-strip-types --test tests/etsy-checkout-journey.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

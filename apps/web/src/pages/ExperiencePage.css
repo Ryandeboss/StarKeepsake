@@ -691,3 +691,13 @@
 .at-frame-quote>span{font-size:12px;line-height:1.55;color:#cedbda;}
 .at-frame-quote button{justify-self:start;border:0;background:transparent;color:#f0cc91;
   font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:5px 0;}
+
+/* Etsy handoff: visible saved reference + finishing instructions, never a private key. */
+.at-etsy-order-steps{margin:4px 0 9px;padding:15px 13px 15px 33px;
+  border:1px solid #48656b;border-radius:9px;background:#0d2731;
+  color:#d5e6df;font-size:11px;line-height:1.7}
+.at-etsy-order-steps li{margin:4px 0;padding-left:3px}
+.at-etsy-order-steps strong{color:#f5dbad}
+.at-ready-packet .at-etsy-checkout{padding:15px 13px;border-radius:10px;
+  font-size:13px;font-weight:700;box-shadow:0 8px 22px #0004}
+.at-ready-packet .at-order-reference{overflow-wrap:anywhere}

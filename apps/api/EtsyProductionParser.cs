@@ -62,17 +62,28 @@ public static class EtsyProductionParser
         var personalized = choices.Value.EnumerateArray().Where(v =>
             Long(v, "property_id") == 54).ToArray();
         if (personalized.Length == 0) return ("missing", null);
-        if (personalized.Length > 1) return ("ambiguous", null);
 
-        var raw = String(personalized[0], "formatted_value");
-        if (string.IsNullOrWhiteSpace(raw) || raw.Length > 128 ||
-            raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            return ("invalid", null);
-        var match = PersonalizationPattern.Match(raw);
-        if (!match.Success) return ("invalid", null);
-
-        var id = match.Groups[1].Value.ToUpperInvariant();
-        return DesignIdPattern.IsMatch(id) ? ("candidate", id) : ("invalid", null);
+        // Etsy's 2026 Custom options can contain separate upload, inscription,
+        // and Design ID fields, all identified by property_id 54. Find exactly
+        // one *standalone* SK-ID value; unrelated photo URLs must not invalidate
+        // that ID. Never infer an ID from arbitrary text or a photo URL.
+        var candidates = new List<string>();
+        foreach (var value in personalized)
+        {
+            var raw = String(value, "formatted_value");
+            if (string.IsNullOrWhiteSpace(raw) || raw.Length > 128 ||
+                raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                raw.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var match = PersonalizationPattern.Match(raw);
+            if (match.Success)
+            {
+                var id = match.Groups[1].Value.ToUpperInvariant();
+                if (DesignIdPattern.IsMatch(id)) candidates.Add(id);
+            }
+        }
+        if (candidates.Count > 1) return ("ambiguous", null);
+        return candidates.Count == 1 ? ("candidate", candidates[0]) : ("invalid", null);
     }
 
     public static object ParseReceipt(long shopId, long receiptId, JsonElement receipt)
