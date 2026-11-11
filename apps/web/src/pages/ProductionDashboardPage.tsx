@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import './ProductionDashboardPage.css'
 import { MaterialsPanel } from './MaterialsPanel'
 import { ProcurementPanel } from './ProcurementPanel'
+import { ManualAmazonPurchasingPanel } from './ManualAmazonPurchasingPanel'
 
 type Receipt = {
   shop_id: number
@@ -109,6 +110,7 @@ export function ProductionDashboardPage() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [failure, setFailure] = useState('')
+  const [manualQueueVersion,setManualQueueVersion]=useState(0)
   const rows = useMemo(() => {
     if (!data) return []
     return data.receipts.map(receipt => ({
@@ -164,6 +166,7 @@ export function ProductionDashboardPage() {
           ' items need review. No manufacturing or purchase was triggered.')
       }
       await load(key)
+      setManualQueueVersion(v=>v+1)
     } catch (error) {
       const text = error instanceof Error ? error.message : 'Request failed.'
       if (text.includes('admin key')) { setKey(''); setData(null) }
@@ -322,6 +325,7 @@ export function ProductionDashboardPage() {
           })}
           {!selectedRow.items.length && <p>There are no Etsy transactions saved for this receipt yet.</p>}
         </section>}
+        <ManualAmazonPurchasingPanel adminKey={key} refreshVersion={manualQueueVersion} />
         <MaterialsPanel adminKey={key} />
         <ProcurementPanel adminKey={key} />
         <p className="production-footnote">This studio never places purchases, changes Etsy orders,

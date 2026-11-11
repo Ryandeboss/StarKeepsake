@@ -44,6 +44,7 @@ jobs:
       - run: npm run test:local-draft
       - run: npm run test:pricing
       - run: npm run test:studio-preservation
+      - run: npm run test:manual-amazon
       - run: npm run test:showroom
       - run: npm run test:sky-dome
       - run: npm run test:photographic
