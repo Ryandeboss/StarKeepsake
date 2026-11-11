@@ -164,7 +164,7 @@ public static class AmazonCatalogParser
                     }
                     if(condition!="NEW")flags.Add("CONDITION_REVIEW");
                     if(availability is null||
-                        !availability.Contains("In Stock",StringComparison.OrdinalIgnoreCase))
+                        !availability.TrimStart().StartsWith("In Stock",StringComparison.OrdinalIgnoreCase))
                         flags.Add("STOCK_NOT_CONFIRMED");
                     var restrictions=P(offer,"buyingRestrictions");
                     if(restrictions.ValueKind!=JsonValueKind.Array||
