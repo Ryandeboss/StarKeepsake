@@ -115,8 +115,10 @@ sealed class FixtureHandler:HttpMessageHandler
             var form=await request.Content!.ReadAsStringAsync(cancellationToken);
             if(!form.Contains("grant_type=refresh_token",StringComparison.Ordinal))
                 throw new Exception("Wrong token grant");
-            return Reply("""{"access_token":"test-token-at-least-16chars",
-              "expires_in":3600,"token_type":"bearer"}""");
+            return Reply("""
+              {"access_token":"test-token-at-least-16chars",
+                "expires_in":3600,"token_type":"bearer"}
+              """);
         }
         if(path=="/products/2020-08-26/products/getProductsByAsins")
         {
@@ -128,11 +130,13 @@ sealed class FixtureHandler:HttpMessageHandler
             if(!body.Contains("B001ABC123",StringComparison.Ordinal)||
                !body.Contains("\"OFFERS\"",StringComparison.Ordinal))
                 throw new Exception("Request must contain mapped ASIN and OFFERS facet");
-            return Reply("""{"products":[{"asin":"B001ABC123","title":"Warm White Micro LED",
-              "includedDataTypes":{"OFFERS":[{"offerId":"offer-example",
-              "merchant":{"name":"Amazon"},"availability":"In Stock.",
-              "productCondition":"NEW","buyingRestrictions":[],
-              "price":{"value":{"amount":39.77,"currencyCode":"USD"}}}]}}]}""");
+            return Reply("""
+              {"products":[{"asin":"B001ABC123","title":"Warm White Micro LED",
+                "includedDataTypes":{"OFFERS":[{"offerId":"offer-example",
+                "merchant":{"name":"Amazon"},"availability":"In Stock.",
+                "productCondition":"NEW","buyingRestrictions":[],
+                "price":{"value":{"amount":39.77,"currencyCode":"USD"}}}]}}]}
+              """);
         }
         throw new Exception("Unexpected outbound request: "+path);
     }
