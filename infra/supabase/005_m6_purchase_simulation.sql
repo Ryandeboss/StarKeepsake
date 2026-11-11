@@ -51,7 +51,7 @@ CREATE FUNCTION public.m6_save_purchase_simulation(
  p_blockers jsonb
 ) RETURNS jsonb
 LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
-DECLARE existing public.m6_purchase_simulations%ROWTYPE; n integer;
+DECLARE existing public.m6_purchase_simulations%ROWTYPE; n integer; line_total bigint; unique_skus integer;
 BEGIN
  IF p_id IS NULL OR p_shop_id IS NULL OR p_shop_id<=0
   OR p_fingerprint IS NULL OR p_fingerprint !~ '^[a-f0-9]{64}$'
@@ -72,6 +72,15 @@ BEGIN
    OR (x->>'estimatedCents') IS NULL OR
      (x->>'estimatedCents') !~ '^[1-9][0-9]{0,9}$';
  IF n>0 THEN RAISE EXCEPTION 'Invalid line item snapshot'; END IF;
+ SELECT coalesce(sum((x->>'estimatedCents')::bigint),0),
+   count(DISTINCT x->>'sku') INTO line_total,unique_skus
+ FROM jsonb_array_elements(p_snapshot) AS x;
+ IF line_total<>p_estimated_cents
+    OR unique_skus<>jsonb_array_length(p_snapshot)
+ THEN RAISE EXCEPTION 'Simulation subtotal mismatch or duplicate SKU'; END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_snapshot) AS x
+    WHERE (x->>'packs')::numeric>10000)
+ THEN RAISE EXCEPTION 'Simulation packs exceed safety bound'; END IF;
  -- Serialize retries and concurrent unique-fingerprint inserts.
  PERFORM pg_advisory_xact_lock(hashtext('starkeepsake-m6-simulation-intents'));
  SELECT * INTO existing FROM public.m6_purchase_simulations
