@@ -129,6 +129,12 @@ export function ProductionDashboardPage() {
     })
   }, [data, filter])
   const selectedRow = rows.find(x => x.receipt.receipt_id === selected)
+  const paidDesignIds = useMemo(()=>{
+    if(!data)return new Set<string>()
+    const paid=new Set(data.receipts.filter(r=>receiptStatus(r)==='Paid').map(r=>r.receipt_id))
+    return new Set(data.items.filter(item=>paid.has(item.receipt_id)&&
+      item.match_state==='matched'&&item.design_id).map(item=>item.design_id!))
+  },[data])
   const paidCount = data?.receipts.filter(r => receiptStatus(r) === 'Paid').length ?? 0
   const reviewCount = data?.receipts.filter(r =>
     ['Review design','Refund review','Not paid','On hold'].includes(
@@ -258,7 +264,9 @@ export function ProductionDashboardPage() {
                 <td>{dateLabel(item.createdAtUtc)}</td>
                 <td>{item.layout==='within'?'Stars woven into photo':item.layout==='above'?'Sky above photo':'Unknown'}</td>
                 <td>{item.finish}</td>
-                <td><span className="production-status">Saved · unpaid</span></td>
+                <td><span className="production-status">
+                  {paidDesignIds.has(item.designId)?'Paid Etsy order matched':'Saved · no matched payment'}
+                </span></td>
               </tr>)}</tbody>
             </table>
           </div>
