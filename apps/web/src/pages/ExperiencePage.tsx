@@ -22,6 +22,8 @@ import { createCustomerPacket, downloadFile, orderPersonalization } from '../cus
 import type { OrderPreferences } from '../customerOrder'
 import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
 import type { SavedDesignReceipt } from '../savedDesign'
+import { PREVIEW_FRAME_QUOTES,frameQuoteFor,loadFramePrices,moneyUsd } from '../storefrontPricing'
+import type { FrameQuote } from '../storefrontPricing'
 import './ExperiencePage.css'
 
 type Stage = 'welcome'|'detecting'|'choice'|'refine'|'moment'|'calculating'|'preview'|'home'
@@ -95,6 +97,9 @@ export function ExperiencePage() {
   const [skyTone,setSkyTone]=useState<'natural'|'indigo'|'teal'>('natural')
   const [lightsOn,setLightsOn]=useState(true)
   const [finish,setFinish]=useState<'walnut'|'oak'|'ebony'>('walnut')
+  const [frameQuotes,setFrameQuotes]=useState<FrameQuote[]>([...PREVIEW_FRAME_QUOTES])
+  const [priceNotice,setPriceNotice]=useState('')
+  const [pricesLoading,setPricesLoading]=useState(false)
   const [room,setRoom]=useState<RoomScene>('warm')
   const [inscription,setInscription]=useState('')
   const [orderBusy,setOrderBusy]=useState(false)
@@ -124,6 +129,23 @@ export function ExperiencePage() {
     if(overlayObject.current) URL.revokeObjectURL(overlayObject.current)
     if(cutoutObject.current) URL.revokeObjectURL(cutoutObject.current)
   },[])
+  useEffect(()=>{
+    if(stage!=='home')return
+    let alive=true
+    const refresh=()=>{
+      void loadFramePrices().then(prices=>{if(alive)setFrameQuotes(prices)})
+        .catch(()=>{if(alive)setPriceNotice('Supplier cost catalog unavailable; showing estimates.')})
+    }
+    refresh()
+    const timer=window.setInterval(refresh,180000)
+    return()=>{alive=false;window.clearInterval(timer)}
+  },[stage])
+  async function refreshFramePrices(){
+    setPricesLoading(true)
+    try{setFrameQuotes(await loadFramePrices());setPriceNotice('Estimates refreshed.')}
+    catch{setPriceNotice('Supplier cost catalog unavailable; showing estimates.')}
+    finally{setPricesLoading(false)}
+  }
   // Opening a private design link does not require an account. A public Etsy Design ID
   // alone is insufficient: only the 256-bit secret in the URL fragment grants read access.
   useEffect(()=>{
@@ -361,6 +383,7 @@ export function ExperiencePage() {
   const atIndex=stage==='welcome'?0:stage==='detecting'||stage==='choice'||stage==='refine'?1:
     stage==='moment'||stage==='calculating'?2:stage==='home'?4:3
   const chosenName=selected?.displayName||'Your special place'
+  const frameQuote=frameQuoteFor(frameQuotes,finish)
   const orderPreferences:OrderPreferences={
     layout:placement,heading,pitch,fov,skyHeight:skyPercent,
     photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
@@ -370,7 +393,8 @@ export function ExperiencePage() {
   const savedCurrent=Boolean(savedDesign&&savedDesign.signature===snapshotSignature)
   const orderKey=JSON.stringify({moment:design.moment,stars:design.stars,
     preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl,
-    storedId:savedCurrent?savedDesign?.receipt.designId:null})
+    storedId:savedCurrent?savedDesign?.receipt.designId:null,
+    priceRevision:frameQuote?.revision,priceCents:frameQuote?.priceCents})
   const currentOrder=preparedOrder?.key===orderKey?preparedOrder.packet:null
   const etsyLink=(import.meta.env.VITE_ETSY_LISTING_URL as string|undefined)?.trim()
   const verifiedEtsyLink=etsyLink&&/^https:\/\/(www\.)?etsy\.com\/(listing|shop)\//.test(etsyLink)?etsyLink:null
@@ -411,7 +435,7 @@ export function ExperiencePage() {
     setOrderBusy(true);setOrderError('')
     try{
       const packet=await createCustomerPacket({design,prefs:preferences,
-        photo,photoUrl,cutoutUrl,
+        photo,photoUrl,cutoutUrl,quote:frameQuote,
         savedDesignId:savedCurrent?savedDesign?.receipt.designId:undefined})
       setPreparedOrder({key,packet})
     }catch(cause){
@@ -747,15 +771,18 @@ export function ExperiencePage() {
               </fieldset>
               <fieldset className="at-home-choice">
                 <legend><span>02</span> Find your frame finish</legend>
-                <div className="at-home-wood-options">{WOOD_OPTIONS.map(choice=>
+                <div className="at-home-wood-options">{WOOD_OPTIONS.filter(choice=>choice.id!=='oak'||finish==='oak').map(choice=>
                   <button type="button" key={choice.id} aria-pressed={finish===choice.id}
                     onClick={()=>{setFinish(choice.id);setRoom(choice.scene)}}>
                     <i className={`at-home-wood-swatch at-swatch-${choice.id}`} aria-hidden="true"/>
-                    <strong>{choice.label}</strong>
+                    <strong>{choice.id==='walnut'?'Two-tone walnut':choice.id==='ebony'?'Matte black':'Natural oak (legacy)'}</strong>
+                    <span className="at-frame-option-depth">{choice.id==='walnut'?'2.5″ deep':choice.id==='ebony'?'3.5″ deep':'Legacy design'}</span>
+                    <span className="at-frame-option-price">{frameQuoteFor(frameQuotes,choice.id)?
+                      moneyUsd(frameQuoteFor(frameQuotes,choice.id)!.priceCents):'Price on request'}</span>
                   </button>)}</div>
-                <small>Choose a finish to see its photographed studio frame.
-                  Room scenes retain the frame color shown in each original image.
-                  Actual materials and stock will be confirmed after prototyping.</small>
+                <small>11×14 illuminated luster-photo frame. Both finishes include individually
+                  twinkling stars and concealed warm-white accent lighting. Room mockups are
+                  illustrative; the frame pictured in each room keeps its original finish.</small>
               </fieldset>
               <div className="at-home-lighting">
                 <div><span className="at-home-control-kicker">03 / LIGHT THE STARS</span>
@@ -782,7 +809,7 @@ export function ExperiencePage() {
                 <div><span>THE PLACE</span><strong>{chosenName}</strong></div>
                 <div><span>YOUR VIEW</span><strong>{Math.round(heading)}° direction · {Math.round(pitch)}° upward</strong></div>
                 <div><span>FRAME CONCEPT</span>
-                  <strong>{WOOD_OPTIONS.find(choice=>choice.id===finish)?.label}
+                  <strong>{finish==='walnut'?'Two-tone walnut':finish==='ebony'?'Matte black':WOOD_OPTIONS.find(choice=>choice.id===finish)?.label}
                     {' · '}{design.framePresetId==='auto'?'Custom proportions':design.framePresetId+' in'}</strong></div>
               </div>
               <button type="button" className="at-home-back"
@@ -796,6 +823,18 @@ export function ExperiencePage() {
               <p>Your finished design can become a one-of-a-kind keepsake.
                 Prepare the original photo, polished foreground and your personalized
                 design sheet for an eventual Etsy order.</p>
+              <div className="at-frame-quote" aria-live="polite">
+                <small>11×14 PRICE ESTIMATE · {frameQuote?.mode==='catalog'?'CURRENT MATERIAL CATALOG':'PLANNING'}</small>
+                <strong>{frameQuote?moneyUsd(frameQuote.priceCents):'Price on request'}</strong>
+                <span>{frameQuote?.mode==='catalog'
+                  ?'Based on workshop material costs, labor, overhead and pricing policy.'
+                  :'Illustrative retail price until supplier-cost data is approved.'}</span>
+                <button type="button" disabled={pricesLoading} onClick={()=>void refreshFramePrices()}>
+                  {pricesLoading?'Checking prices…':'↻ Refresh estimate'}</button>
+                {priceNotice&&<small role="status">{priceNotice}</small>}
+                <small>Etsy sets the actual checkout price. This estimate is not a charge,
+                  and does not automatically update an Etsy listing.</small>
+              </div>
               <label htmlFor="at-order-inscription">A short inscription (optional)</label>
               <input id="at-order-inscription" type="text" maxLength={65}
                 value={inscription} placeholder="e.g. The night our story began"

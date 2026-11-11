@@ -427,6 +427,16 @@
 .at-home-right .at-customer-order h2{font-size:32px;}
 .at-home-right .at-customer-order .at-primary{justify-content:center;}
 .at-home-right .at-customer-order .at-ready-packet{margin-top:8px;}
+.at-home-wood-options{grid-template-columns:repeat(2,minmax(0,1fr));}
+.at-frame-option-depth,.at-frame-option-price{display:block;font-size:11px;line-height:1.5;margin-top:5px;color:#a9bec3;}
+.at-frame-option-price{font:600 16px Georgia,serif;color:#edcf9b;}
+.at-frame-quote{margin:15px 0;padding:16px;border:1px solid #627b86;border-radius:12px;
+  background:linear-gradient(125deg,#173744,#0c2736);display:grid;gap:8px;}
+.at-frame-quote>small{font:10px ui-monospace,monospace;letter-spacing:.06em;color:#bcd0d1;line-height:1.5;}
+.at-frame-quote>strong{font:normal 32px Georgia,serif;color:#f7dfaf;}
+.at-frame-quote>span{font-size:12px;line-height:1.55;color:#cedbda;}
+.at-frame-quote button{justify-self:start;border:0;background:transparent;color:#f0cc91;
+  font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:5px 0;}
 @media(max-width:1080px){
   .at-home-layout{grid-template-columns:minmax(0,1fr);}
   .at-home-right{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
