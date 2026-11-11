@@ -1,0 +1,38 @@
+.materials-section{border:1px solid #35465a;border-radius:16px;background:#111c2ce8;padding:28px;margin:22px 0;color:#e8f0fa}
+.materials-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:24px}
+.materials-heading h2{font:400 32px Georgia,serif;margin:0 0 10px}
+.materials-heading p,.materials-explain{color:#aabbd0;font-size:13px;line-height:1.65}
+.materials-heading button,.materials-actions button,.materials-recipe-line button{border:1px solid #607086;border-radius:8px;padding:10px 14px;color:#dfebf6;background:#22324a}
+.materials-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:25px 0}
+.materials-metrics article{padding:16px;border:1px solid #344860;border-radius:12px;background:#142137;display:grid;gap:10px}
+.materials-metrics small{font-size:12px;color:#a4b6cc}
+.materials-metrics strong{font-size:27px}
+.materials-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:20px 0 28px;align-items:start}
+.materials-wide{grid-column:1/-1}
+.materials-form{border:1px solid #35465c;border-radius:13px;padding:21px;background:#152339;display:grid;gap:13px}
+.materials-form h3,.materials-section>h3{font:400 22px Georgia,serif;margin:0}
+.materials-form p{color:#afc0d1;font-size:12px;line-height:1.65;margin:0 0 5px}
+.materials-form label{display:grid;gap:6px;color:#bbcbe1;font-size:12px}
+.materials-form input,.materials-form select{box-sizing:border-box;width:100%;border:1px solid #53657a;border-radius:8px;background:#0d1828;color:#f3f6fc;padding:10px;font:inherit}
+.materials-form button.production-primary{justify-self:start;background:#e5c892;color:#152033;border:1px solid #e5c892;border-radius:8px;padding:10px 15px;font-weight:650}
+.materials-form button:disabled{opacity:.48}
+.materials-two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.materials-recipe-line{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:12px;align-items:end}
+.materials-actions{display:flex;gap:12px;flex-wrap:wrap}
+.materials-section>h3{margin:34px 0 12px}
+.materials-table-scroll{overflow:auto;width:100%;border:1px solid #35475d;border-radius:12px}
+.materials-table-scroll table{width:100%;min-width:700px;border-collapse:collapse;text-align:left}
+.materials-table-scroll th{font-size:10px;letter-spacing:.09em;color:#9aacc4;background:#102034;padding:14px}
+.materials-table-scroll td{font-size:12px;padding:15px;border-top:1px solid #34475a}
+.materials-table-scroll td strong,.materials-table-scroll td small{display:block}
+.materials-table-scroll td small{color:#99abc2;margin-top:5px}
+.materials-table-scroll a{color:#e5c892}
+.materials-empty{padding:22px;color:#a5b5c9;font-size:13px}
+.materials-snapshot{border-top:1px solid #35485b;padding:13px 0;display:grid;gap:5px}
+.materials-snapshot small{color:#8fa7c5}
+.materials-snapshot span{color:#e5cb9b}
+.materials-footnote{font-size:12px;color:#98aabc;line-height:1.7}
+.materials-error,.materials-success{border:1px solid #8c5964;background:#40252b;color:#ffdfe5;border-radius:8px;padding:13px}
+.materials-success{border-color:#4d7864;background:#263d34;color:#d8efe3}
+@media(max-width:850px){.materials-grid{grid-template-columns:1fr}.materials-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.materials-wide{grid-column:auto}.materials-heading{flex-direction:column}.materials-recipe-line{grid-template-columns:1fr 1fr}}
+@media(max-width:500px){.materials-section{padding:16px}.materials-two{grid-template-columns:1fr}.materials-recipe-line{grid-template-columns:1fr}.materials-metrics article{padding:12px}}

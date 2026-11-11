@@ -58,6 +58,7 @@ jobs:
       - run: dotnet run --project tests/DesignSave.Tests/DesignSave.Tests.csproj --configuration Release
       - run: dotnet run --project tests/EtsyProduction.Tests/EtsyProduction.Tests.csproj --configuration Release
       - run: dotnet run --project tests/EtsyOAuth.Tests/EtsyOAuth.Tests.csproj --configuration Release
+      - run: dotnet run --project tests/Materials.Tests/Materials.Tests.csproj --configuration Release
       - run: bash -n scripts/etsy/prepare-container-app.sh
 
   design-engine:
