@@ -34,7 +34,8 @@
     "test:chapter-nav": "node --experimental-strip-types --test tests/workshop-navigation.test.mjs",
     "test:local-draft": "node --experimental-strip-types --test tests/local-workshop-draft.test.mjs",
     "test:pricing": "node --experimental-strip-types --test tests/storefront-pricing.test.mjs",
-    "test:studio-preservation": "node --test tests/studio-preservation.test.mjs"
+    "test:studio-preservation": "node --test tests/studio-preservation.test.mjs",
+    "test:manual-amazon": "node --experimental-strip-types --test tests/manual-amazon-queue.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
