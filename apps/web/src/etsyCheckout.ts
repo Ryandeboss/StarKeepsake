@@ -43,8 +43,9 @@ export function canContinueToEtsy(input:{
   listing:EtsyListingChoice|null
 }):boolean{
   const {designSaved,savedDesignId,manifest,listing}=input
-  return designSaved && Boolean(savedDesignId&&isSavedDesignId(savedDesignId)) &&
-    manifest?.reference===savedDesignId &&
-    manifest.preferences.finish===listing?.finish &&
-    Boolean(listing?.url) && manifest.status==='UNPAID_PREVIEW'
+  if(!designSaved||!savedDesignId||!isSavedDesignId(savedDesignId)||
+    !manifest||!listing)return false
+  return manifest.reference===savedDesignId &&
+    manifest.preferences.finish===listing.finish &&
+    Boolean(listing.url) && manifest.status==='UNPAID_PREVIEW'
 }
