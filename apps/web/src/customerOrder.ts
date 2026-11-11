@@ -4,6 +4,7 @@ import { projectObserverStar } from './skyImmersiveData'
 import { observerPointInPanel } from './skyWorkshopMath'
 import { orderReference, makeOrderManifest, zipFiles } from './orderManifest'
 import type { OrderManifest, OrderPreferences } from './orderManifest'
+import type { FrameQuote } from './storefrontPricing'
 export type { OrderManifest, OrderPreferences } from './orderManifest'
 export { orderPersonalization } from './orderManifest'
 const encoder=new TextEncoder()
@@ -90,6 +91,7 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
 }
 export async function createCustomerPacket(input:{
   design:DesignSpec;prefs:OrderPreferences;photo:File;photoUrl:string;cutoutUrl:string;savedDesignId?:string;
+  quote?:FrameQuote|null;
 }):Promise<{manifest:OrderManifest;zip:Blob;sheet:Blob;prepared:Blob|null}>{
   if(!input.design.astronomy||!input.design.moment.location)throw Error('Finish the workshop first.')
   if(input.prefs.layout==='within'&&!input.cutoutUrl)throw Error('Save the polished foreground first.')
@@ -98,6 +100,9 @@ export async function createCustomerPacket(input:{
   const reference=input.savedDesignId??await orderReference(input.design,input.prefs,photo)
   const original={name:input.photo.name,bytes:input.photo.size,mime:input.photo.type}
   const manifest=makeOrderManifest(reference,input.design,input.prefs,original,new Date().toISOString())
+  if(input.quote)manifest.pricing={priceCents:input.quote.priceCents,currency:'USD',
+    mode:input.quote.mode,revision:input.quote.revision,
+    updatedAtUtc:input.quote.updatedAtUtc,binding:false}
   const foreground=input.prefs.layout==='within'?
     await fetch(input.cutoutUrl).then(r=>r.blob()):null
   const sheet=await createOrderSheet(manifest,input.photoUrl,input.cutoutUrl)

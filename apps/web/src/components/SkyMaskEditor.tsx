@@ -4,11 +4,13 @@ import { hasTransparentSky, maskWhiteSkyPixels } from '../skyCutout'
 import {
   changeRegionAlpha, colorRegion, composeSkyCutout, fillMaskPolygon,
   getAlpha, maskWorkingDimensions, paintAlphaLine,
+  appendFreehandPoint, isUsableFreehandArea, pointInMaskPolygon,
 } from '../skyMaskMath'
 import type { MaskPoint } from '../skyMaskMath'
 import { resampleSkyAlpha } from '../skyWorkshopMath'
 import type { SkyAlphaMask } from '../skyWorkshopMath'
 import { smartRectangleCleanup } from '../skyWorkshopMask'
+import type { ChapterIndex } from '../workshopNavigation'
 import './SkyMaskEditor.css'
 
 type Tool = 'smart' | 'brush' | 'polygon'
@@ -21,6 +23,8 @@ type Props = {
   onDismissPolishGuide?: () => void
   onApply: (png: Blob, alpha: Uint8ClampedArray) => void
   onClose: () => void
+  onChapterNavigate?: (chapter: ChapterIndex) => void
+  chapterNotice?: string | null
 }
 type LoadedPhoto = { width: number; height: number }
 const MAX_HISTORY = 12
@@ -28,18 +32,20 @@ const MAX_HISTORY = 12
 /** Photo and its undo history stay in this browser tab; no upload or image service. */
 export function SkyMaskEditor({
   file, initialMask, detectedMask, showPolishGuide = false, onDismissPolishGuide,
-  onApply, onClose,
+  onApply, onClose, onChapterNavigate, chapterNotice,
 }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const photo = useRef<Uint8ClampedArray | null>(null)
   const automatic = useRef<Uint8ClampedArray | null>(null)
   const initialAlpha = useRef<Uint8ClampedArray | null>(null)
   const smartDrag = useRef<{start:MaskPoint;latest:MaskPoint;pointerId:number}|null>(null)
+  const freehandDrag = useRef<{pointerId:number;points:MaskPoint[]}|null>(null)
   const alpha = useRef<Uint8ClampedArray | null>(null)
   const past = useRef<Uint8ClampedArray[]>([])
   const future = useRef<Uint8ClampedArray[]>([])
   const lastPointer = useRef<MaskPoint | null>(null)
   const painting = useRef(false)
+  const brushPointer = useRef<number|null>(null)
   const redrawFrame = useRef<number | null>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
 
@@ -54,10 +60,12 @@ export function SkyMaskEditor({
   const [tolerance, setTolerance] = useState(22)
   const [contiguous, setContiguous] = useState(true)
   const [brushSize, setBrushSize] = useState(22)
+  const [brushCursor,setBrushCursor] = useState<MaskPoint|null>(null)
   const [vertices, setVertices] = useState<MaskPoint[]>([])
+  const [traceReady,setTraceReady]=useState(false)
   const [undoCount, setUndoCount] = useState(0)
   const [redoCount, setRedoCount] = useState(0)
-  const [message, setMessage] = useState('Click a missed sky pocket to clean it. Drag over a larger area to clean light gaps while preserving darker branches. Switch to Restore to bring anything back.')
+  const [message, setMessage] = useState('Sky Spot Finder: click a sky-colored spot or drag a box over missed patches. Choose Add to sky or Keep as photo. Your original is never overwritten.')
 
   useEffect(() => {
     let cancelled = false
@@ -157,6 +165,7 @@ export function SkyMaskEditor({
     setUndoCount(past.current.length)
     setRedoCount(future.current.length)
     setVertices([])
+    setTraceReady(false)
     scheduleDraw()
   }
   function redo() {
@@ -167,6 +176,7 @@ export function SkyMaskEditor({
     setUndoCount(past.current.length)
     setRedoCount(future.current.length)
     setVertices([])
+    setTraceReady(false)
     scheduleDraw()
   }
 
@@ -184,7 +194,15 @@ export function SkyMaskEditor({
     onDismissPolishGuide?.()
     const p=position(event)
     if(tool==='polygon'){
-      setVertices(points=>[...points,p])
+      if(traceReady && pointInMaskPolygon(p,vertices)){
+        applyPolygon(operation==='restore')
+        return
+      }
+      event.currentTarget.setPointerCapture(event.pointerId)
+      freehandDrag.current={pointerId:event.pointerId,points:[p]}
+      setTraceReady(false)
+      setVertices([p])
+      setMessage('Hold and drag all the way around an area, then release to close the outline.')
       return
     }
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -195,14 +213,28 @@ export function SkyMaskEditor({
     }
     saveHistory()
     painting.current=true
+    brushPointer.current=event.pointerId
     lastPointer.current=p
     paintAlphaLine(alpha.current,photo.current,loaded.width,loaded.height,
       p.x,p.y,p.x,p.y,brushSize/2,operation==='restore')
+    setMessage(operation==='restore'
+      ? 'Keeping the brushed area in your original photograph. Drag over faces, trees, or objects to protect them.'
+      : 'Painting this area into the night sky. Stars can appear wherever you clear the photograph.')
     scheduleDraw()
   }
   function pointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
     if(!loaded)return
     const p=position(event)
+    if(tool==='brush')setBrushCursor(p)
+    const trace=freehandDrag.current
+    if(tool==='polygon'&&trace&&trace.pointerId===event.pointerId){
+      const points=appendFreehandPoint(trace.points,p,2,900)
+      if(points!==trace.points){
+        trace.points=points
+        setVertices(points)
+      }
+      return
+    }
     const drag=smartDrag.current
     if(tool==='smart'&&drag&&drag.pointerId===event.pointerId){
       drag.latest=p
@@ -213,13 +245,29 @@ export function SkyMaskEditor({
         width:`${(right-left)/loaded.width*100}%`,height:`${(bottom-top)/loaded.height*100}%`})
       return
     }
-    if(!painting.current||!alpha.current||!photo.current||!lastPointer.current)return
+    if(!painting.current||brushPointer.current!==event.pointerId||
+       !alpha.current||!photo.current||!lastPointer.current)return
     paintAlphaLine(alpha.current,photo.current,loaded.width,loaded.height,
       lastPointer.current.x,lastPointer.current.y,p.x,p.y,brushSize/2,operation==='restore')
     lastPointer.current=p
     scheduleDraw()
   }
   function pointerEnd(event:ReactPointerEvent<HTMLCanvasElement>) {
+    const trace=freehandDrag.current
+    if(tool==='polygon' && trace && trace.pointerId===event.pointerId){
+      freehandDrag.current=null
+      const outline=appendFreehandPoint(trace.points,position(event),2,900)
+      if(isUsableFreehandArea(outline)){
+        setVertices(outline)
+        setTraceReady(true)
+        setMessage('Outline closed. Select Add to sky or Keep as photo, then click inside the outline or use a button below.')
+      }else{
+        setVertices([])
+        setTraceReady(false)
+        setMessage('Trace a full closed area by holding and dragging. Make a larger loop around the part you want to change.')
+      }
+      return
+    }
     if(tool==='smart'&&smartDrag.current&&loaded&&alpha.current&&photo.current){
       const drag=smartDrag.current
       if(event.pointerId!==drag.pointerId)return
@@ -244,21 +292,40 @@ export function SkyMaskEditor({
       }
       scheduleDraw()
     }
+    if(tool==='brush'&&painting.current&&brushPointer.current===event.pointerId&&
+       loaded&&alpha.current&&photo.current&&lastPointer.current){
+      const finalPoint=position(event)
+      paintAlphaLine(alpha.current,photo.current,loaded.width,loaded.height,
+        lastPointer.current.x,lastPointer.current.y,finalPoint.x,finalPoint.y,
+        brushSize/2,operation==='restore')
+      scheduleDraw()
+    }
     painting.current=false
+    brushPointer.current=null
     lastPointer.current=null
   }
   function pointerCancel() {
+    if(freehandDrag.current){
+      freehandDrag.current=null
+      setVertices([])
+      setTraceReady(false)
+    }
     smartDrag.current=null
     setDragBox(null)
     painting.current=false
+    brushPointer.current=null
     lastPointer.current=null
+    setBrushCursor(null)
   }
-  function applyPolygon() {
-    if (!loaded || !alpha.current || !photo.current || vertices.length < 3) return
+  function applyPolygon(restore=operation==='restore') {
+    if (!loaded || !alpha.current || !photo.current || !traceReady || !isUsableFreehandArea(vertices)) return
     saveHistory()
-    const changed = fillMaskPolygon(alpha.current, photo.current, loaded.width, loaded.height, vertices, operation === 'restore')
-    setMessage(`${changed.toLocaleString()} pixels ${operation === 'restore' ? 'restored' : 'removed'} within your traced area.`)
+    const changed = fillMaskPolygon(alpha.current, photo.current, loaded.width, loaded.height, vertices, restore)
+    setMessage(changed
+      ? `${changed.toLocaleString()} pixels ${restore?'kept in the original photograph':'added to the night sky'} inside your hand-traced selection. Undo is available.`
+      : 'This selection was already set that way. Trace another area or try Undo.')
     setVertices([])
+    setTraceReady(false)
     scheduleDraw()
   }
   function resetMask() {
@@ -266,7 +333,8 @@ export function SkyMaskEditor({
     saveHistory()
     alpha.current = new Uint8ClampedArray(initialAlpha.current ?? getAlpha(automatic.current))
     setVertices([])
-    setMessage('The initial AI horizon selection has been restored. You can refine it again.')
+    setTraceReady(false)
+    setMessage('The original detected-sky selection is back. You can refine it again.')
     scheduleDraw()
   }
   function restoreOriginal() {
@@ -274,7 +342,8 @@ export function SkyMaskEditor({
     saveHistory()
     alpha.current = getAlpha(photo.current)
     setVertices([])
-    setMessage('Original photo restored. Start removing sky again.')
+    setTraceReady(false)
+    setMessage('All of your original photo is visible again. Add chosen spots to the sky when ready.')
     scheduleDraw()
   }
   async function exportImage() {
@@ -315,31 +384,57 @@ export function SkyMaskEditor({
           event.preventDefault(); redo()
         }
       }}>
+      {onChapterNavigate&&<nav className="sky-mask-chapters" aria-label="Jump to another workshop chapter">
+        {(['Photograph','Horizon','Moment','Your sky','Keepsake'] as const).map((label,index)=>
+          <button type="button" key={label} aria-label={`Chapter ${index+1}: ${label}`}
+            aria-current={index===1?'step':undefined}
+            onClick={()=>onChapterNavigate(index as ChapterIndex)}>
+            <span>{String(index+1).padStart(2,'0')}</span> {label}
+          </button>)}
+      </nav>}
+      {chapterNotice&&<p className="sky-mask-chapter-notice" role="status">{chapterNotice}</p>}
       <header className="sky-mask-header">
         <div>
           <span className="sky-mask-eyebrow">Your photo · free local editing</span>
           <h2>Polish your photograph</h2>
-          <p>We've marked the likely sky in blue. Simply click a missed patch to clean it or drag a rectangle to tidy several bright pockets at once. Restore details anytime.</p>
+          <p>Decide exactly what stays in your photograph and what becomes sky. Use Sky Spot Finder for automatic suggestions, Manual Sky Brush to paint either way, or Freehand Lasso for outlined regions.</p>
         </div>
         <button ref={closeButton} type="button" onClick={onClose} aria-label="Close sky editor">✕</button>
       </header>
-      <div className="sky-mask-intro">{detectedMask ?
-        'AI made a careful first pass. Click to select a connected sky patch or drag to sweep a rectangle; both work automatically.'
-        : 'Use one click to select a region, or drag a rectangle to clean several bright pockets.'}</div>
+      <div className="sky-mask-intro" role="status">
+        {tool==='smart'
+          ? '01 · Sky Spot Finder — click a likely sky pocket or drag a rectangle. The color-aware cleanup favors sky and leaves darker branches intact.'
+          : tool==='brush'
+            ? '02 · Manual Sky Brush — select Add to sky or Keep in photo, then click and drag to paint exactly where you want, even across dark trees, buildings or faces. The brush follows your choice, not AI detection.'
+            : '03 · Freehand Lasso — hold and drag a loop around any region. Release, choose Add to sky or Keep as photo, then click inside the outline to apply.'}
+      </div>
       <div className="sky-mask-tools" aria-label="Sky mask editing tools"
         onPointerDown={onDismissPolishGuide}>
         <div className="sky-mask-tool-buttons" role="group" aria-label="Choose editing tool">
           {(['smart','brush','polygon'] as const).map(item =>
             <button key={item} type="button" aria-pressed={tool === item} className={tool === item ? 'active' : ''}
-              onClick={() => { setTool(item); setVertices([]);setDragBox(null) }}>
-              {item === 'smart' ? '✦ Smart cleanup · click or drag' : item === 'brush' ? '◉ Fine brush' : '⬡ Trace area'}
+              onClick={() => { setTool(item); setVertices([]);setTraceReady(false);
+                setDragBox(null);setBrushCursor(null);freehandDrag.current=null }}>
+              {item === 'smart' ? '✦ Sky Spot Finder' : item === 'brush' ? '◉ Manual Sky Brush' : '⬡ Freehand Lasso'}
             </button>)}
         </div>
-        <div className="sky-mask-tool-buttons sky-mask-actions" role="group" aria-label="Clean sky or restore photograph">
-          <button type="button" className={operation==='remove'?'active':''}
-            aria-pressed={operation==='remove'} onClick={()=>setOperation('remove')}>✦ Clean remaining sky</button>
-          <button type="button" className={operation==='restore'?'active':''}
-            aria-pressed={operation==='restore'} onClick={()=>setOperation('restore')}>↶ Restore photograph</button>
+        <div className="sky-mask-edit-row">
+          <div className="sky-mask-tool-buttons sky-mask-actions" role="group" aria-label="Choose whether editing adds sky or keeps the original photo">
+            <button type="button" className={operation==='remove'?'active':''}
+              aria-pressed={operation==='remove'} onClick={()=>setOperation('remove')}>✦ Add to sky</button>
+            <button type="button" className={operation==='restore'?'active':''}
+              aria-pressed={operation==='restore'} onClick={()=>setOperation('restore')}>◎ Keep in photo</button>
+          </div>
+          <div className="sky-mask-tool-buttons sky-mask-quick-history" role="group" aria-label="Undo, redo, and restore photo mask">
+            <button type="button" disabled={!undoCount} title="Undo last edit (Ctrl/Cmd+Z)"
+              onClick={undo}>↶ Undo</button>
+            <button type="button" disabled={!redoCount} title="Redo last edit (Ctrl/Cmd+Shift+Z)"
+              onClick={redo}>↷ Redo</button>
+            <button type="button" disabled={!loaded} title="Reapply the original automatically detected sky"
+              onClick={resetMask}>Reset AI</button>
+            <button type="button" disabled={!loaded} title="Show every part of the original photograph"
+              onClick={restoreOriginal}>Restore original</button>
+          </div>
         </div>
         {tool === 'smart' && <>
           <label>Tolerance <strong>{tolerance}</strong>
@@ -349,14 +444,18 @@ export function SkyMaskEditor({
           <label className="sky-mask-check"><input type="checkbox" checked={contiguous}
             onChange={event => setContiguous(event.target.checked)}/> Connected pixels only</label>
         </>}
-        {tool === 'brush' && <label>Brush size <strong>{brushSize} px</strong>
-          <input type="range" min="3" max="120" value={brushSize}
+        {tool === 'brush' && <div className="sky-mask-brush-settings">
+          <label htmlFor="sky-brush-size">Manual brush diameter <strong>{brushSize} px</strong></label>
+          <input id="sky-brush-size" type="range" min="3" max="120" value={brushSize}
             onChange={event => setBrushSize(Number(event.target.value))}/>
-        </label>}
+          <small>{operation==='remove'?'Paint anywhere to replace those pixels with stars.':'Paint anywhere to protect or restore the original photo.'}</small>
+        </div>}
         {tool === 'polygon' && <div className="sky-mask-polygon-buttons">
-          <span>{vertices.length} corners</span>
-          <button type="button" disabled={vertices.length < 3} onClick={applyPolygon}>Apply traced area</button>
-          <button type="button" disabled={!vertices.length} onClick={() => setVertices([])}>Clear points</button>
+          <span>{traceReady?'Outline ready':freehandDrag.current?'Drawing outline…':'Hold and trace a closed loop'}</span>
+          <button type="button" disabled={!traceReady} onClick={()=>applyPolygon(false)}>✦ Add traced area to sky</button>
+          <button type="button" disabled={!traceReady} onClick={()=>applyPolygon(true)}>◎ Keep traced area in photo</button>
+          <button type="button" disabled={!vertices.length}
+            onClick={() => {setVertices([]);setTraceReady(false)}}>Clear outline</button>
         </div>}
       </div>
       <div className="sky-mask-workspace">
@@ -380,11 +479,18 @@ export function SkyMaskEditor({
           style={{ width: `${zoom}%` }}>
           {loaded ? <>
             <canvas ref={canvas} width={loaded.width} height={loaded.height}
-              aria-label="Photo editor. Click to clean one region, or drag to draw a rectangle. Choose Restore to bring back the original photo."
+              aria-label="Photo sky editor. Sky Spot Finder: click or drag a rectangle. Manual Sky Brush: paint any pixels to add to sky or keep in photograph. Freehand Lasso: draw an outline."
               onPointerDown={pointerDown} onPointerMove={pointerMove}
               onPointerUp={pointerEnd} onPointerCancel={pointerCancel}
+              onPointerLeave={()=>{if(!painting.current)setBrushCursor(null)}}
               onLostPointerCapture={pointerCancel}/>
             {dragBox && <div className="sky-mask-smart-rect" style={dragBox} aria-hidden="true"/>}
+            {tool==='brush'&&brushCursor&&loaded&&<div
+              className={`sky-mask-brush-cursor ${operation==='remove'?'is-sky':'is-photo'}`}
+              style={{left:`${brushCursor.x/loaded.width*100}%`,
+                top:`${brushCursor.y/loaded.height*100}%`,
+                width:`${brushSize/loaded.width*100}%`}}
+              aria-hidden="true"/>}
             {showPolishGuide && tool==='smart' && !dragBox && <div
               className="sky-mask-gesture-guide" aria-hidden="true">
               <div className="sky-mask-gesture-tap"/>
@@ -405,11 +511,13 @@ export function SkyMaskEditor({
             {tool === 'polygon' && vertices.length > 0 &&
               <svg className="sky-mask-polygon-overlay" viewBox={`0 0 ${loaded.width} ${loaded.height}`}
                 preserveAspectRatio="none" aria-hidden="true">
-                <polyline points={vertices.map(p => `${p.x},${p.y}`).join(' ')}
-                  fill="none" stroke="#f1c779" strokeWidth={Math.max(2, loaded.width/500)}
-                  strokeDasharray="14 7"/>
-                {vertices.map((p, index) => <circle key={index} cx={p.x} cy={p.y}
-                  r={Math.max(4, loaded.width/290)} fill="#ffe0a3" stroke="#15222e" strokeWidth="2"/>)}
+                {traceReady
+                  ? <polygon points={vertices.map(p=>`${p.x},${p.y}`).join(' ')}
+                      fill="rgba(49,211,233,.18)" stroke="#ffe0a3"
+                      strokeWidth={Math.max(2,loaded.width/700)} strokeDasharray="9 6"/>
+                  : <polyline points={vertices.map(p=>`${p.x},${p.y}`).join(' ')}
+                      fill="none" stroke="#ffe0a3" strokeWidth={Math.max(2,loaded.width/700)}
+                      strokeDasharray="9 6"/>}
               </svg>}
           </> : <div className="sky-mask-loading" role="status">{error || 'Preparing full-resolution photo…'}</div>}
         </div>
@@ -419,16 +527,11 @@ export function SkyMaskEditor({
           className="sky-mask-dismiss-hint" onClick={()=>onDismissPolishGuide?.()}>
           Got it — start polishing
         </button>}
-        <small className="sky-mask-disclosure">Cyan shows the selected sky. Clicking cleans one connected region; dragging cleans bright gaps within your rectangle, without stripping dark branches. Restore works with the same gestures. Zoom for tiny details, undo mistakes, then save. The original photo is preserved in your browser.</small>
+        <small className="sky-mask-disclosure">Cyan means sky: stars can appear there. Manual Sky Brush paints precisely into whichever mode you choose, without AI restrictions. Sky Spot Finder remains automatic. Use Undo, Redo, Reset AI or Restore original beside the two painting modes.</small>
       </div>
       {error && <p className="sky-mask-error" role="alert">{error}</p>}
       <footer className="sky-mask-footer">
-        <div className="sky-mask-history">
-          <button type="button" disabled={!undoCount} onClick={undo}>↶ Undo</button>
-          <button type="button" disabled={!redoCount} onClick={redo}>↷ Redo</button>
-          <button type="button" disabled={!loaded} onClick={resetMask}>Reset to AI selection</button>
-          <button type="button" disabled={!loaded} onClick={restoreOriginal}>Restore original</button>
-        </div>
+        <p className="sky-mask-footer-tip">Changes stay local until you save. Your original photograph is preserved.</p>
         <div className="sky-mask-save">
           <button type="button" onClick={onClose}>Cancel</button>
           <button type="button" className="sky-mask-primary" disabled={!loaded || saving}

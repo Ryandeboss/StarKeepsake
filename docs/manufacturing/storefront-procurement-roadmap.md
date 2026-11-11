@@ -1,0 +1,18 @@
+# StarKeepsake 11×14 frame options and purchasing integration
+
+Customer Chapter 05 now offers two production-concept frame finishes: two-tone walnut (2.5in) and matte black (3.5in). Both use a professionally mounted luster photo, Pico W, up to 24 individual warm-white LEDs with optical fiber, TLC5947 controller driver, hidden diffused accent, and low-voltage power. Existing finish IDs walnut and ebony are preserved for saved design and M3 compatibility; legacy oak is visible only if reopening an old oak design. Room images are illustrative.
+
+## Website price behavior
+- Public GET /api/storefront/frame-prices yields only two aggregated retail estimates; no supplier prices, secret keys or customer information.
+- The initial planning *retail* prices are $799 walnut and $899 matte black. These are deliberately illustrative owner-policy defaults, distinct from the ~$450 one-off build budget. Do not represent these as live Etsy prices.
+- Once draft M3 PR #59 is merged, migration 003 is applied, and complete material recipes entered with exact codes `starkeepsake-11x14-walnut` and `starkeepsake-11x14-ebony`, the API calculates retail estimates from costs and waste per SKU, $125 labor and $35 overhead, 12% fee allowance and 25% target margin, rounded up to $5. Supplier quotes are NOT pulled from websites by this implementation.
+- Browser checks server quote at Chapter 05 entry and every three minutes while there; Refresh estimate is available. The exported order.json stores a **nonbinding** price snapshot; Etsy checkout price is authoritative.
+- Catalog update in M3 will update website estimates without a frontend push. To automatically follow external vendor site price changes, connect legitimate supplier price APIs (Amazon Business Product Search API where eligible, and each frame/print supplier's feed) to a scheduled quote refresh; no such supplier API has been approved/configured.
+
+## All-inclusive per-order BOM
+M3 recipe should include one frame of the chosen finish, professionally printed mounted 11×14 photo, sky panel, up to 24 warm-white LEDs, PMMA fibers, individual couplers and light baffles, TLC5947, Pico W (two are owned now but not free for unlimited sales), 5V warm-white COB with aluminum diffuser, rated USB wall supply, wiring and power protection, mounting adhesives and hardware, and protective packaging. Reusable soldering and precision drilling tools are NOT per-order purchases. Verified stock on hand should reduce shortage quantities but not alter customer retail price.
+
+## Target unattended procurement (NOT ACTIVE)
+M2 already verifies signed Etsy order.paid webhooks; M3 supports job-linked draft BOMs for matched paid orders. Automatic purchases still require supplier ordering API authorization, exact vendor SKUs/offers and shipping/tax, durable idempotent per-order purchase records, payment method, order spending caps, stock reservations and refund/cancellation holds. On successful paid receipt, create an immutable BOM, reserve physical stock, quote remaining shortages with time-stamped offers, verify order profitability and owner-approved daily/per-order caps, then submit to approved supplier API; failures/price spikes should place a HOLD rather than spend. Etsy listing variation synchronization also requires listings_w OAuth and a complete updateListingInventory implementation (current Etsy integration is read-only transactions_r). No code in this PR charges a supplier or changes Etsy listings, databases, or deployment settings.
+
+Preview/review-only; do not merge, release, authorize manufacturing or spend money until expressly approved.
