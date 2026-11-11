@@ -28,6 +28,7 @@ import type { OrderPreferences } from '../customerOrder'
 import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
 import type { SavedDesignReceipt } from '../savedDesign'
 import { PREVIEW_FRAME_QUOTES, frameQuoteFor, loadFramePrices, moneyUsd } from '../storefrontPricing'
+import { etsyListingForFinish, canContinueToEtsy } from '../etsyCheckout'
 import type { FrameQuote } from '../storefrontPricing'
 import './ExperiencePage.css'
 
@@ -117,7 +118,7 @@ export function ExperiencePage() {
   const [orderError,setOrderError]=useState('')
   const [saveBusy,setSaveBusy]=useState(false)
   const [saveError,setSaveError]=useState('')
-  const [copied,setCopied]=useState<'link'|'order'|null>(null)
+  const [copied,setCopied]=useState<'link'|'order'|'details'|null>(null)
   const copiedTimeout=useRef<number|null>(null)
   const [restoreBusy,setRestoreBusy]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
   const [restoreError,setRestoreError]=useState('')
@@ -601,20 +602,32 @@ export function ExperiencePage() {
   const savedCurrent=Boolean(savedDesign&&savedDesign.signature===snapshotSignature)
   const orderKey=JSON.stringify({moment:design.moment,stars:design.stars,
     preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl,
-    storedId:savedCurrent?savedDesign?.receipt.designId:null,
     priceRevision:frameQuote?.revision,priceCents:frameQuote?.priceCents})
-  const currentOrder=preparedOrder?.key===orderKey?preparedOrder.packet:null
-  const etsyLink=(import.meta.env.VITE_ETSY_LISTING_URL as string|undefined)?.trim()
-  const verifiedEtsyLink=etsyLink&&/^https:\/\/(www\.)?etsy\.com\/(listing|shop)\//.test(etsyLink)?etsyLink:null
+  // A packet without the server-issued saved Design ID cannot be matched to Etsy.
+  const currentOrder=preparedOrder?.key===orderKey&&savedCurrent&&
+    preparedOrder.packet.manifest.reference===savedDesign?.receipt.designId
+    ?preparedOrder.packet:null
+  const selectedEtsyListing=etsyListingForFinish(finish,{
+    walnut:import.meta.env.VITE_ETSY_LISTING_WALNUT_URL as string|undefined,
+    ebony:import.meta.env.VITE_ETSY_LISTING_EBONY_URL as string|undefined,
+    shared:import.meta.env.VITE_ETSY_LISTING_URL as string|undefined,
+  })
+  const etsyCheckoutReady=canContinueToEtsy({
+    designSaved:savedCurrent,
+    savedDesignId:savedDesign?.receipt.designId,
+    manifest:currentOrder?.manifest??null,
+    listing:selectedEtsyListing,
+  })
 
-  async function saveDesignNow(){
+  async function saveDesignNow():Promise<SavedDesignReceipt|null>{
+    if(savedCurrent&&savedDesign)return savedDesign.receipt
     if(!photo||!design.astronomy||!design.moment.location){
       setSaveError('Finish your night sky before saving.')
-      return
+      return null
     }
     if(placement==='within'&&!cutoutUrl){
       setSaveError('Finish and save the polished foreground first.')
-      return
+      return null
     }
     setSaveBusy(true)
     setSaveError('')
@@ -631,12 +644,14 @@ export function ExperiencePage() {
       })
       setSavedDesign({receipt,signature})
       window.history.replaceState(null,'',privateDesignLink(window.location.href,receipt))
+      return receipt
     }catch(cause){
       setSaveError(cause instanceof Error?cause.message:'Unable to save your design.')
+      return null
     }finally{setSaveBusy(false)}
   }
 
-  async function copyWithFeedback(text:string,kind:'link'|'order'){
+  async function copyWithFeedback(text:string,kind:'link'|'order'|'details'){
     try{
       await navigator.clipboard.writeText(text)
       setCopied(kind)
@@ -654,9 +669,15 @@ export function ExperiencePage() {
     const preferences={...orderPreferences}
     setOrderBusy(true);setOrderError('')
     try{
+      // Save the customer's *exact* frame finish, night sky and photo first.
+      // The server-created SK-ID is the only Etsy personalization ID our
+      // paid-order importer will accept. A local checksum must never reach Etsy.
+      const receipt=savedCurrent&&savedDesign
+        ?savedDesign.receipt:await saveDesignNow()
+      if(!receipt)throw Error('Your design could not be securely saved. Please save it before ordering.')
       const packet=await createCustomerPacket({design,prefs:preferences,
         photo,photoUrl,cutoutUrl,quote:frameQuote,
-        savedDesignId:savedCurrent?savedDesign?.receipt.designId:undefined})
+        savedDesignId:receipt.designId})
       setPreparedOrder({key,packet})
     }catch(cause){
       setOrderError(cause instanceof Error?cause.message:'Could not prepare your order files.')
@@ -1082,9 +1103,9 @@ export function ExperiencePage() {
             <div className="at-customer-order">
               <span className="at-kicker">THE FINISHING TOUCH / YOUR KEEPSAKE</span>
               <h2>Make it <em>yours.</em></h2>
-              <p>Your finished design can become a one-of-a-kind keepsake.
-                Prepare the original photo, polished foreground and your personalized
-                design sheet for an eventual Etsy order.</p>
+              <p>Make your own illuminated night-sky keepsake. Choose the frame finish,
+                preserve your photograph and star map, then carry the saved design
+                to Etsy to complete your purchase securely.</p>
               <div className="at-frame-quote" aria-live="polite">
                 <small>11×14 PRICE ESTIMATE · {frameQuote?.mode==='catalog'?'CURRENT MATERIAL CATALOG':'PLANNING'}</small>
                 <strong>{frameQuote?moneyUsd(frameQuote.priceCents):'Price on request'}</strong>
@@ -1120,15 +1141,16 @@ export function ExperiencePage() {
                 <small>Keep this link private. Anyone with the full link can reopen the design.
                   Changing your choices and saving again creates a new Design ID.</small>
               </div>}
-              <button type="button" className="at-primary at-wide" disabled={orderBusy}
+              <button type="button" className="at-primary at-wide" disabled={orderBusy||saveBusy||restoreBusy}
                 onClick={()=>void buildOrderPacket()}>
-                {orderBusy?'Preparing your keepsake…':'Get this keepsake'} <span>✦</span>
+                {orderBusy?'Saving and preparing your keepsake…':'Save design & prepare Etsy order'} <span>✦</span>
               </button>
               {orderError&&<p role="alert" className="at-error">{orderError}</p>}
               {currentOrder&&<div className="at-ready-packet" role="status">
-                <div><strong>Design files ready</strong>
+                <div><strong>Your design is saved for Etsy</strong>
                   <span className="at-order-reference">{currentOrder.manifest.reference}</span>
-                  <small>This is a file-matching reference, not a paid order.</small>
+                  <small>Use this exact Design ID in Etsy's required “StarKeepsake Design ID” text field.
+                    This is not an Etsy order or proof of payment.</small>
                 </div>
                 <button type="button" onClick={()=>downloadFile(currentOrder.zip,
                   currentOrder.manifest.reference+'-maker-packet.zip')}>
@@ -1139,21 +1161,39 @@ export function ExperiencePage() {
                   onClick={()=>downloadFile(currentOrder.prepared!,'prepared-foreground.png')}>
                   ↓ Download polished foreground (PNG)</button>}
                 <button type="button" onClick={()=>
-                  void copyWithFeedback(orderPersonalization(currentOrder.manifest),'order')}>
-                  {copied==='order'?'✓ Etsy details copied!':'Copy Etsy personalization details'}
+                  void copyWithFeedback(currentOrder.manifest.reference,'order')}>
+                  {copied==='order'?'✓ Design ID copied!':'1 · Copy exact Design ID for Etsy'}
                 </button>
                 {copied==='order'&&<span className="at-copy-confirmation" role="status">
-                  <span aria-hidden="true">✓</span> Personalization text copied.
+                  <span aria-hidden="true">✓</span> Paste only the SK-... code into the Etsy Design ID field.
                 </span>}
-                {verifiedEtsyLink?<a className="at-etsy-checkout" href={verifiedEtsyLink}
-                  target="_blank" rel="noopener noreferrer">
-                  Continue to Etsy checkout ↗</a>
+                <button type="button" onClick={()=>
+                  void copyWithFeedback(orderPersonalization(currentOrder.manifest),'details')}>
+                  {copied==='details'?'✓ Summary copied!':'Optional · Copy full design summary'}
+                </button>
+                <ol className="at-etsy-order-steps">
+                  <li>Your original photograph and sky design are safely stored with this Design ID.</li>
+                  <li>On Etsy, paste <strong>only the Design ID</strong> into the required
+                    “StarKeepsake Design ID” personalization field.</li>
+                  <li>Choose <strong>{finish==='walnut'?'Two-tone walnut':'Matte black'}</strong>
+                    {selectedEtsyListing?.requiresFinishSelection
+                      ?' from the Etsy frame-finish variation.':' if Etsy asks for a frame variation.'}
+                    {' '}Check Etsy's actual price and delivery details before payment.</li>
+                </ol>
+                {etsyCheckoutReady&&selectedEtsyListing
+                  ?<a className="at-etsy-checkout" href={selectedEtsyListing.url}
+                    target="_blank" rel="noopener noreferrer"
+                    onClick={()=>{void navigator.clipboard?.writeText(currentOrder.manifest.reference)
+                      .then(()=>setCopied('order')).catch(()=>{})}}>
+                    2 · Continue to Etsy to buy your frame ↗</a>
                   :<p className="at-checkout-pending">
-                    Our Etsy shop is getting ready. You can save your custom design
-                    files now, but ordering and payment are not available yet.</p>}
-                <small>When our Etsy listing opens, use its personalization fields to
-                  send this design reference and your artwork. Your order is only placed
-                  after Etsy checkout is completed.</small>
+                    {selectedEtsyListing
+                      ?'Save and prepare the latest version of your design before proceeding.'
+                      :'Etsy checkout is not open for this frame finish yet. Your design is safely saved; ordering is unavailable until the matching Etsy listing is published and connected.'}
+                  </p>}
+                <small>Opening Etsy does not charge you. StarKeepsake will match the
+                  finished purchase only after Etsy confirms payment and the required
+                  Design ID is included. Do not paste the private reopening link into Etsy.</small>
               </div>}
             </div>
           </aside>

@@ -32,6 +32,18 @@ Check(EtsyProductionParser.Personalization(Parse("""
     {"variations":[{"property_id":54,"formatted_value":"https://example.com/photo.jpg"}]}
     """)).State == "invalid", "File URL cannot become a design ID");
 Check(EtsyProductionParser.Personalization(Parse("""
+    {"variations":[{"property_id":54,"formatted_name":"Uploaded photograph","formatted_value":"https://example.com/photo.jpg"},
+                   {"property_id":54,"formatted_name":"Short inscription","formatted_value":"Our night"},
+                   {"property_id":54,"formatted_name":"StarKeepsake Design ID","formatted_value":"SK-0123456789ABCDEF"}]}
+    """)).DesignId == design, "Exactly one Design ID still matches among Etsy 2026 custom fields");
+Check(EtsyProductionParser.Personalization(Parse("""
+    {"variations":[{"property_id":54,"formatted_value":"SK-0123456789ABCDEF"},
+                   {"property_id":54,"formatted_value":"SK-0123456789ABCDEF"}]}
+    """)).State == "ambiguous", "Repeated Design IDs remain ambiguous, even if identical");
+Check(EtsyProductionParser.Personalization(Parse("""
+    {"variations":[{"property_id":54,"formatted_value":"Thanks SK-0123456789ABCDEF!"}]}
+    """)).State == "invalid", "Embedded Design ID is never inferred from free text");
+Check(EtsyProductionParser.Personalization(Parse("""
     {"variations":[{"property_id":54,"formatted_value":"SK-../customer"}]}
     """)).State == "invalid", "Reject invalid or path-like Design ID");
 
