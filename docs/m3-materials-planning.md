@@ -41,3 +41,6 @@
 - All 3 new tables are RLS enabled, revoked from anon/authenticated and accessed only by the server's existing admin-key protected endpoints. New SQL functions are SECURITY INVOKER, restricted to service_role.
 - Supplier prices are still manually entered in the catalog; no live vendor pricing feed, supplier payment or fully automatic replenishment in M3. That is a separate M6 integration.
 - Actual Etsy variation prices are independent. New FramePricing API is an **estimate**, and neither it nor draft M3 publishes an Etsy listing. Release requires integrating the two branches, applying and verifying migration 003 once, then deploying API/frontend with owner approval.
+
+## Duplicate prevention on network failures
+Stock adjustment, supplier-order logging and supplier-receipt forms preserve their in-progress UUIDs for re-submission of identical inputs. Server SQL verifies idempotency and rejects ID reuse for changed values. On form edits a new ID is used. DO NOT rely on retries after page refresh; check the purchase/order register before recording another physical delivery. Customer prices use the latest supplier-material and recipe revision timestamps, but do not alter past paid order amounts.

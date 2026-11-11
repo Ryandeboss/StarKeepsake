@@ -72,6 +72,11 @@ public sealed class FramePricingService(HttpClient http,DesignPersistenceOptions
                     if(updated.GetValueOrDefault(sku) is string d)dates.Add(d);
                 }
                 if(!complete){result.Add(defaultQuote);continue;}
+                var recipeUpdated=recipes.EnumerateArray().First(x=>
+                    x.GetProperty("recipe_code").GetString()==recipeCode);
+                if(recipeUpdated.TryGetProperty("updated_at",out var recipeTime)
+                    &&recipeTime.ValueKind==JsonValueKind.String)
+                    dates.Add(recipeTime.GetString()!);
                 var revision=dates.OrderBy(x=>x,StringComparer.Ordinal).LastOrDefault()??"catalog-v1";
                 result.Add(defaultQuote with {PriceCents=FramePricePolicy.RetailCents(total),
                     Mode="catalog",Revision=revision,UpdatedAtUtc=revision=="catalog-v1"?null:revision});

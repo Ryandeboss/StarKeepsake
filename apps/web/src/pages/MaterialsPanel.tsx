@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import './MaterialsPanel.css'
 
 type Material = {sku:string;name:string;category:string;unit:string;unit_cost_cents:number|null;on_hand:number;reorder_at:number;supplier_name:string|null;supplier_url:string|null;notes:string|null}
@@ -52,16 +52,21 @@ export function MaterialsPanel({adminKey}:{adminKey:string}){
   const [receivingId,setReceivingId]=useState('');const [receivingQty,setReceivingQty]=useState('')
   const [allocateJob,setAllocateJob]=useState('');const [allocateSku,setAllocateSku]=useState('')
   const [allocateQty,setAllocateQty]=useState('')
+  // Stable IDs on a timeout retry: never create another purchase/stock movement
+  // just because the first response failed to arrive.
+  const pendingStock=useRef<{signature:string;id:string}|null>(null)
+  const pendingPurchase=useRef<{signature:string;id:string}|null>(null)
+  const pendingReceipt=useRef<{signature:string;id:string}|null>(null)
   const reload=async()=>setData(await request<MaterialsData>('/api/admin/materials',adminKey))
   useEffect(()=>{let live=true
     void request<MaterialsData>('/api/admin/materials',adminKey).then(v=>{if(live)setData(v)})
       .catch(e=>{if(live)setError(e instanceof Error?e.message:'Could not load materials.')})
     return()=>{live=false}
   },[adminKey])
-  async function act(label:string,task:()=>Promise<unknown>){
+  async function act(label:string,task:()=>Promise<unknown>):Promise<boolean>{
     setBusy(true);setError('');setSuccess('')
-    try{await task();await reload();setSuccess(label)}
-    catch(e){setError(e instanceof Error?e.message:'Request failed.')}
+    try{await task();await reload();setSuccess(label);return true}
+    catch(e){setError(e instanceof Error?e.message:'Request failed.');return false}
     finally{setBusy(false)}
   }
   async function saveMaterial(event:FormEvent){
@@ -78,13 +83,15 @@ export function MaterialsPanel({adminKey}:{adminKey:string}){
   async function adjust(event:FormEvent){
     event.preventDefault()
     if(!stockSku||!stockDelta||!stockReason.trim())return
-    // A retry of the same request should use the same UUID; do not auto-retry on failure.
-    const movementId=crypto.randomUUID()
-    await act('Inventory count adjusted. No purchase or stock reservation was made.',()=>
+    const signature=JSON.stringify([stockSku,stockDelta,stockReason.trim()])
+    const movementId=pendingStock.current?.signature===signature
+      ?pendingStock.current.id:crypto.randomUUID()
+    pendingStock.current={signature,id:movementId}
+    const ok=await act('Inventory count adjusted. No purchase or stock reservation was made.',()=>
       request('/api/admin/materials/stock',adminKey,'POST',{
         sku:stockSku,delta:Number(stockDelta),reason:stockReason.trim(),movementId
       }))
-    setStockDelta('');setStockReason('')
+    if(ok){pendingStock.current=null;setStockDelta('');setStockReason('')}
   }
   async function saveRecipe(event:FormEvent){
     event.preventDefault()
@@ -104,19 +111,28 @@ export function MaterialsPanel({adminKey}:{adminKey:string}){
   async function recordPurchase(event:FormEvent){
     event.preventDefault()
     if(!purchaseSku||!purchaseQty||!supplierReference.trim())return
-    await act('Existing supplier order recorded (no checkout performed).',()=>
+    const unitCostCents=data?.parts.find(p=>p.sku===purchaseSku)?.unit_cost_cents??null
+    const signature=JSON.stringify([purchaseSku,purchaseQty,supplierReference.trim(),unitCostCents])
+    const purchaseId=pendingPurchase.current?.signature===signature
+      ?pendingPurchase.current.id:crypto.randomUUID()
+    pendingPurchase.current={signature,id:purchaseId}
+    const ok=await act('Existing supplier order recorded (no checkout performed).',()=>
       request('/api/admin/materials/purchases',adminKey,'POST',{
-        purchaseId:crypto.randomUUID(),sku:purchaseSku,quantity:Number(purchaseQty),
-        supplierReference:supplierReference.trim(),unitCostCents:data?.parts.find(p=>p.sku===purchaseSku)?.unit_cost_cents??null
+        purchaseId,sku:purchaseSku,quantity:Number(purchaseQty),
+        supplierReference:supplierReference.trim(),unitCostCents
       }))
-    setSupplierReference('');setPurchaseQty('')
+    if(ok){pendingPurchase.current=null;setSupplierReference('');setPurchaseQty('')}
   }
   async function receivePurchase(event:FormEvent){
     event.preventDefault()
     if(!receivingId||!receivingQty)return
-    await act('Received parts added to inventory.',()=>request('/api/admin/materials/receipts',adminKey,'POST',{
-      purchaseId:receivingId,receiptId:crypto.randomUUID(),quantity:Number(receivingQty)}))
-    setReceivingQty('')
+    const signature=JSON.stringify([receivingId,receivingQty])
+    const receiptId=pendingReceipt.current?.signature===signature
+      ?pendingReceipt.current.id:crypto.randomUUID()
+    pendingReceipt.current={signature,id:receiptId}
+    const ok=await act('Received parts added to inventory.',()=>request('/api/admin/materials/receipts',adminKey,'POST',{
+      purchaseId:receivingId,receiptId,quantity:Number(receivingQty)}))
+    if(ok){pendingReceipt.current=null;setReceivingQty('')}
   }
   async function reserve(event:FormEvent){
     event.preventDefault()

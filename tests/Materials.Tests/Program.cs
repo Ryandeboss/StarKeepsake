@@ -26,3 +26,6 @@ Check(ProcurementValidation.ValidSupplierPurchase(
   new SupplierPurchaseDraft(Guid.NewGuid(),"FRAME-WALNUT",1,"ORDER-001",12345)),"valid supplier record");
 Check(!ProcurementValidation.ValidSupplierPurchase(
   new SupplierPurchaseDraft(Guid.Empty,"FRAME-WALNUT",1,"ORDER-001",12345)),"reject empty purchase ID");
+
+Check(FramePricePolicy.RetailCents(0)==25500,"markup policy lower bound rounded to five dollars");
+Check(FramePricePolicy.RetailCents(30000)==73500,"cost change flows into pricing estimate");
