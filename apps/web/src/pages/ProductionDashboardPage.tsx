@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import './ProductionDashboardPage.css'
 import { MaterialsPanel } from './MaterialsPanel'
+import { ProcurementPanel } from './ProcurementPanel'
 
 type Receipt = {
   shop_id: number
@@ -322,6 +323,7 @@ export function ProductionDashboardPage() {
           {!selectedRow.items.length && <p>There are no Etsy transactions saved for this receipt yet.</p>}
         </section>}
         <MaterialsPanel adminKey={key} />
+        <ProcurementPanel adminKey={key} />
         <p className="production-footnote">This studio never places purchases, changes Etsy orders,
           or launches fabrication. Order amounts include Etsy receipt totals, not net profit.</p>
       </>}

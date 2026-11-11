@@ -98,7 +98,9 @@ public sealed class MaterialPlanningRepository(HttpClient client, DesignPersiste
         var allocations=await RequestAsync(HttpMethod.Get,"material_allocations?shop_id=eq."+shop+
           "&select=shop_id,receipt_id,transaction_id,sku,quantity_allocated,updated_at&limit=1000",
           null,ct);
-        return new {shopId,parts,recipes,recipeLines,plans,lines,jobs,purchases,allocations};
+        var receipts=await RequestAsync(HttpMethod.Get,"etsy_receipts?shop_id=eq."+shop+
+          "&select=shop_id,receipt_id,is_paid,is_canceled,has_refunds,etsy_status&order=receipt_id.desc&limit=300",null,ct);
+        return new {shopId,parts,recipes,recipeLines,plans,lines,jobs,purchases,allocations,receipts};
     }
     public Task<JsonElement> SaveMaterialAsync(MaterialDraft item,CancellationToken ct) =>
         RequestAsync(HttpMethod.Post,"rpc/m3_save_material",new {p_material=new {

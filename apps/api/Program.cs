@@ -178,6 +178,7 @@ builder.Services.AddHttpClient<EtsyProductionRepository>(client =>
     client.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddTransient<EtsyProductionService>();
 builder.Services.AddHttpClient<MaterialPlanningRepository>(client=>client.Timeout=TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient<ProcurementRepository>(client=>client.Timeout=TimeSpan.FromSeconds(20));
 builder.Services.AddHttpClient<FramePricingService>(client=>client.Timeout=TimeSpan.FromSeconds(12));
 builder.Logging.AddFilter("System.Net.Http.HttpClient.EtsyProductionClient", LogLevel.Warning);
 builder.Logging.AddFilter("System.Net.Http.HttpClient.EtsyProductionRepository", LogLevel.Warning);
@@ -204,6 +205,7 @@ app.MapDesignPersistenceEndpoints();
 app.MapEtsyConnectionEndpoints();
 app.MapEtsyProductionEndpoints();
 app.MapMaterialPlanningEndpoints();
+app.MapProcurementEndpoints();
 app.MapGet("/api/storefront/frame-prices",async (HttpContext ctx,FramePricingService service)=>{
     ctx.Response.Headers.CacheControl="no-store";
     return Results.Ok(await service.QuotesAsync(ctx.RequestAborted));
