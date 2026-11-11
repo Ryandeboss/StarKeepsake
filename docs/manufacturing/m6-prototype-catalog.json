@@ -1,0 +1,592 @@
+{
+  "version": 1,
+  "project": "StarKeepsake",
+  "createdUtc": "2026-11-11",
+  "status": "CANDIDATE_PROTOTYPE_ONLY",
+  "externalSpendAllowed": false,
+  "autoImportToM3": false,
+  "frameFormat": "11x14 deep shadowbox",
+  "designedFor": "printed luster photograph + real astronomically computed individually controlled warm white stars + concealed accent illumination",
+  "materials": [
+    {
+      "sku": "FRAME-WALNUT",
+      "name": "11×14 two-tone walnut deep shadowbox",
+      "category": "frame",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Verify actual 2.5-inch usable depth, glazing, removable back and routing space"
+    },
+    {
+      "sku": "FRAME-BLACK",
+      "name": "11×14 matte black deep shadowbox",
+      "category": "frame",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Verify actual 3.5-inch usable depth and how photo/sky layers mount"
+    },
+    {
+      "sku": "PHOTO-LUSTER",
+      "name": "Professional archival luster photo print",
+      "category": "photo",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Measure printed-photo aperture; 11×14 is outer frame, not guaranteed print crop"
+    },
+    {
+      "sku": "MOUNT-BOARD",
+      "name": "Rigid acid-free photo mounting board",
+      "category": "mounting",
+      "unit": "sheet",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Verify thickness, adhesive compatibility, and flat mounting"
+    },
+    {
+      "sku": "SKY-PANEL",
+      "name": "Opaque drilled starfield front/panel",
+      "category": "mounting",
+      "unit": "sheet",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Confirm star-hole count, drilling geometry and finish against M5 bench results"
+    },
+    {
+      "sku": "PICO-W",
+      "name": "Raspberry Pi Pico W controller",
+      "category": "electronics",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": "Raspberry Pi",
+      "supplierUrl": "https://www.raspberrypi.com/products/raspberry-pi-pico/",
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": 2,
+      "verifiedOnHand": null,
+      "notes": "User reports owning two; confirm which Pico variant before loading firmware"
+    },
+    {
+      "sku": "DRIVER-TLC5947",
+      "name": "Adafruit TLC5947 24-channel PWM LED driver breakout",
+      "category": "electronics",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": 1495,
+      "observedSupplierDate": "2026-11-11",
+      "supplierName": "Adafruit",
+      "supplierUrl": "https://www.adafruit.com/product/1429",
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "24 channels, individually PWM-controlled; electrical and star-emitter design require bench validation"
+    },
+    {
+      "sku": "EMITTERS-WW",
+      "name": "Warm-white star LED emitters sized for fiber coupling",
+      "category": "lighting",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Define LED current, color temperature, count and fiber-coupling fit"
+    },
+    {
+      "sku": "FIBER-BUNDLE",
+      "name": "Optical fiber bundle for point stars",
+      "category": "lighting",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Determine diameter, lengths, bends and quantities from physical sky layout"
+    },
+    {
+      "sku": "COB-ACCENT",
+      "name": "Warm-white COB accent LED strip",
+      "category": "lighting",
+      "unit": "m",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "No exposed strip dots; verify actual illuminated perimeter and dissipation"
+    },
+    {
+      "sku": "DIFFUSER-ACCENT",
+      "name": "Opaque recessed diffuser/channel assembly",
+      "category": "mounting",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Hide COB points and edge glare; fit in frame shadowbox"
+    },
+    {
+      "sku": "PSU-LOWV",
+      "name": "Certified enclosed low-voltage adapter",
+      "category": "electronics",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Choose voltage/current only after confirming star LED and COB power budgets"
+    },
+    {
+      "sku": "FUSE-LOWV",
+      "name": "Low-voltage fuse/protection assembly",
+      "category": "electronics",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Specify fuse and wiring based on measured current draw; no mains wiring inside frame"
+    },
+    {
+      "sku": "WIRING-SET",
+      "name": "Low-voltage wiring, connectors and strain relief set",
+      "category": "electronics",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Verify connector polarity, connector lock and pull/strain relief"
+    },
+    {
+      "sku": "ONOFF-SWITCH",
+      "name": "Discreet low-voltage power switch",
+      "category": "electronics",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Determine external placement and desired accessibility"
+    },
+    {
+      "sku": "MOUNT-HARDWARE",
+      "name": "Mounting spacers, cable clips and fastening set",
+      "category": "mounting",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Verify load and wall attachment method"
+    },
+    {
+      "sku": "SHIP-BOX",
+      "name": "Protective shipping carton and inserts",
+      "category": "packaging",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Check packed dimensions, carrier limits and drop-test suitability"
+    },
+    {
+      "sku": "CARE-CARD",
+      "name": "Printed care and setup instructions",
+      "category": "packaging",
+      "unit": "each",
+      "unitCostCents": null,
+      "observedSupplierPriceCents": null,
+      "observedSupplierDate": null,
+      "supplierName": null,
+      "supplierUrl": null,
+      "amazonAsin": null,
+      "packSizeVerified": false,
+      "physicalSpecsVerified": false,
+      "reportedOwnedQuantity": null,
+      "verifiedOnHand": null,
+      "notes": "Include power, cleaning, safety and no-user-serviceable parts"
+    }
+  ],
+  "recipes": [
+    {
+      "recipeCode": "starkeepsake-11x14-walnut",
+      "finish": "walnut",
+      "desiredFrameSizeIn": "11x14",
+      "targetFrameDepthIn": 2.5,
+      "confirmedVendorFrameDepthIn": null,
+      "lines": [
+        {
+          "sku": "FRAME-WALNUT",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "PHOTO-LUSTER",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "MOUNT-BOARD",
+          "quantityPerFrame": 1,
+          "unit": "sheet",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "SKY-PANEL",
+          "quantityPerFrame": 1,
+          "unit": "sheet",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "PICO-W",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "DRIVER-TLC5947",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "EMITTERS-WW",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "FIBER-BUNDLE",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "COB-ACCENT",
+          "quantityPerFrame": 1,
+          "unit": "m",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "DIFFUSER-ACCENT",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "PSU-LOWV",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "FUSE-LOWV",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "WIRING-SET",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "ONOFF-SWITCH",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "MOUNT-HARDWARE",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "SHIP-BOX",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "CARE-CARD",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        }
+      ],
+      "readyForManufacturing": false,
+      "readyForAutomaticOrder": false
+    },
+    {
+      "recipeCode": "starkeepsake-11x14-ebony",
+      "finish": "ebony",
+      "desiredFrameSizeIn": "11x14",
+      "targetFrameDepthIn": 3.5,
+      "confirmedVendorFrameDepthIn": null,
+      "lines": [
+        {
+          "sku": "FRAME-BLACK",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "PHOTO-LUSTER",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "MOUNT-BOARD",
+          "quantityPerFrame": 1,
+          "unit": "sheet",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "SKY-PANEL",
+          "quantityPerFrame": 1,
+          "unit": "sheet",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "PICO-W",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "DRIVER-TLC5947",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "EMITTERS-WW",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "FIBER-BUNDLE",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "COB-ACCENT",
+          "quantityPerFrame": 1,
+          "unit": "m",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "DIFFUSER-ACCENT",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "PSU-LOWV",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "FUSE-LOWV",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "WIRING-SET",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "ONOFF-SWITCH",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "MOUNT-HARDWARE",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "SHIP-BOX",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        },
+        {
+          "sku": "CARE-CARD",
+          "quantityPerFrame": 1,
+          "unit": "each",
+          "quantityStatus": "placeholder_for_first_fit_check",
+          "wastePercent": null
+        }
+      ],
+      "readyForManufacturing": false,
+      "readyForAutomaticOrder": false
+    }
+  ],
+  "mandatorySignoffs": [
+    "Confirm physical frame suppliers, usable depths and photo/sky mounting geometry",
+    "Verify star point count, individual channels vs grouped channels and driver current limits",
+    "Measure optical fiber length/diameter and demonstrate brightness and twinkle",
+    "Verify power adapter safety approval, voltage and measured load/thermal margin",
+    "Verify photo print and mounting quality before selecting a print vendor",
+    "Verify physical units-per-supplier-pack and the real Amazon Business ASIN/offer",
+    "Verify supplier prices including taxes, shipping, returns and substitutes",
+    "Confirm stock of both owned Pico W boards and firmware variant",
+    "Perform dark-room photo/lighting QA and packaging drop tests",
+    "Owner approves actual BOM recipe quantities, costs, sourcing and Etsy retail pricing"
+  ]
+}

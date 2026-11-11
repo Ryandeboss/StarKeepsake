@@ -1,0 +1,15 @@
+.m6-sim-lock{padding:12px;border:1px solid #bd8c4f;border-radius:8px;color:#ffe0ac;
+ background:#3d3020;font:600 11px/1.6 ui-monospace,monospace;letter-spacing:.05em}
+.m6-sim-budget{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:16px 0}
+.m6-sim-budget label{display:grid;gap:7px;flex:1;min-width:160px;font-size:12px}
+.m6-sim-budget input{font:inherit;border:1px solid #536e76;border-radius:8px;
+ padding:10px 12px;background:#0d2934;color:#eff7ef}
+.m6-sim-budget button,.m6-sim-actions button{border:1px solid #618190;border-radius:8px;
+ padding:10px 12px;background:#183947;color:#f1e4c8;cursor:pointer}
+.m6-sim-budget button:disabled,.m6-sim-actions button:disabled{opacity:.55;cursor:not-allowed}
+.m6-sim-help,.m6-sim-warn{font-size:12px;line-height:1.6;color:#c9ced1}
+.m6-sim-warn{padding:12px;border-left:3px solid #bd8c4f;background:#253943}
+.m6-sim-report,.m6-sim-ledger{margin-top:24px}
+.m6-sim-actions{display:flex;gap:7px;flex-wrap:wrap}
+.m6-sim td small{display:block;color:#b7c8cc;font-size:11px}
+.m6-sim table{min-width:600px}

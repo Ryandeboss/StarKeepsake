@@ -24,7 +24,7 @@ public sealed record ProcurementNeed(string Sku,string Name,string Unit,decimal 
     long? CatalogUnitCostCents,long? EstimatedPurchaseCents,string[] Blocks);
 public sealed record ProcurementPreview(string Mode,bool CheckoutEnabled,bool OffersVerified,
     bool SnapshotComplete,int ActivePaidJobs,int CatalogItems,long? EstimatedMaterialsCents,
-    ProcurementNeed[] Lines,string[] Warnings);
+    ProcurementNeed[] Lines,string[] Warnings,string[]? ActiveJobKeys=null);
 
 public static class ProcurementPlanner
 {
@@ -120,7 +120,8 @@ public static class ProcurementPlanner
             planned.Count,parts.Length,
             outLines.All(x=>x.EstimatedPurchaseCents.HasValue||x.NetToOrder==0)
                 ? outLines.Sum(x=>x.EstimatedPurchaseCents??0):null,
-            outLines.OrderBy(x=>x.Sku,StringComparer.Ordinal).ToArray(),warnings.ToArray());
+            outLines.OrderBy(x=>x.Sku,StringComparer.Ordinal).ToArray(),warnings.ToArray(),
+            planned.OrderBy(x=>x,StringComparer.Ordinal).ToArray());
     }
 }
 

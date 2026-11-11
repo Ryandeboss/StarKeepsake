@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import './ProductionDashboardPage.css'
 import { MaterialsPanel } from './MaterialsPanel'
 import { ProcurementPanel } from './ProcurementPanel'
+import { M6SimulationPanel } from './M6SimulationPanel'
 import { ManualAmazonPurchasingPanel } from './ManualAmazonPurchasingPanel'
 import type { MaterialSnapshot } from '../manualAmazonQueue'
 import { materialsForProductionJob } from '../orderFulfillment'
@@ -382,6 +383,7 @@ export function ProductionDashboardPage() {
         <ManualAmazonPurchasingPanel adminKey={key} refreshVersion={manualQueueVersion} />
         <MaterialsPanel adminKey={key} />
         <ProcurementPanel adminKey={key} />
+        <M6SimulationPanel adminKey={key} />
         <p className="production-footnote">This studio never places purchases, changes Etsy orders,
           or launches fabrication. Order amounts include Etsy receipt totals, not net profit.</p>
       </>}
