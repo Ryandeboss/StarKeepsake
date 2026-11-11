@@ -1,0 +1,21 @@
+.manual-amazon{scroll-margin-top:24px}
+.manual-amazon-safe{border:1px solid #bd8e50;background:#40311d;color:#ffe0ae;
+ padding:12px 15px;border-radius:9px;font:600 11px/1.5 ui-monospace,monospace;
+ letter-spacing:.045em}
+.manual-amazon-note,.manual-amazon-attention{font-size:12px;line-height:1.6;
+ border-left:3px solid #c39362;background:#243944;padding:12px 15px;
+ color:#e1ded7;border-radius:0 7px 7px 0}
+.manual-amazon-attention{margin:16px 0}
+.manual-amazon-attention h3{margin:0 0 8px;font-size:16px}
+.manual-amazon-attention ul{margin:8px 0;padding-left:20px}
+.manual-amazon a{color:#f4d1a0;text-decoration:underline}
+.manual-amazon td small{display:block;margin-top:5px;max-width:270px;
+ font-size:11px;line-height:1.5;color:#b7ccd1}
+.manual-amazon td button{font:inherit;font-size:12px;border:1px solid #8aa0a6;
+ background:#1d4349;color:#f1ebdd;border-radius:8px;padding:10px;cursor:pointer}
+.manual-amazon td button:disabled{opacity:.5;cursor:not-allowed}
+.manual-amazon-log{margin-top:25px;scroll-margin-top:24px}
+.manual-amazon-confirm{display:flex!important;flex-direction:row!important;
+ align-items:flex-start!important;gap:10px;font-size:12px;line-height:1.6}
+.manual-amazon-confirm input{flex:none;margin-top:4px}
+.manual-amazon-log input,.manual-amazon-log select{min-width:0}
