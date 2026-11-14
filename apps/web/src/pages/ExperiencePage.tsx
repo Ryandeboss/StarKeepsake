@@ -694,7 +694,7 @@ export function ExperiencePage() {
     <div className="at-aurora" aria-hidden="true"/>
     <header className="at-header">
       <button type="button" className="at-wordmark" onClick={()=>goToChapter(0)} aria-label="StarKeepsake home">
-        <span className="at-logo-mark">✳</span><span>STAR<span>KEEPSAKE</span><small>THE NIGHT ATELIER</small></span>
+        <span className="at-logo-mark" aria-hidden="true"><img src="/favicon.svg?v=6" alt="" /></span><span>STAR<span>KEEPSAKE</span><small>THE NIGHT ATELIER</small></span>
       </button>
       <nav className="at-steps" aria-label="Jump between the five workshop chapters">
         {STEPS.map((item,index)=><button type="button" key={item.key}
