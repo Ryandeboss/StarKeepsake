@@ -179,6 +179,26 @@ builder.Services.AddHttpClient<EtsyProductionRepository>(client =>
 builder.Services.AddTransient<EtsyProductionService>();
 builder.Services.AddHttpClient<MaterialPlanningRepository>(client=>client.Timeout=TimeSpan.FromSeconds(30));
 builder.Services.AddHttpClient<ProcurementRepository>(client=>client.Timeout=TimeSpan.FromSeconds(20));
+// Amazon Business Product Search is strictly read-only; endpoints/hostnames are fixed.
+// Azure secrets stay exclusively server-side; no browser tokens or buyer email.
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("AmazonBusiness").Get<AmazonBusinessCatalogOptions>()
+        ?? new AmazonBusinessCatalogOptions());
+builder.Services.AddHttpClient("AmazonBusinessLwa",client=>{
+    client.BaseAddress=new Uri("https://api.amazon.com/");
+    client.Timeout=TimeSpan.FromSeconds(12);
+}).ConfigurePrimaryHttpMessageHandler(()=>new HttpClientHandler{
+    AllowAutoRedirect=false,UseCookies=false
+});
+builder.Services.AddHttpClient("AmazonBusinessProductSearch",client=>{
+    client.BaseAddress=new Uri("https://na.business-api.amazon.com/");
+    client.Timeout=TimeSpan.FromSeconds(20);
+}).ConfigurePrimaryHttpMessageHandler(()=>new HttpClientHandler{
+    AllowAutoRedirect=false,UseCookies=false
+});
+builder.Services.AddSingleton<AmazonBusinessCatalogClient>();
+// Do not log LWA form bodies or the authorization/user-email request headers.
+builder.Logging.AddFilter("System.Net.Http.HttpClient.AmazonBusiness",LogLevel.Warning);
 builder.Services.AddHttpClient<FramePricingService>(client=>client.Timeout=TimeSpan.FromSeconds(12));
 builder.Logging.AddFilter("System.Net.Http.HttpClient.EtsyProductionClient", LogLevel.Warning);
 builder.Logging.AddFilter("System.Net.Http.HttpClient.EtsyProductionRepository", LogLevel.Warning);

@@ -187,6 +187,40 @@ public static class ProcurementEndpoints
             try{return Results.Ok(await repo.Save(input,ctx.RequestAborted));}
             catch(HttpRequestException){return Results.Problem("Mapping rejected; check M3 SKU.",statusCode:409);}
         }).RequireRateLimiting("production-admin");
-        // Intentionally NO order-placement endpoint or Amazon token handling.
+        app.MapGet("/api/admin/procurement/catalog/status",(HttpContext ctx,
+            EtsyConnectionOptions auth,AmazonBusinessCatalogClient amazon)=>{
+            Harden(ctx);
+            if(!Allowed(ctx,auth))return Results.Unauthorized();
+            return Results.Ok(amazon.Readiness());
+        }).RequireRateLimiting("production-admin");
+
+        // Explicit owner request only. No periodic provider polling or writes to M3.
+        app.MapPost("/api/admin/procurement/catalog/quotes/refresh",async (
+            HttpContext ctx,EtsyConnectionOptions auth,DesignPersistenceOptions opts,
+            ProcurementRepository repo,AmazonBusinessCatalogClient amazon)=>{
+            Harden(ctx);
+            if(!Allowed(ctx,auth))return Results.Unauthorized();
+            if(!opts.IsConfigured)return Results.StatusCode(503);
+            if(!amazon.Readiness().Configured)return Results.Json(
+                new {code="CATALOG_NOT_CONFIGURED"},statusCode:503);
+            try
+            {
+                var mappings=AmazonCatalogParser.ParseMappings(
+                    await repo.Mappings(ctx.RequestAborted));
+                var quotes=await amazon.Refresh(mappings,ctx.RequestAborted);
+                return Results.Ok(quotes);
+            }
+            catch(AmazonCatalogException e)
+            {
+                var rate=e.Code is "CATALOG_REFRESH_COOLDOWN" or "PROVIDER_RATE_LIMITED";
+                return Results.Json(new {code=e.Code},
+                    statusCode:rate?429:503);
+            }
+            catch(Exception e) when(e is HttpRequestException or JsonException)
+            {
+                return Results.Json(new {code="CATALOG_READ_UNAVAILABLE"},statusCode:503);
+            }
+        }).RequireRateLimiting("production-sync");
+        // Intentionally NO Amazon order-placement, approval or spending API.
     }
 }

@@ -5,3 +5,10 @@
 .m6-panel a{color:#f7dbad}
 .m6-panel ul{font-size:12px;line-height:1.85}
 .m6-panel .m6-checkbox{display:flex;flex-direction:row;align-items:center;gap:8px}
+
+.m6-catalog{margin-top:22px}
+.m6-catalog-status{padding:12px 14px;border-radius:8px;background:#17313a;
+ border:1px solid #52717a;color:#d8e7e0}
+.m6-offer-result{margin-top:15px}
+.m6-offer-result td{vertical-align:top}
+.m6-offer-result td small{display:block;color:#b4c7cb;line-height:1.5;margin-top:5px}
