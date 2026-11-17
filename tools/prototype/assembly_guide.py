@@ -29,10 +29,10 @@ def validate(mapping, review, measurements):
         raise GuideError("Saved Design IDs must match")
     n = mapping.get("count")
     leds = mapping.get("leds")
-    if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= 30 or not isinstance(leds, list) or len(leds) != n or review.get("selectedLedCount") != n:
+    if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= 128 or not isinstance(leds, list) or len(leds) != n or review.get("selectedLedCount") != n:
         raise GuideError("Invalid LED count")
-    if not isinstance(mapping.get("board"), str) or "Pico 2 W" not in mapping["board"] or mapping.get("dataGpio") != 0:
-        raise GuideError("Pico 2 W / GPIO0 prototype map expected")
+    if not isinstance(mapping.get("board"), str) or not mapping.get("board") or mapping.get("dataGpio") != 0:
+        raise GuideError("Controller model / GPIO0 map expected")
     art = review.get("nominalArtworkMm")
     if not isinstance(art, dict):
         raise GuideError("Nominal dimensions missing")
@@ -90,7 +90,10 @@ def validate(mapping, review, measurements):
     if substrate == "unknown":
         warnings.append("Printed or laser-tested substrate is not yet selected.")
     return {"reference": ref, "ledCount": n, "nominalWidthMm": w,
-            "nominalHeightMm": h, "leds": points, "measurements": physical,
+            "nominalHeightMm": h, "leds": points,"printSpec":review.get("printSpec"),
+            "driverCountEstimate":math.ceil(n/24),
+            "selectionSource":mapping.get("selectionSource","legacy_reselected_HOLD"),
+            "measurements": physical,
             "warnings": warnings}
 
 def steps(info):
@@ -110,7 +113,7 @@ def steps(info):
          "Review light guides/fibers/diffusers, star spacing and serviceability. Logical LED index is not a drilled hole location or strip routing plan.",
          "Optical map and clearance photographs"),
         ("electrical", "Electrical", "Inspect regulated power, logic shifting and current",
-         "Verify Pico 2 W 3.3V GPIO, suitable 5V LED logic buffer, common ground, external protected supply, wiring, strain relief and current/thermal measurements.",
+         "Verify actual Pico W family model, chosen LED driver chain (estimated "+str(info["driverCountEstimate"])+" 24-channel drivers), appropriate 3.3V logic interfacing, protected low-voltage supply, wiring and thermal measurements.",
          "Wiring diagram, voltage/current/temperature evidence"),
         ("firmware", "Controller", "Bench-test safe LED startup and power-off",
          "Keep firmware interlocks disabled until electronics review. Under supervision, confirm indexed LEDs, low brightness, reset behavior and darkness when off.",
@@ -142,7 +145,10 @@ def generate(mapping, review, measurements=None):
             "nominalArtworkMm": {"width": v["nominalWidthMm"],
                                  "height": v["nominalHeightMm"]},
             "actualMeasurements": v["measurements"],
-            "ledCount": v["ledCount"], "warnings": v["warnings"],
+            "ledCount": v["ledCount"],
+            "printSpec":v["printSpec"],"estimatedDriverCount":v["driverCountEstimate"],
+            "selectionSource":v["selectionSource"],
+            "warnings": v["warnings"],
             "steps": checklist}
     e = lambda x: escape(str(x), quote=True)
     alerts = "".join("<li>" + e(s) + "</li>" for s in data["warnings"])

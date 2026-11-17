@@ -6,6 +6,7 @@ a physically sequential LED map and a non-production QA report. No laser command
 import argparse
 import json
 import math
+import os
 import re
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -75,27 +76,60 @@ def parse_order(payload):
         if not sx<=x<=sx+sw or not sy<=y<=sy+sh:
             raise PrototypeError("Star outside sky region; do not fabricate")
         normalized.append({"xMm":x,"yMm":y,"diameter":dia,"magnitude":mag,"hipparcosId":hip})
+    physical=d.get("physicalStars")
+    subset=None
+    if physical is not None:
+        if not isinstance(physical,list) or len(physical)>128:
+            raise PrototypeError("Invalid physical star set")
+        by_hip={s["hipparcosId"]:s for s in normalized}
+        subset=[]
+        for i,record in enumerate(physical):
+            if not isinstance(record,dict) or record.get("ledIndex")!=i:
+                raise PrototypeError("Physical LED indices must be 0..N-1")
+            hip=record.get("hipparcosId")
+            if isinstance(hip,bool) or not isinstance(hip,int) or hip not in by_hip:
+                raise PrototypeError("Physical star must be included in digital catalogue")
+            canonical=by_hip[hip]
+            if any(abs(check_num(record.get(k),k,-3 if k=="magnitude" else 0,
+                     8 if k=="magnitude" else max(w,h))-canonical[k])>.002
+                   for k in ("xMm","yMm","magnitude")):
+                raise PrototypeError("Physical star coordinates mismatch saved sky")
+            subset.append({**canonical,"index":i,
+                "selectionReason":record.get("selectionReason","unspecified")})
     return {"reference":ref,"widthMm":w,"heightMm":h,
-            "framePresetId":d.get("framePresetId"),"regions":regions,"stars":normalized}
+            "framePresetId":d.get("framePresetId"),"regions":regions,"stars":normalized,
+            "physicalStars":subset,"physicalSelection":d.get("physicalSelection"),
+            "printSpec":payload.get("manufacturing",{}).get("print") if isinstance(payload.get("manufacturing"),dict) else None}
 
-def select_leds(design,count=24,spacing=3.5):
-    if isinstance(count,bool) or not isinstance(count,int) or not 1<=count<=30:
-        raise PrototypeError("Select 1..30 bench LEDs")
+def select_leds(design,count=None,spacing=3.5):
+    limit=int(os.getenv("MAX_PHYSICAL_STARS","48"))
+    if limit<1 or limit>128:
+        raise PrototypeError("MAX_PHYSICAL_STARS must be 1..128")
+    if count is not None and (isinstance(count,bool) or not isinstance(count,int) or not 1<=count<=limit):
+        raise PrototypeError("LED request exceeds configured physical-star maximum")
     spacing=check_num(spacing,"spacing",2,20)
     sx,sy,sw,sh=design["regions"]["sky"]
     selected=[]
-    for star in sorted(design["stars"],key=lambda s:(s["magnitude"],s["hipparcosId"])):
+    authoritative=design.get("physicalStars")
+    if authoritative is not None:
+        if len(authoritative)>limit:
+            raise PrototypeError("Saved physical star count exceeds current product limit; review before manufacturing")
+        source=authoritative[:count] if count is not None else authoritative
+    else:
+        source=sorted(design["stars"],key=lambda s:(s["magnitude"],s["hipparcosId"]))
+    for star in source:
         x,y=star["xMm"],star["yMm"]
         margin=2+star["diameter"]/2
         if not sx+margin<=x<=sx+sw-margin or not sy+margin<=y<=sy+sh-margin:
+            if authoritative is not None:raise PrototypeError("Saved physical star is too close to sky edge")
             continue
         if any(math.hypot(x-s["xMm"],y-s["yMm"])<spacing for s in selected):
+            if authoritative is not None:raise PrototypeError("Physical star separation failed validation")
             continue
         selected.append({**star,"index":len(selected)})
-        if len(selected)==count:
-            break
+        if authoritative is None and len(selected)==(count if count is not None else limit):break
     if not selected:
-        raise PrototypeError("No stars satisfy nominal spacing")
+        raise PrototypeError("No safe physical stars were available; production HOLD")
     return selected
 
 def number(v):
@@ -126,24 +160,33 @@ def registration_svg(design,leds):
                 "stroke":"#d36844","stroke-width":"0.18"})
     return ET.tostring(root,encoding="unicode")
 
-def export(payload,max_leds=24):
+def export(payload,max_leds=None):
     d=parse_order(payload)
     leds=select_leds(d,count=max_leds)
     mapping={"format":"starkeepsake-prototype-led-map-v1","reference":d["reference"],
-        "board":"Raspberry Pi Pico 2 W (bench assumption)",
+        "board":"Pico W family (model/wiring to be verified)",
         "dataGpio":0,"count":len(leds),
+        "driverChannelsPerBoard":24,"estimatedDriverCount":math.ceil(len(leds)/24),
+        "selectionSource":"saved_physicalStars" if d["physicalStars"] is not None else "legacy_reselected_HOLD",
         "leds":[{"index":s["index"],"hipparcosId":s["hipparcosId"],
                  "xMm":round(s["xMm"],3),"yMm":round(s["yMm"],3),
-                 "magnitude":s["magnitude"]} for s in leds],
+                 "magnitude":s["magnitude"],"apertureMm":s["diameter"],
+                 "selectionReason":s.get("selectionReason","legacy_unverified")} for s in leds],
         "powerNote":"At 60mA full white per WS2812-compatible RGB pixel, the LED-only theoretical upper estimate is %d mA; verify actual strip and supply."%(len(leds)*60)}
     report={"status":"REFERENCE_ONLY_NOT_APPROVED_FOR_LASER",
         "designReference":d["reference"],"nominalArtworkMm":{"width":d["widthMm"],"height":d["heightMm"]},
         "selectedLedCount":len(leds),"originalStarCount":len(d["stars"]),
+        "maxPhysicalStars":int(os.getenv("MAX_PHYSICAL_STARS","48")),
+        "printSpec":d["printSpec"],
+        "driverCountEstimate":math.ceil(len(leds)/24),
+        "selectionSource":mapping["selectionSource"],
         "reviewRequired":[
           "UNPAID_PREVIEW is not a paid Etsy order or authorization to manufacture.",
           "Confirm real frame opening, substrate dimensions, kerf and laser compatibility.",
           "Nominal star coordinates are NOT a validated physical cut path.",
           "Reconcile immersive camera/horizon composition against canonical artwork.",
+          "Verify print bleed/trim/safe metadata and oversize lab proof before mounting.",
+          "Legacy packets must be recalculated for authoritative physicalStars.",
           "LED index is a proposed logical wiring order, not physical routing."
         ]}
     return {"registration_reference.svg":registration_svg(d,leds),
@@ -155,7 +198,8 @@ def main():
     ap=argparse.ArgumentParser(description="Offline StarKeepsake prototype alignment exporter (NO laser output)")
     ap.add_argument("order_json",type=Path)
     ap.add_argument("--out",required=True,type=Path)
-    ap.add_argument("--leds",type=int,default=24)
+    ap.add_argument("--leds",type=int,default=None,
+                    help="Optional smaller bench subset. Default uses ALL saved physicalStars, max configured.")
     args=ap.parse_args()
     try:
         data=args.order_json.read_bytes()

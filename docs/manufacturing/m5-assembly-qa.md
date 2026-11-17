@@ -6,7 +6,7 @@
 
 First obtain a saved non-sensitive StarKeepsake sample design and download its local maker packet. Extract order.json. Run M4 to generate a nominal-millimeter reference and numbered LED plan:
 
-    python tools/prototype/artwork.py path/to/order.json --out output/m4 --leds 24
+    python tools/prototype/artwork.py path/to/order.json --out output/m4
 
 Optionally copy docs/manufacturing/measurements.example.json to a local, private measurements.json. Replace null values only when real frame opening width/height, internal depth, frame/LED/supply product models and substrate have been measured or confirmed.
 

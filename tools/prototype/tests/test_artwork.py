@@ -50,7 +50,33 @@ class PrototypeTest(unittest.TestCase):
         for i in range(30):
             self.assertLessEqual(max(intensity(0,i,12345,20)),20)
         with self.assertRaises(ValueError):intensity(0,0,0,255)
-        with self.assertRaises(PrototypeError):select_leds(parse_order(packet()),31)
+        with self.assertRaises(PrototypeError):select_leds(parse_order(packet()),129)
+    def test_authoritative_variable_n_is_preserved(self):
+        p=packet()
+        p["design"]["physicalStars"]=[
+            dict(s,ledIndex=i,selectionReason="bright_anchor")
+            for i,s in enumerate([p["design"]["stars"][0],p["design"]["stars"][2],p["design"]["stars"][3]])]
+        p["design"]["physicalSelection"]={"maxPhysicalStars":48,"algorithm":"bright-anchors-spatial-v1"}
+        result=export(p)
+        mapping=json.loads(result["led_map.json"])
+        self.assertEqual(mapping["selectionSource"],"saved_physicalStars")
+        self.assertEqual(mapping["count"],3)
+        self.assertEqual(mapping["estimatedDriverCount"],1)
+        self.assertEqual(mapping["leds"][-1]["index"],2)
+        p["design"]["physicalStars"][0]["xMm"]+=7
+        with self.assertRaises(PrototypeError):export(p)
+    def test_more_than_24_leds_without_one_driver_limit(self):
+        p=packet()
+        p["design"]["stars"]=[
+            {"hipparcosId":i+1,"xMm":9+(i%8)*27,"yMm":9+(i//8)*29,
+             "holeSizeMm":1.0,"magnitude":2.0} for i in range(36)]
+        p["design"]["physicalStars"]=[
+            dict(s,ledIndex=i,selectionReason="balanced_field")
+            for i,s in enumerate(p["design"]["stars"])]
+        m=json.loads(export(p)["led_map.json"])
+        self.assertEqual(m["count"],36)
+        self.assertEqual(m["estimatedDriverCount"],2)
+        self.assertEqual([s["index"] for s in m["leds"]],list(range(36)))
     def test_invalid_geometry_overlap(self):
         p=packet();p["design"]["regions"]["engravingPhoto"]["yMm"]=70
         with self.assertRaises(PrototypeError):parse_order(p)

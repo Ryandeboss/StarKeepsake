@@ -77,6 +77,9 @@ export type AstronomyCalculation = {
   visibleCatalogStars: number
   projectedCandidates: number
   selectedStars: number
+  maxPhysicalStars?: number
+  eligiblePhysicalStars?: number
+  selectedPhysicalStars?: number
 }
 export type DesignStar = MillimeterPoint & {
   hipparcosId: number
@@ -85,6 +88,19 @@ export type DesignStar = MillimeterPoint & {
   azimuthDeg: number
   holeSizeMm: number
   ledIndex: number
+}
+export type PhysicalStar = DesignStar & {
+  selectionReason: 'bright_anchor' | 'balanced_field'
+  selectionPriority: number
+}
+export type PhysicalSelection = {
+  algorithm: string
+  maxPhysicalStars: number
+  minSeparationMm: number
+  eligibleStars: number
+  selectedStars: number
+  driverChannelsPerBoard: number
+  estimatedDriverCount: number
 }
 export type DesignSpec = {
   schemaVersion: typeof DESIGN_SPEC_VERSION
@@ -101,7 +117,10 @@ export type DesignSpec = {
   materialStyle: MaterialStyleSpec
   skySettings: SkySettings
   astronomy: AstronomyCalculation | null
-  stars: readonly DesignStar[]
+  stars: readonly DesignStar[] // digital stars, retained for saved v1.5 compatibility
+  displayStars?: readonly DesignStar[]
+  physicalStars?: readonly PhysicalStar[]
+  physicalSelection?: PhysicalSelection
 }
 
 type Geometry = { widthMm: number; heightMm: number; marginMm: number }

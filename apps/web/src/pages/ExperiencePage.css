@@ -703,3 +703,14 @@
 .at-ready-packet .at-etsy-checkout{padding:15px 13px;border-radius:10px;
   font-size:13px;font-weight:700;box-shadow:0 8px 22px #0004}
 .at-ready-packet .at-order-reference{overflow-wrap:anywhere}
+
+.at-physical-inspector{margin:18px 0;padding:16px;border:1px solid #526d78;border-radius:13px;background:#0c2535;color:#d9e5e8;font-size:12px}
+.at-inspector-header{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center}
+.at-inspector-header strong{color:#efd59e;letter-spacing:.07em}
+.at-inspector-header label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.at-physical-inspector p{margin:10px 0;line-height:1.55}
+.at-inspector-table-wrap{max-height:270px;overflow:auto}
+.at-physical-inspector table{width:100%;border-collapse:collapse;text-align:left;font-size:11px}
+.at-physical-inspector th,.at-physical-inspector td{padding:5px 9px;border-bottom:1px solid #476073}
+.at-physical-inspector th{position:sticky;top:0;background:#1c3849;color:#f7dcb0}
+.at-physical-inspector small{display:block;color:#b2c6ce;margin-top:10px}

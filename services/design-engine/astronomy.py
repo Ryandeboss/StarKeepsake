@@ -13,6 +13,7 @@ from skyfield.api import Loader, Star, wgs84
 from skyfield.data import hipparcos
 
 from frame_layout import FrameLayout, get_layout
+from physical_star_selection import select_physical_stars
 
 DEFAULT_LAYOUT = get_layout("11x14")
 ARTWORK_WIDTH_MM = DEFAULT_LAYOUT.width_mm
@@ -27,6 +28,8 @@ SKY_RADIUS_MM = min(SKY_REGION[2], SKY_REGION[3]) / 2
 DEFAULT_MAGNITUDE_LIMIT = 6.0
 DEFAULT_MAX_STARS = 96
 DEFAULT_MIN_SEPARATION_MM = 3.5
+MAX_PHYSICAL_STARS = int(os.getenv("MAX_PHYSICAL_STARS", "48"))
+PHYSICAL_MIN_SEPARATION_MM = float(os.getenv("PHYSICAL_STAR_MIN_SEPARATION_MM", "4.5"))
 
 DATA_DIR = Path(
     os.getenv(
@@ -266,14 +269,37 @@ def generate_star_field(
             )
         )
 
+    try:
+        chosen_physical, eligible_physical = select_physical_stars(
+            candidates, maximum=MAX_PHYSICAL_STARS,
+            minimum_separation_mm=PHYSICAL_MIN_SEPARATION_MM,
+            sky_region=layout.sky, hole_diameter=hole_size_mm)
+    except ValueError as exc:
+        raise AstronomyInputError(str(exc)) from exc
+    indices = {star.hipparcos_id: i for i,(star,_,_) in enumerate(chosen_physical)}
+    physical_stars = [
+        {"hipparcosId":star.hipparcos_id,"xMm":round(star.x_mm,3),
+         "yMm":round(star.y_mm,3),"magnitude":round(star.magnitude,3),
+         "altitudeDeg":round(star.altitude_deg,3),
+         "azimuthDeg":round(star.azimuth_deg,3),
+         "holeSizeMm":hole_size_mm(star.magnitude),"ledIndex":i,
+         "selectionReason":reason,"selectionPriority":priority}
+        for i,(star,reason,priority) in enumerate(chosen_physical)
+    ]
+
     candidates.sort(key=lambda star: (star.magnitude, -star.altitude_deg, star.hipparcos_id))
 
-    selected: list[CandidateStar] = []
+    selected: list[CandidateStar] = [s for s,_,_ in chosen_physical]
+    seen_display = {s.hipparcos_id for s in selected}
+    display_budget = max(max_stars,len(selected))
     for candidate in candidates:
-        if _far_enough_from_selected(candidate, selected, min_separation_mm):
+        if len(selected) >= display_budget:
+            break
+        if candidate.hipparcos_id not in seen_display and _far_enough_from_selected(candidate,selected,min_separation_mm):
             selected.append(candidate)
-            if len(selected) >= max_stars:
-                break
+            seen_display.add(candidate.hipparcos_id)
+            if len(selected)>=display_budget:break
+    selected.sort(key=lambda star:(star.magnitude,-star.altitude_deg,star.hipparcos_id))
 
     stars = [
         {
@@ -284,9 +310,9 @@ def generate_star_field(
             "altitudeDeg": round(star.altitude_deg, 3),
             "azimuthDeg": round(star.azimuth_deg, 3),
             "holeSizeMm": hole_size_mm(star.magnitude),
-            "ledIndex": index,
+            "ledIndex": indices.get(star.hipparcos_id,-1),
         }
-        for index, star in enumerate(selected)
+        for star in selected
     ]
 
     return {
@@ -303,6 +329,20 @@ def generate_star_field(
             "visibleCatalogStars": visible_catalog_stars,
             "projectedCandidates": len(candidates),
             "selectedStars": len(stars),
+            "maxPhysicalStars": MAX_PHYSICAL_STARS,
+            "eligiblePhysicalStars": eligible_physical,
+            "selectedPhysicalStars": len(physical_stars),
         },
-        "stars": stars,
+        "stars": stars,  # backward-compatible display-stars alias
+        "displayStars": stars,
+        "physicalStars": physical_stars,
+        "physicalSelection": {
+            "algorithm": "bright-anchors-spatial-v1",
+            "maxPhysicalStars": MAX_PHYSICAL_STARS,
+            "minSeparationMm": PHYSICAL_MIN_SEPARATION_MM,
+            "eligibleStars": eligible_physical,
+            "selectedStars": len(physical_stars),
+            "driverChannelsPerBoard": 24,
+            "estimatedDriverCount": math.ceil(len(physical_stars)/24),
+        },
     }

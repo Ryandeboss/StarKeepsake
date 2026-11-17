@@ -5,6 +5,7 @@ import { observerPointInPanel } from './skyWorkshopMath'
 import { orderReference, makeOrderManifest, zipFiles } from './orderManifest'
 import type { OrderManifest, OrderPreferences } from './orderManifest'
 import type { FrameQuote } from './storefrontPricing'
+import { printSpecification,trimSafeGuideSvg,embedPngDpi } from './manufacturingPrint'
 export type { OrderManifest, OrderPreferences } from './orderManifest'
 export { orderPersonalization } from './orderManifest'
 const encoder=new TextEncoder()
@@ -89,6 +90,84 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
   ctx.fillText('Preview only · physical star lights, frame and materials may differ',90,1763)
   return png(canvas)
 }
+/** Separate high-resolution manufacturing artwork; never use the illustrative
+ * order-sheet PNG for print. Trim remains exactly the intended composition.
+ * Bleed extends colored edge pixels: obtain lab approval of the proof first.
+ */
+async function createManufacturingArt(manifest:OrderManifest,photoUrl:string,
+  foregroundUrl:string):Promise<Blob>{
+  const {design,preferences:p}=manifest
+  const spec=manifest.manufacturing!.print
+  const trim=document.createElement('canvas')
+  trim.width=spec.trimPixels.width;trim.height=spec.trimPixels.height
+  const ctx=trim.getContext('2d');if(!ctx)throw Error('Print canvas unavailable.')
+  const w=trim.width,h=trim.height
+  ctx.fillStyle='#071723';ctx.fillRect(0,0,w,h)
+  const skyHeight=p.layout==='within'?h:h*p.skyHeight/100
+  const grad=ctx.createLinearGradient(0,0,0,skyHeight)
+  const palette=p.tone==='teal'?['#081924','#194a5b']:p.tone==='indigo'?
+    ['#050e25','#1b2850']:['#040c1d','#213f57']
+  grad.addColorStop(0,palette[0]);grad.addColorStop(1,palette[1])
+  ctx.fillStyle=grad;ctx.fillRect(0,0,w,skyHeight)
+  const aspect=p.layout==='within'?w/h:w/skyHeight
+  // The displayed stellar composition follows the same observer projection
+  // as the order sheet. Physical LED coordinate alignment is separately held
+  // for proofing: canonical M4 coordinates cannot be silently transformed.
+  for(const star of design.stars){
+    const projected=projectObserverStar(star.azimuthDeg,star.altitudeDeg,p.heading,p.pitch,p.fov)
+    if(!projected.inFront)continue
+    const point=observerPointInPanel(projected.x,projected.y,aspect)
+    if(!point.inside)continue
+    const radius=Math.max(1.2,Math.min(5,3.4-star.magnitude*.38))*spec.dpi/300
+    const x=point.x*w,y=point.y*skyHeight
+    ctx.beginPath();ctx.fillStyle='#f8f3e4'
+    ctx.shadowColor='#dce9fb';ctx.shadowBlur=radius*3
+    ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill()
+  }
+  ctx.shadowBlur=0
+  if(p.layout==='within'){
+    const prepared=await readImage(foregroundUrl)
+    ctx.drawImage(prepared,0,0,w,h)
+  }else{
+    ctx.fillStyle='#071723';ctx.fillRect(0,skyHeight,w,h-skyHeight)
+    placePhoto(ctx,await readImage(photoUrl),0,skyHeight,w,h-skyHeight,p.photoFit)
+  }
+  // Inscription / timestamp are placed inside the requested safe inset.
+  // Full visible print is deliberately free of trim marks and guides.
+  const inset=spec.safeInsetIn/spec.trimSizeIn.width*w
+  const font=Math.max(26,Math.round(w*.02))
+  ctx.font=font+'px Georgia';ctx.textAlign='center'
+  ctx.fillStyle='#fff0d0'
+  ctx.shadowColor='#08111b';ctx.shadowBlur=font*.25
+  const caption=[p.inscription.trim(),design.moment.date,
+    design.moment.location?.displayName??''].filter(Boolean).join(' · ')
+  if(caption){
+    const y=h-Math.max(inset,Math.round(h*.035))
+    ctx.fillText(caption,w/2,y,Math.max(10,w-2*inset))
+  }
+  ctx.shadowBlur=0
+  const canvas=document.createElement('canvas')
+  canvas.width=spec.documentPixels.width;canvas.height=spec.documentPixels.height
+  const out=canvas.getContext('2d');if(!out)throw Error('Print canvas unavailable.')
+  // Fully opaque fallback prevents any transparent seams at half-pixel bleed offsets.
+  out.fillStyle='#071723';out.fillRect(0,0,canvas.width,canvas.height)
+  const x=spec.trimPixels.x,y=spec.trimPixels.y
+  // Extend artwork to all four bleed edges; no white pixels/borders.
+  out.drawImage(trim,x,y,w,h)
+  out.drawImage(trim,0,0,1,h,0,y,x,h)
+  out.drawImage(trim,w-1,0,1,h,x+w,y,canvas.width-x-w,h)
+  out.drawImage(trim,0,0,w,1,x,0,w,y)
+  out.drawImage(trim,0,h-1,w,1,x,y+h,w,canvas.height-y-h)
+  for(const [sx,sy,dx,dy,dw,dh] of [
+    [0,0,0,0,x,y],[w-1,0,x+w,0,canvas.width-x-w,y],
+    [0,h-1,0,y+h,x,canvas.height-y-h],
+    [w-1,h-1,x+w,y+h,canvas.width-x-w,canvas.height-y-h]
+  ])out.drawImage(trim,sx,sy,1,1,dx,dy,dw,dh)
+  const pngBlob=await png(canvas)
+  const bytes=embedPngDpi(new Uint8Array(await pngBlob.arrayBuffer()),spec.dpi)
+  return new Blob([new Uint8Array(bytes).buffer],{type:'image/png'})
+}
+
 export async function createCustomerPacket(input:{
   design:DesignSpec;prefs:OrderPreferences;photo:File;photoUrl:string;cutoutUrl:string;savedDesignId?:string;
   quote?:FrameQuote|null;
@@ -100,15 +179,29 @@ export async function createCustomerPacket(input:{
   const reference=input.savedDesignId??await orderReference(input.design,input.prefs,photo)
   const original={name:input.photo.name,bytes:input.photo.size,mime:input.photo.type}
   const manifest=makeOrderManifest(reference,input.design,input.prefs,original,new Date().toISOString())
+  manifest.manufacturing={
+    print:printSpecification(input.design.physicalArtwork.widthMm,
+      input.design.physicalArtwork.heightMm),
+    selectedPhysicalStars:input.design.physicalStars?.length??null,
+    physicalMax:input.design.physicalSelection?.maxPhysicalStars??null,
+    physicalSelectionVersion:input.design.physicalSelection?.algorithm??null,
+    status:'PROOF_REQUIRED',
+    warning:'Physical star alignment to customer preview requires reviewed printed registration; no automatic drilling authorization.',
+  }
   if(input.quote)manifest.pricing={priceCents:input.quote.priceCents,currency:'USD',
     mode:input.quote.mode,revision:input.quote.revision,
     updatedAtUtc:input.quote.updatedAtUtc,binding:false}
   const foreground=input.prefs.layout==='within'?
     await fetch(input.cutoutUrl).then(r=>r.blob()):null
   const sheet=await createOrderSheet(manifest,input.photoUrl,input.cutoutUrl)
+  const printArt=await createManufacturingArt(manifest,input.photoUrl,input.cutoutUrl)
   const content=[
     {name:'order.json',data:encoder.encode(JSON.stringify(manifest,null,2))},
     {name:'order-sheet.png',data:new Uint8Array(await sheet.arrayBuffer())},
+    {name:'print-artwork-with-bleed.png',data:new Uint8Array(await printArt.arrayBuffer())},
+    {name:'print-trim-safe-guide.svg',
+      data:encoder.encode(trimSafeGuideSvg(manifest.manufacturing!.print))},
+    {name:'print-spec.json',data:encoder.encode(JSON.stringify(manifest.manufacturing,null,2))},
     {name:manifest.expectedFiles[1],data:photo},
     {name:'HOW-TO-ORDER.txt',data:encoder.encode([
       'STARKEEP SAKE · DESIGN REFERENCE '+reference,
@@ -117,6 +210,11 @@ export async function createCustomerPacket(input:{
       'In the Etsy custom options upload: order-sheet.png, original-photo image',
       'and prepared-foreground.png if this design uses stars inside the photo.',
       'Enter the reference in the Etsy design reference field.',
+      'Print-ready artwork is 300 DPI, with configurable bleed and safe area.',
+      'Use print-spec.json for exact document, trim and safe-area dimensions.',
+      'print-trim-safe-guide.svg is a proof OVERLAY ONLY, NOT for printing over artwork.',
+      'Confirm oversize document support with print lab; print a physical proof before production.',
+      'Physical LED coordinate registration still requires manual calibration.',
       'The maker must verify that Etsy marks the order paid before assembly.',
     ].join('\n'))},
   ]

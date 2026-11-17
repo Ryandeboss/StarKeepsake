@@ -78,6 +78,8 @@ function WizardLoader({kind,progress}: {kind:'detecting'|'calculating';progress:
 
 export function ExperiencePage() {
   const [stage,setStage]=useState<Stage>('welcome')
+  const physicalInspector=new URLSearchParams(window.location.search).get('physicalInspector')==='1'
+  const [physicalOnly,setPhysicalOnly]=useState(false)
   const [design,setDesign]=useState<DesignSpec>(()=>({...INITIAL_DESIGN_SPEC,stars:[],astronomy:null}))
   const [photo,setPhoto]=useState<File|null>(null)
   const [photoUrl,setPhotoUrl]=useState('')
@@ -576,7 +578,10 @@ export function ExperiencePage() {
       const calculated=await generateAstronomy(moment,design.skySettings,
         design.framePresetId,design.photoAspectRatio)
       if(version!==astronomyVersion.current)return
-      setDesign(current=>({...current,moment,astronomy:calculated.calculation,stars:calculated.stars}))
+      setDesign(current=>({...current,moment,astronomy:calculated.calculation,
+        stars:calculated.displayStars??calculated.stars,
+        displayStars:calculated.displayStars??calculated.stars,
+        physicalStars:calculated.physicalStars,physicalSelection:calculated.physicalSelection}))
       setHeading(wrapWorkshopHeading(suggestedObserverHeading(calculated.stars)))
       setPitch(18)
       setFov(105)
@@ -601,6 +606,7 @@ export function ExperiencePage() {
     photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
   const savedCurrent=Boolean(savedDesign&&savedDesign.signature===snapshotSignature)
   const orderKey=JSON.stringify({moment:design.moment,stars:design.stars,
+    physicalStars:design.physicalStars,physicalSelection:design.physicalSelection,
     preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl,
     priceRevision:frameQuote?.revision,priceCents:frameQuote?.priceCents})
   // A packet without the server-issued saved Design ID cannot be matched to Etsy.
@@ -944,7 +950,7 @@ export function ExperiencePage() {
           <div className="at-preview-main">
             <SkyWorkshopPreview
               showroom={false} lightsOn={lightsOn} finish={finish}
-              stars={design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
+              stars={physicalInspector&&physicalOnly?(design.physicalStars??[]):design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
               layout={placement}
               imageAspect={dimensions?dimensions.width/dimensions.height:1}
               heading={heading} pitch={pitch} fov={fov} skyHeight={skyPercent}
@@ -958,6 +964,34 @@ export function ExperiencePage() {
               <div><span>THE NIGHT OF {date}</span><strong>{chosenName}</strong></div>
               <div><span>REAL HIPPARCOS STARS</span><strong>{design.stars.length} plotted in the calculated sky</strong></div>
             </div>
+            {physicalInspector&&<section className="at-physical-inspector"
+              aria-label="Development physical LED star inspector">
+              <div className="at-inspector-header">
+                <strong>MANUFACTURING STAR INSPECTOR · DEV ONLY</strong>
+                <label><input type="checkbox" checked={physicalOnly}
+                  onChange={e=>setPhysicalOnly(e.target.checked)}/>
+                  Show physical LED stars only</label>
+              </div>
+              <p>{design.physicalStars?.length??0} selected /
+                {' '}{design.physicalSelection?.eligibleStars??'unknown'} physically eligible ·
+                {' '}configured maximum {design.physicalSelection?.maxPhysicalStars??'unknown'} ·
+                {' '}{design.stars.length} digital display stars</p>
+              {!design.physicalSelection&&<p role="status">
+                This saved design predates physical-star selection. Recalculate the night
+                to obtain a verified physical subset; no legacy assumptions were made.</p>}
+              {design.physicalStars&&<div className="at-inspector-table-wrap">
+                <table><thead><tr><th>LED</th><th>HIP</th><th>Mag.</th>
+                  <th>X mm</th><th>Y mm</th><th>Priority / reason</th></tr></thead>
+                  <tbody>{design.physicalStars.map(star=><tr key={star.hipparcosId}>
+                    <td>{star.ledIndex}</td><td>{star.hipparcosId}</td>
+                    <td>{star.magnitude.toFixed(2)}</td><td>{star.xMm.toFixed(3)}</td>
+                    <td>{star.yMm.toFixed(3)}</td>
+                    <td>{star.selectionReason} ({star.selectionPriority.toFixed(2)})</td>
+                  </tr>)}</tbody></table>
+              </div>}
+              <small>Canonical astronomical projection, not a drill-ready plan.
+                Compare against the physical printed proof.</small>
+            </section>}
             {placement==='above'&&<div className="at-balance-box">
               <label>How much sky should frame your photograph? <strong>{skyPercent}%</strong>
                 <input type="range" min="20" max="70" value={skyPercent}
@@ -1032,7 +1066,7 @@ export function ExperiencePage() {
                 :dimensions?dimensions.width/dimensions.height:1}>
               <SkyWorkshopPreview
                 showroom={true} lightsOn={lightsOn} finish={finish}
-                stars={design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
+                stars={physicalInspector&&physicalOnly?(design.physicalStars??[]):design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
                 layout={placement}
                 imageAspect={dimensions?dimensions.width/dimensions.height:1}
                 heading={heading} pitch={pitch} fov={fov} skyHeight={skyPercent}
@@ -1157,6 +1191,8 @@ export function ExperiencePage() {
                   ↓ Download complete maker packet</button>
                 <button type="button" onClick={()=>downloadFile(currentOrder.sheet,'order-sheet.png')}>
                   ↓ Download Etsy order sheet (PNG)</button>
+                <small>The maker ZIP includes 300-DPI bleed artwork, print-spec.json,
+                  and a separate trim/safe proof guide. Lab proof required.</small>
                 {currentOrder.prepared&&<button type="button"
                   onClick={()=>downloadFile(currentOrder.prepared!,'prepared-foreground.png')}>
                   ↓ Download polished foreground (PNG)</button>}

@@ -60,6 +60,9 @@ export function resolveMoment(input: {
 export type AstronomyResult = {
   calculation: NonNullable<DesignSpec['astronomy']>
   stars: DesignSpec['stars']
+  displayStars?: DesignSpec['stars']
+  physicalStars?: DesignSpec['physicalStars']
+  physicalSelection?: DesignSpec['physicalSelection']
 }
 
 export function generateAstronomy(

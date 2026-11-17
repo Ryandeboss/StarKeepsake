@@ -129,7 +129,19 @@ public sealed record AstronomyEngineRequest(
 
 public sealed record AstronomyEngineResponse(
     AstronomyCalculation Calculation,
-    IReadOnlyList<DesignStar> Stars);
+    IReadOnlyList<DesignStar> Stars,
+    IReadOnlyList<DesignStar>? DisplayStars = null,
+    IReadOnlyList<PhysicalDesignStar>? PhysicalStars = null,
+    PhysicalStarSelection? PhysicalSelection = null);
+
+public sealed record PhysicalDesignStar(
+    int HipparcosId,double XMm,double YMm,double Magnitude,
+    double AltitudeDeg,double AzimuthDeg,double HoleSizeMm,int LedIndex,
+    string SelectionReason,double SelectionPriority);
+public sealed record PhysicalStarSelection(
+    string Algorithm,int MaxPhysicalStars,double MinSeparationMm,
+    int EligibleStars,int SelectedStars,int DriverChannelsPerBoard,
+    int EstimatedDriverCount);
 
 public sealed record AstronomyCalculation(
     string Catalog,
@@ -143,7 +155,10 @@ public sealed record AstronomyCalculation(
     double MinSeparationMm,
     int VisibleCatalogStars,
     int ProjectedCandidates,
-    int SelectedStars);
+    int SelectedStars,
+    int? MaxPhysicalStars = null,
+    int? EligiblePhysicalStars = null,
+    int? SelectedPhysicalStars = null);
 
 public sealed record DesignStar(
     int HipparcosId,
