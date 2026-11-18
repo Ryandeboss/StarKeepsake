@@ -21,4 +21,41 @@
     "test:sky-dome": "node --experimental-strip-types --test tests/sky-dome.test.mjs",
     "test:photographic": "node --experimental-strip-types --test tests/sky-photographic.test.mjs",
     "test:sky-ai-mask": "node --experimental-strip-types --test tests/sky-ai-mask.test.mjs",
-    "test:sky-recovery": "node --experimental-strip-types --test tests/sky-missed-sky-recovery.¶»§q«^
+    "test:sky-recovery": "node --experimental-strip-types --test tests/sky-missed-sky-recovery.test.mjs",
+    "test:sky-spot": "node --experimental-strip-types --test tests/sky-spot-cleanup.test.mjs",
+    "test:sky-sweep": "node --experimental-strip-types --test tests/sky-sweep-cleanup.test.mjs",
+    "test:photo-sky-layout": "node --experimental-strip-types --test tests/photo-sky-layout.test.mjs",
+    "test:experience": "node --experimental-strip-types --test tests/frame-experience.test.mjs",
+    "test:workshop": "node --experimental-strip-types --test tests/sky-workshop-orientation.test.mjs",
+    "test:orders": "node --experimental-strip-types --test tests/customer-order.test.mjs",
+    "test:print": "node --experimental-strip-types --test tests/manufacturing-print.test.mjs",
+    "test:physical-stars": "node --experimental-strip-types --test tests/physical-star-selection.test.mjs",
+    "test:showroom": "node --experimental-strip-types --test tests/showroom-plates.test.mjs",
+    "test:saved-design": "node --experimental-strip-types --test tests/saved-design.test.mjs",
+    "test:sky-placement": "node --experimental-strip-types --test tests/sky-placement.test.mjs",
+    "test:chapter-nav": "node --experimental-strip-types --test tests/workshop-navigation.test.mjs",
+    "test:local-draft": "node --experimental-strip-types --test tests/local-workshop-draft.test.mjs",
+    "test:pricing": "node --experimental-strip-types --test tests/storefront-pricing.test.mjs",
+    "test:studio-preservation": "node --test tests/studio-preservation.test.mjs",
+    "test:manual-amazon": "node --experimental-strip-types --test tests/manual-amazon-queue.test.mjs",
+    "test:etsy-checkout": "node --experimental-strip-types --test tests/etsy-checkout-journey.test.mjs"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vite": "^8.3.5"
+  }
+}
