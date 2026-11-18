@@ -880,3 +880,232 @@ Likely high-value next choices are:
 - define the physical maximum-star count experimentally.
 
 Do not choose one silently if the user asks to continue generally; infer from the immediate next message and this handoff.
+
+
+---
+
+# 22. Latest decision: builder completion -> admin manufacturing packet -> Etsy paid job
+
+User's current launch threshold is pragmatic: once a real customer can complete the StarKeepsake builder, obtain the correct sky from their place/date/time, finalize a manufacturable design, proceed to Etsy to pay, and the owner/admin can receive everything needed to physically build that exact design, the user wants to begin advertising and accepting real customers.
+
+This means the website must treat customer finalization as a **production handoff**, not merely a saved preview.
+
+## A. Save an immutable production design packet before Etsy checkout
+
+When the customer presses the final buy/checkout action, save a server-side design version with a stable Design ID. That packet should include enough information to reproduce the exact purchased object later even if the public builder code, defaults, or star-selection algorithm change.
+
+Required categories:
+
+### Identity / linkage
+
+- server-assigned StarKeepsake Design ID;
+- immutable design-version ID / revision;
+- created/finalized timestamp;
+- integrity hash/checksum where practical;
+- later Etsy receipt/order/transaction IDs once payment is matched;
+- order/job status.
+
+### Customer-selected product configuration
+
+- product size / visible trim size;
+- frame finish / Etsy variation;
+- orientation/aspect;
+- inscription/text and typography choices;
+- sky-layout choice (stars above image vs woven/other supported mode);
+- any customer-visible customization that changes the physical product.
+
+### Original image + exact image-processing state
+
+- private original uploaded image;
+- final processed foreground/cutout if applicable;
+- crop transform;
+- scale/rotation/pan/position;
+- horizon setting;
+- mask/manual cleanup state needed to reproduce the result;
+- final composited visible artwork preview.
+
+Never rely on re-running an AI cutout later to recreate the customer's exact purchased artwork if the processed result can instead be stored.
+
+### Astronomy inputs
+
+- customer-selected date;
+- time and the product's handling of unknown time;
+- location text shown to customer;
+- resolved latitude/longitude;
+- timezone/offset assumptions used;
+- astronomy/catalog/ephemeris version where needed for reproducibility;
+- projection/orientation parameters;
+- magnitude/visibility settings used.
+
+### Physical-star selection
+
+Define N as the actual number of physical illuminated stars in that design.
+
+Store the exact finalized physical-star set, not just the rule that could recreate it.
+
+For every physical star store at minimum:
+
+- LED index 0...N-1;
+- stable star/catalog identifier (HIP where available);
+- magnitude;
+- projected x/y position in the final trim coordinate system;
+- normalized x/y if useful;
+- selected/manual-selection state;
+- aperture/brightness category or calibrated values once finalized;
+- PWM/driver brightness value once the physical calibration recipe is finalized.
+
+Also store:
+
+- N;
+- configured maximum physical-star count used at finalization;
+- whether the set was auto-selected and/or manually edited.
+
+The digital display-star set can be larger. Manufacturing uses the frozen physical-star set.
+
+### Print-ready artwork assets
+
+Admin should not have to recreate/export the customer artwork manually.
+
+Store/generate:
+
+- exact visible/trim artwork;
+- print-ready artwork with bleed;
+- potentially useful exact-size and alternate-bleed derivatives if the production workflow retains them;
+- trim dimensions;
+- bleed dimensions;
+- safe-area metadata;
+- DPI;
+- pixel dimensions;
+- color/export metadata needed by the selected print process.
+
+The visible 11x14 composition and the larger bleed document must be explicitly distinguished.
+
+### Manufacturing geometry
+
+Generate a machine/workbench-ready packet containing:
+
+- final trim dimensions;
+- board orientation and TOP marker;
+- exact N star-hole coordinates;
+- LED index next to each star coordinate;
+- star identifier/magnitude;
+- aperture size/category when calibrated;
+- printable 1:1 drilling template or equivalent deterministic coordinate artifact;
+- any registration/reference marks that do not appear on the customer-facing artwork;
+- warnings if two selected physical stars violate minimum physical spacing.
+
+Do not make the owner measure star locations from a screenshot.
+
+## B. Admin production job
+
+Before payment, the saved design may exist as a pending design.
+
+After Etsy reports a legitimate paid order and the Design ID matches exactly, create/link a production job in the admin UI.
+
+The admin job should present, in one place:
+
+1. Etsy order/receipt linkage and paid state;
+2. Design ID/version;
+3. customer's selected frame finish and product size;
+4. final customer preview;
+5. downloadable print-ready bleed artwork;
+6. downloadable exact trim/visible artwork;
+7. manufacturing/drilling packet;
+8. exact physical-star table with N rows;
+9. astronomy/date/time/location summary;
+10. source/processed image assets for recovery, with private access;
+11. per-order BOM / material requirements;
+12. build checklist / QA status;
+13. procurement status for anything not in stock;
+14. final QC records/photos before shipment.
+
+The admin should not need to revisit the customer-facing builder to reconstruct a production order.
+
+## C. Per-order BOM that should be generated from the finalized design
+
+The job should derive quantities from the actual design and the currently approved production recipe.
+
+Customer/order-specific purchases:
+
+- one selected frame;
+- one professionally printed customer artwork;
+- print-lab pickup/delivery allocation if applicable.
+
+Materials consumed from stock:
+
+- one 3 mm black SINTRA artwork panel;
+- mounting-film area needed for that panel;
+- N LED3FWAW LEDs (or current approved replacement);
+- N StarPods;
+- PETG consumption for N StarPods and other printed parts;
+- one Pico W;
+- TLC5947 driver count = ceil(N / 24) for the current prototype architecture;
+- one accent-light MOSFET board if accent lighting remains part of the approved recipe;
+- tested accent COB length + diffuser/channel;
+- scalable star-harness wire based on N;
+- star-harness connector groups based on N/current connector recipe;
+- separate star-power and accent-light service connectors;
+- heat-shrink;
+- main power/accent wire;
+- power distribution hardware;
+- fuse/protection;
+- one validated wall adapter + cable;
+- one external power-entry/strain-relief set;
+- carrier standoffs/screws;
+- cable-management hardware;
+- removable rear-cover hardware;
+- spacer/hanging-hardware additions only when the chosen frame requires them;
+- one care/setup insert;
+- one protective shipping package and adapter compartment.
+
+The admin BOM must distinguish:
+- buy specifically for this order;
+- pull from Pack Stock;
+- consume/cut from Bulk Stock;
+- Make Per Order.
+
+Do not fake exact quantities for unresolved parts. If a component is still HOLD/Research, show that explicitly and block production readiness if it is a safety/fit-critical unresolved requirement.
+
+## D. Etsy handoff
+
+The website should save the production packet **before** sending the customer to Etsy.
+
+Etsy should receive or ask for the stable StarKeepsake Design ID and the customer's matching physical variation/finish.
+
+The customer should never paste private asset URLs into Etsy.
+
+Etsy remains the payment/order authority. A saved design is not a paid order.
+
+After the Etsy webhook/manual sync confirms a legitimate paid receipt:
+
+- read the Design ID;
+- match it to the frozen production packet;
+- validate the purchased frame variation against the saved design;
+- create/link the admin production job;
+- mark it production-eligible only when payment and variation checks pass.
+
+## E. Current product-launch interpretation
+
+The user's present goal is not to perfect every future automation before marketing.
+
+The minimum launch-ready loop is:
+
+```text
+customer uploads photo
+-> sets date/time/location
+-> builder calculates accurate sky
+-> customer finalizes exact design
+-> server freezes production packet
+-> customer goes to Etsy with Design ID / matching variation
+-> Etsy payment is confirmed
+-> admin gets one production job containing artwork + star geometry + BOM + checklist
+-> owner can source/use parts and physically build the exact purchased frame
+-> QA -> package -> ship
+```
+
+Advertising can begin once this loop is genuinely usable and the physical recipe being sold has passed enough prototype validation to be fulfilled safely and consistently.
+
+## F. Latest requested next action
+
+The immediate request in this turn was to produce a prompt for the separate website-development chat that reiterates the exact data/assets/BOM that must flow from a finalized builder design into the admin production interface and Etsy linkage.
+
