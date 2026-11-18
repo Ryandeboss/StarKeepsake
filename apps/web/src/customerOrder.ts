@@ -7,6 +7,7 @@ import type { OrderManifest, OrderPreferences } from './orderManifest'
 import type { FrameQuote } from './storefrontPricing'
 import { printSpecification,trimSafeGuideSvg,embedPngDpi,PRINT_VARIANTS,DEFAULT_PRINT_SETTINGS } from './manufacturingPrint'
 import type {PrintSpecification,PrintVariantId} from './manufacturingPrint'
+import {assessPhotoPrintQuality,samplePhotoVisualMetrics} from './photoPrintQuality'
 export type { OrderManifest, OrderPreferences } from './orderManifest'
 export { orderPersonalization } from './orderManifest'
 const encoder=new TextEncoder()
@@ -201,6 +202,27 @@ export async function createCustomerPacket(input:{
     updatedAtUtc:input.quote.updatedAtUtc,binding:false}
   const foreground=input.prefs.layout==='within'?
     await fetch(input.cutoutUrl).then(r=>r.blob()):null
+  const originalBitmap=await createImageBitmap(input.photo)
+  let originalWidth=0,originalHeight=0,visual
+  try{
+    originalWidth=originalBitmap.width;originalHeight=originalBitmap.height
+    visual=samplePhotoVisualMetrics(originalBitmap)
+  }finally{originalBitmap.close()}
+  let preparedWidth:number|undefined,preparedHeight:number|undefined
+  if(foreground){
+    const bitmap=await createImageBitmap(foreground)
+    try{preparedWidth=bitmap.width;preparedHeight=bitmap.height}
+    finally{bitmap.close()}
+  }
+  const quality=assessPhotoPrintQuality({
+    sourceWidth:originalWidth,sourceHeight:originalHeight,
+    artworkWidthMm:input.design.physicalArtwork.widthMm,
+    artworkHeightMm:input.design.physicalArtwork.heightMm,
+    layout:input.prefs.layout,skyHeight:input.prefs.skyHeight,
+    photoFit:input.prefs.photoFit,preparedWidth,preparedHeight,visual
+  })
+  manifest.manufacturing.photoQuality=quality
+  manifest.expectedFiles.push('photo-quality-report.json')
   const sheet=await createOrderSheet(manifest,input.photoUrl,input.cutoutUrl)
   const trim=await createManufacturingTrim(manifest,input.photoUrl,input.cutoutUrl)
   const printVariants={} as Record<PrintVariantId,Blob>
@@ -221,6 +243,7 @@ export async function createCustomerPacket(input:{
   const content=[
     {name:'order.json',data:encoder.encode(JSON.stringify(manifest,null,2))},
     {name:'order-sheet.png',data:new Uint8Array(await sheet.arrayBuffer())},
+    {name:'photo-quality-report.json',data:encoder.encode(JSON.stringify(quality,null,2))},
     ...variantFiles,
     {name:manifest.expectedFiles[1],data:photo},
     {name:'HOW-TO-ORDER.txt',data:encoder.encode([
@@ -235,6 +258,7 @@ export async function createCustomerPacket(input:{
       '  print-artwork-bleed-1-8.png (11.25x14.25 in; 1/8 in bleed per edge)',
       '  print-artwork-bleed-1-4.png (11.5x14.5 in; 1/4 in bleed per edge)',
       'Each file has corresponding print-spec-*.json and print-guide-*.svg.',
+      'Read photo-quality-report.json for effective source PPI and print review hold.',
       'SVG guides are proof overlays ONLY, not part of print image.',
       'Print at native dimensions; do not Fit to Page, resize or autocrop.',
       'Verify the accepted bleed size and physical printed proof with the shop.',

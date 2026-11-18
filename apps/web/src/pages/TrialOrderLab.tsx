@@ -2,6 +2,7 @@ import {useState} from 'react'
 import {createCustomerPacket,downloadFile} from '../customerOrder'
 import type {OrderPreferences} from '../orderManifest'
 import {PRINT_VARIANTS} from '../manufacturingPrint'
+import {assessPhotoPrintQuality} from '../photoPrintQuality'
 import {generateAstronomy} from '../api'
 import {INITIAL_DESIGN_SPEC} from '../designSpec'
 import type {DesignSpec} from '../designSpec'
@@ -68,11 +69,30 @@ export function TrialOrderLab(){
       const photo=await createTrialPhoto()
       setSample(photo)
       const dims=await inspectPng(photo)
-      const effectivePpi=Math.floor(Math.min(dims.width/11,
-        dims.height/(layout==='above'?14*(1-.42):14)))
-      mark('photo','Synthetic source photo',dims.width===3600&&dims.height===2700?'pass':'fail',
-        dims.width+' × '+dims.height+' px. Approx. effective PPI for this demo crop: '+
-        effectivePpi+'. Quality estimate only; production photo sharpness checks are not yet enforced.')
+      const quality=assessPhotoPrintQuality({
+        sourceWidth:dims.width,sourceHeight:dims.height,
+        artworkWidthMm:279.4,artworkHeightMm:355.6,
+        layout,skyHeight:42,photoFit:'fit'
+      })
+      const hiRes=assessPhotoPrintQuality({sourceWidth:6400,sourceHeight:4800,
+        artworkWidthMm:279.4,artworkHeightMm:355.6,
+        layout:'above',skyHeight:42,photoFit:'fit'})
+      const lowRes=assessPhotoPrintQuality({sourceWidth:500,sourceHeight:400,
+        artworkWidthMm:279.4,artworkHeightMm:355.6,
+        layout:'above',skyHeight:42,photoFit:'fit'})
+      const cropped=assessPhotoPrintQuality({sourceWidth:1800,sourceHeight:1200,
+        artworkWidthMm:279.4,artworkHeightMm:355.6,
+        layout:'above',skyHeight:42,photoFit:'center-crop'})
+      const scenariosPass=hiRes.status==='excellent'&&lowRes.status==='review'&&
+        lowRes.needsOwnerReview&&cropped.effectivePpi<hiRes.effectivePpi&&
+        quality.artworkIs11x14
+      mark('photo','Synthetic source photo',
+        dims.width===3600&&dims.height===2700&&scenariosPass?'pass':'fail',
+        dims.width+' × '+dims.height+' px, '+quality.effectivePpi+
+        ' effective PPI. High-resolution, low-resolution and cropped examples: '+
+        (scenariosPass?'tier checks passed':'quality tier mismatch')+
+        '. '+(quality.needsOwnerReview?'Manual owner approval required for this layout.':
+          'Physical print proof still required.'))
       photoUrl=URL.createObjectURL(photo)
       setProgress('Requesting real Chicago night sky from astronomy API')
       const moment=resolveSampleMoment(TRIAL_DATE,TRIAL_TIME,false,SAMPLE_LOCATIONS[0])
@@ -160,6 +180,15 @@ export function TrialOrderLab(){
         verified.every(v=>v.ok)?'pass':'fail',
         verified.map(x=>x.variant.label+': '+x.actual.width+' × '+
           x.actual.height+' px ('+(x.ok?'verified':'MISMATCH')+')').join(' · '))
+      const packetQuality=exportResult.manifest.manufacturing?.photoQuality
+      mark('print-quality-report','Manufacturing preflight in ZIP manifest',
+        packetQuality?.version==='photo-print-preflight-v1'&&
+        packetQuality.artworkIs11x14&&
+        packetQuality.effectivePpi===quality.effectivePpi?'pass':'fail',
+        'Recomputed source effective PPI: '+
+        (packetQuality?.effectivePpi??'missing')+
+        '; owner print hold: '+(packetQuality?.needsOwnerReview??'unknown')+
+        '. photo-quality-report.json travels with manufacturing packet.')
       const names=exportResult.manifest.expectedFiles
       const packetPass=names.every(name=>new Uint8Array(
         new TextEncoder().encode(name)).length>0)&&

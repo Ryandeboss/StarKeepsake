@@ -80,3 +80,18 @@ test('guided trial has prefilled workshop and read-only, explicitly simulated Et
   assert.match(trialPage,/downloadReport/)
   assert.doesNotMatch(trialPage,/saveCustomerDesign|\/api\/admin\/production\/sync|\/api\/webhooks\/etsy\/orders/)
 })
+
+const qualityModule=file('../src/photoPrintQuality.ts')
+const qualityPacket=file('../src/customerOrder.ts')
+const qualityOwner=file('../src/pages/OwnerProductionFiles.tsx')
+test('source-photo quality preflight follows the actual customer and admin packet',()=>{
+  assert.match(studio,/getFrameLayout\('11x14'\)/)
+  assert.match(studio,/framePresetId:'11x14'/)
+  assert.match(studio,/PRINT QUALITY CHECK · SOURCE PHOTO/)
+  assert.match(studio,/qualityAcceptedKey/)
+  assert.match(studio,/assessPhotoPrintQuality/)
+  assert.match(qualityModule,/needsOwnerReview/)
+  assert.match(qualityPacket,/photo-quality-report\.json/)
+  assert.match(qualityPacket,/manifest\.manufacturing\.photoQuality=quality/)
+  assert.match(qualityOwner,/PRINT HOLD — owner review required/)
+})

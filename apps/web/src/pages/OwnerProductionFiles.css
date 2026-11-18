@@ -17,3 +17,9 @@
 .opf-results>small{font-size:11px;line-height:1.65;color:#a8bbc8}
 @media(max-width:850px){.opf-heading{flex-direction:column;align-items:flex-start}
   .opf-variants{grid-template-columns:1fr}}
+
+.opf-quality{margin:8px 0;padding:13px 15px;border-radius:10px;
+  border:1px solid #699176;background:#13312b;color:#e1f0d7}
+.opf-quality-review{border-color:#b98477;background:#422b2a;color:#ffe1d2}
+.opf-quality strong{font-size:13px;color:inherit}
+.opf-quality p{margin:6px 0;color:inherit;font-size:12px}

@@ -72,6 +72,22 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId}
     {packet&&<div className="opf-results" role="status">
       <p><strong>Owner print files generated.</strong> Each retains the identical
         11 × 14-inch visible composition. Review the photograph and physical proof before printing.</p>
+      {packet.manifest.manufacturing?.photoQuality&&
+        <div className={'opf-quality opf-quality-'+packet.manifest.manufacturing.photoQuality.status}
+          role="status">
+          <strong>{packet.manifest.manufacturing.photoQuality.needsOwnerReview
+            ?'PRINT HOLD — owner review required':'Source photo print preflight'}</strong>
+          <p>Effective source resolution: <b>
+            {packet.manifest.manufacturing.photoQuality.effectivePpi} PPI</b>;
+            {' '}printed photograph approximately
+            {' '}{packet.manifest.manufacturing.photoQuality.printedPhotoIn.width} ×
+            {' '}{packet.manifest.manufacturing.photoQuality.printedPhotoIn.height} inches.
+            {packet.manifest.manufacturing.photoQuality.needsOwnerReview
+              ?' Do NOT send to printer until the source, crop and physical proof are approved.'
+              :' Human sharpness and printed proof checks remain required.'}</p>
+          {packet.manifest.manufacturing.photoQuality.warnings.map((message,i)=>
+            <p key={i}>• {message}</p>)}
+        </div>}
       <button type="button" onClick={()=>downloadFile(packet.zip,
         designId+'-owner-manufacturing.zip')}>↓ Complete maker packet (ZIP)</button>
       <div className="opf-variants">{PRINT_VARIANTS.map(variant=><article key={variant.id}>

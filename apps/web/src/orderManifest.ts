@@ -2,6 +2,7 @@ import type { DesignSpec } from './designSpec'
 import type { AbovePhotoFitMode } from './frameSkyBalance'
 import { PRINT_VARIANTS } from './manufacturingPrint.ts'
 import type { PrintSpecification,PrintVariantId } from './manufacturingPrint'
+import type { PhotoQualityReport } from './photoPrintQuality'
 
 export type OrderPreferences={
   layout:'above'|'within'; heading:number; pitch:number; fov:number
@@ -18,6 +19,7 @@ export type OrderManifest={
     revision:string;updatedAtUtc:string|null;binding:false}
   manufacturing?: {print:PrintSpecification;
     printVariants?:{id:PrintVariantId;spec:PrintSpecification}[];
+    photoQuality?:PhotoQualityReport;
     selectedPhysicalStars:number|null;
     physicalMax:number|null;physicalSelectionVersion:string|null;
     status:'PROOF_REQUIRED';warning:string}

@@ -44,3 +44,43 @@ Etsy test order**; synthetic lab never impersonates paid Etsy or permits
 fabrication/purchases. Note that effective PPI estimate in lab is informational
 only; site-wide customer print quality gating is not complete. Supplier
 print proof, exact hole registration, print color and hardware QA remain HOLD.
+
+
+## 2026-11-18 — Source-photo professional print preflight
+
+The retail manufacturing product is **fixed at an 11×14-inch physical trim**.
+New uploaded photo aspect ratios are preserved as source aspect/fit choices,
+NOT permitted to change the product's physical artwork dimensions. Saved legacy
+designs with different artboard geometry are NOT silently remapped: preflight
+marks them **owner review required**; verify old star coordinates and physical
+mockup before manufacturing or ask the customer to re-save a corrected design.
+
+`apps/web/src/photoPrintQuality.ts` computes effective **source** PPI from the
+printed-photo region, the selected sky split, and the source-pixel window
+for *fit*, *cover/crop* and *within-photo* composition, independent of the
+300-DPI PNG export document. Baseline initial tiers are >=250 excellent,
+200–249 good, 150–199 caution, <150 owner-review hold; exact PPI displayed.
+Warnings also cover cropping away >50% of source, anisotropic stretching from
+the current within-photo compositor, extreme exposure, and abnormally flat
+details (nonbinding sampled blur heuristic). No external AI, no automatic
+upscaling or loss of customer originals. Subtle/intentional blur and night
+photos can trigger false positives, so heuristics never justify auto-rejection.
+
+Chapter 05 shows a labeled photo preflight, detailed warning, and original
+pixel-detail inspection. Low-PPI/distorted/legacy geometry requires the buyer
+to explicitly acknowledge the owner approval hold before preparing the Etsy
+packet; they can still save a design. The **print approval itself is NOT
+automated** by the buyer acknowledgement. The same preflight is recomputed
+on the original saved photo during owner maker-packet generation, displayed in
+the owner job details, and written to both `order.json` and a separate
+`photo-quality-report.json` in the ZIP. This keeps job quality tied to actual
+artwork bytes without a Supabase DB migration. This is not a printer or color
+management certification; print-lab proof/ICC validation is still required.
+The Trial Order Lab now tests high, low and cropped source tiers as well as
+the quality record carried into the same synthetic maker packet.
+
+Important next steps: visually compare online Chapter 05 preview against
+actual 11×14 raster across photo ratios, inspect saved legacy order geometry,
+verify the physical print/mount and drill registration, and add owner approval
+state to the private job lifecycle (currently a visible hold, not an enforced
+server-side production transition).

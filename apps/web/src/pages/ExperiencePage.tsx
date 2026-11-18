@@ -15,6 +15,8 @@ import type { LocalWorkshopDraft } from '../localWorkshopDraft'
 import type { ChapterIndex } from '../workshopNavigation'
 import type { WorkshopDetection } from '../skyBlend'
 import { FULL_PHOTO_CROP } from '../photoCrop'
+import { assessPhotoPrintQuality,samplePhotoVisualMetrics } from '../photoPrintQuality'
+import type { PhotoVisualMetrics } from '../photoPrintQuality'
 import { INITIAL_DESIGN_SPEC, getFrameLayout, toRect } from '../designSpec'
 import type { DesignSpec } from '../designSpec'
 import { isOfflineCity, searchOfflineCities } from '../offlineCitySearch'
@@ -113,6 +115,8 @@ export function ExperiencePage() {
   const [photo,setPhoto]=useState<File|null>(null)
   const [photoUrl,setPhotoUrl]=useState('')
   const [dimensions,setDimensions]=useState<{width:number;height:number}|null>(null)
+  const [photoVisual,setPhotoVisual]=useState<PhotoVisualMetrics|null>(null)
+  const [qualityAcceptedKey,setQualityAcceptedKey]=useState('')
   const [detected,setDetected]=useState<WorkshopDetection|null>(null)
   const [overlayUrl,setOverlayUrl]=useState('')
   const [detectorError,setDetectorError]=useState('')
@@ -170,6 +174,20 @@ export function ExperiencePage() {
   const lookupVersion=useRef(0)
   const detectionOnDecode=useRef(true)
   const [draftReady,setDraftReady]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
+  // Source-only sampling never uploads the photo and also runs for restored drafts.
+  useEffect(()=>{
+    if(!photo){setPhotoVisual(null);return}
+    let canceled=false
+    void (async()=>{
+      try{
+        const bitmap=await createImageBitmap(photo)
+        try{const sampled=samplePhotoVisualMetrics(bitmap)
+          if(!canceled)setPhotoVisual(sampled)}
+        finally{bitmap.close()}
+      }catch{if(!canceled)setPhotoVisual(null)}
+    })()
+    return ()=>{canceled=true}
+  },[photo])
   // Physical-light choices depend on the FINAL perspective and visible photo.
   // Recompute on camera/crop changes; retain the unchanged digital astronomy.
   const physicalView=useMemo(()=>design.astronomy&&dimensions
@@ -531,10 +549,12 @@ export function ExperiencePage() {
       bitmap.close()
       if(photoObject.current!==url)return
       const ratio=Math.max(.35,Math.min(3,width/height))
-      const {physicalArtwork,regions}=getFrameLayout('auto',ratio)
+      // Retail product is the fixed 11×14 mounting panel, regardless of photo shape.
+      // Source image aspect affects fitting, never the physical frame geometry.
+      const {physicalArtwork,regions}=getFrameLayout('11x14')
       setDimensions({width,height})
       setPhotoDecodeBusy(false)
-      setDesign(current=>({...current,framePresetId:'auto',photoAspectRatio:ratio,
+      setDesign(current=>({...current,framePresetId:'11x14',photoAspectRatio:ratio,
         physicalArtwork,regions,photo:{...current.photo,assetId:'local-photo',
           fitMode:'contain',crop:FULL_PHOTO_CROP,positionMm:toRect(regions.engravingPhoto)},
         customText:{...current.customText,positionMm:toRect(regions.text)},stars:[],astronomy:null}))
@@ -707,6 +727,15 @@ export function ExperiencePage() {
     layout:placement,heading,pitch,fov,skyHeight:skyPercent,
     photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
   }
+  const photoQuality=dimensions&&photo?assessPhotoPrintQuality({
+    sourceWidth:dimensions.width,sourceHeight:dimensions.height,
+    artworkWidthMm:activeDesign.physicalArtwork.widthMm,
+    artworkHeightMm:activeDesign.physicalArtwork.heightMm,
+    layout:placement,skyHeight:skyPercent,photoFit,visual:photoVisual,
+  }):null
+  const qualityKey=JSON.stringify({file:photo?.name,bytes:photo?.size,
+    stamp:photo?.lastModified,dimensions,layout:placement,skyPercent,photoFit,
+    artwork:activeDesign.physicalArtwork,status:photoQuality?.status})
   const snapshotSignature=designSnapshotSignature({design:activeDesign,preferences:orderPreferences,
     photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
   const savedCurrent=Boolean(savedDesign&&savedDesign.signature===snapshotSignature)
@@ -779,6 +808,10 @@ export function ExperiencePage() {
     if(!photo)return
     if(!activeDesign.physicalStars?.length){
       setOrderError('Choose a view with at least one physical star light before preparing your Etsy order.')
+      return
+    }
+    if(photoQuality?.needsOwnerReview&&qualityAcceptedKey!==qualityKey){
+      setOrderError('Review the print-quality warning and acknowledge it before preparing the Etsy order.')
       return
     }
     const key=orderKey
@@ -1379,6 +1412,43 @@ export function ExperiencePage() {
                 <small>Etsy sets the actual checkout price. This estimate is not a charge,
                   and does not automatically update an Etsy listing.</small>
               </div>
+              {photoQuality&&<section className={'at-photo-preflight at-quality-'+photoQuality.status}
+                aria-label="Print quality check">
+                <div className="at-photo-preflight-heading">
+                  <div><span>PRINT QUALITY CHECK · SOURCE PHOTO</span>
+                    <strong>{photoQuality.status==='excellent'?'Excellent source resolution':
+                      photoQuality.status==='good'?'Good source resolution':
+                      photoQuality.status==='caution'?'Check print sharpness':
+                      'Owner review required'}</strong></div>
+                  <b>{Math.round(photoQuality.effectivePpi)} PPI</b>
+                </div>
+                <p>Your {photoQuality.sourcePixels.width.toLocaleString()} ×
+                  {' '}{photoQuality.sourcePixels.height.toLocaleString()} px original
+                  will occupy approximately {photoQuality.printedPhotoIn.width} ×
+                  {' '}{photoQuality.printedPhotoIn.height} inches in the physical print.
+                  The effective resolution is calculated after your fit/crop choice.</p>
+                {photoQuality.warnings.length>0&&<ul>
+                  {photoQuality.warnings.map((warning,index)=><li key={index}>{warning}</li>)}
+                </ul>}
+                <details className="at-quality-inspect">
+                  <summary>Inspect the source photograph at 100% detail</summary>
+                  <div className="at-quality-pixel-window" aria-label="Original photograph central pixel detail">
+                    {dimensions&&photoUrl&&<img src={photoUrl} alt="Actual source pixels near the center of the selected photograph"
+                      style={{width:dimensions.width,height:dimensions.height,left:'50%',top:'50%',
+                        transform:'translate(-50%, -50%)'}}/>}
+                  </div>
+                  <small>Unscaled source pixels near image center. Check faces, edges and compression.
+                    This browser preview is not a substitute for the lab's printed proof.</small>
+                </details>
+                {photoQuality.needsOwnerReview&&<label className="at-quality-confirm">
+                  <input type="checkbox" checked={qualityAcceptedKey===qualityKey}
+                    onChange={e=>setQualityAcceptedKey(e.target.checked?qualityKey:'')}/>
+                  I understand that this design needs manual owner print approval.
+                  I can save it, but it must not be printed until it passes a physical proof.
+                </label>}
+                <small>We never secretly enhance your photograph. A 300-DPI exported
+                  file cannot restore missing source detail. Print-shop approval is still required.</small>
+              </section>}
               <label htmlFor="at-order-inscription">A short inscription (optional)</label>
               <input id="at-order-inscription" type="text" maxLength={65}
                 value={inscription} placeholder="e.g. The night our story began"
