@@ -19,8 +19,8 @@ A new *manufacturing* raster `print-artwork-with-bleed.png` is created separatel
 | Property | Nominal 11×14 default |
 |---|---|
 | Final visible trim | 11 × 14 in = 279.4 × 355.6 mm |
-| Bleed per side | 0.125 in, configurable in `DEFAULT_PRINT_SETTINGS` |
-| Document size (print at 100% / no fit-to-page) | 11.25 × 14.25 in |
+| Bleed per side | **0.25 in default**, configurable in `DEFAULT_PRINT_SETTINGS` |
+| Document size (print at 100% / no fit-to-page) | **11.5 × 14.5 in (3450 × 4350 px)** |
 | Full pixel size at 300 DPI | 3375 × 4275 px |
 | Trim within document | x/y 37.5 px; w 3300 px; h 4200 px |
 | Safe inset inside trim | 0.25 in = 75 px |
@@ -28,7 +28,7 @@ A new *manufacturing* raster `print-artwork-with-bleed.png` is created separatel
 
 The whole print document is opaque artwork, not a white border; the trim stays the customer's nominal 11×14 area and the bleed is extended colored edge pixels from the trim art. Trim/safe guides exist ONLY in a separate proof overlay, not the submitted print PNG. Configurable `DEFAULT_PRINT_SETTINGS` in `apps/web/src/manufacturingPrint.ts` controls bleed, safe inset, and DPI. The source image can be lower quality than the 300-DPI final raster; resampling does not create missing detail.
 
-**Lab and mechanical hold:** Do not send a 3375×4275 PNG to a lab that auto-crops/reformats to 11×14; obtain explicit support for 11.25×14.25 image submissions (or their equivalent PDF bleed/trim workflow). Confirm the SINTRA panel, rabbet and substrate dimensions and make a physical alignment proof. Some print houses require 0.25-inch bleed on mounted work, so verify before changing the config. Critical faces/text and image crop need human inspection even when caption is automatically constrained inside the safe area.
+**Lab and mechanical hold:** The default printable master is now 3450×4350 px at 300 DPI, 11.5×14.5 in with 0.25 in of bleed on **each** edge. Do not send it to a lab that auto-crops/reformats to 11×14. Obtain explicit acceptance for the 11.5×14.5 document size (or their equivalent PDF bleed/trim workflow), verify the SINTRA panel, rabbet, and substrate dimensions, and make a physical alignment proof. **A vendor specifying 0.125 in bleed has NOT automatically approved a 0.25 in file**: some require the exact 11.25×14.25 in file with their own trim profile. Generate a supplier-specific variant if required rather than asking the lab to scale down the 11.5×14.5 master. Critical faces/text and image crop require human inspection even when the caption is constrained inside the safe area.
 
 **Astronomy/photo alignment caveat:** The current customer-facing immersive preview and order sheet use observer-camera projection, while canonical M4 positions remain equirectangular. This update deliberately DOES NOT move catalogue coordinates to make them match. Cross-check the printed star field against the physical registration and reconcile projection on actual hardware **before drilling, delivering, or approving a customer job**. `PROOF_REQUIRED` is mandatory in the print/mfg packet. The export is a print candidate, not validated final fabrication instructions.
 
@@ -83,3 +83,17 @@ Legacy packets without new print coords remain explicitly proof/HOLD.
 **Tests:** `npm run test:physical-stars` covers 12/24 auto inclusion, >24
 brightness/spread determinism, manual under-cap edits, spacing and cap;
 M4 offline tests cover final print coordinates and canonical retention.
+
+
+## 2026-11-18 owner decision — generous master bleed
+
+The owner requested 1/4-inch bleed per edge for the 11×14 SINTRA-mounted photo.
+This has become the browser maker packet's default. It **does not increase source
+photo resolution**. The existing 300-DPI document is a high-resolution output
+canvas, not a certification that a low-resolution customer photo is sharp.
+The original photo and selected crop must pass a separate effective-PPI,
+focus, compression-artifact, color and proofing preflight. Do not claim the
+artwork is print-shop-approved until the specific shop confirms its preferred
+document size and production proof. The owner's next phases include secure
+admin retrieval of saved design files and job-specific, selected-N-driven
+components rather than a fixed 24-LED recipe.

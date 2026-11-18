@@ -1391,8 +1391,9 @@ export function ExperiencePage() {
                   ↓ Download complete maker packet</button>
                 <button type="button" onClick={()=>downloadFile(currentOrder.sheet,'order-sheet.png')}>
                   ↓ Download Etsy order sheet (PNG)</button>
-                <small>The maker ZIP includes 300-DPI bleed artwork, print-spec.json,
-                  and a separate trim/safe proof guide. Lab proof required.</small>
+                <small>The maker ZIP includes 300-DPI artwork with ¼-inch bleed per side,
+                  print-spec.json and a separate trim/safe proof guide. The print shop must
+                  approve the exact file dimensions before printing or mounting.</small>
                 {currentOrder.prepared&&<button type="button"
                   onClick={()=>downloadFile(currentOrder.prepared!,'prepared-foreground.png')}>
                   ↓ Download polished foreground (PNG)</button>}

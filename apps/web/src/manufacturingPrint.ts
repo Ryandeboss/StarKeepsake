@@ -4,7 +4,7 @@
  */
 export type PrintSettings = {bleedIn:number;safeIn:number;dpi:number}
 export const DEFAULT_PRINT_SETTINGS: Readonly<PrintSettings> = Object.freeze({
-  bleedIn:0.125,safeIn:0.25,dpi:300,
+  bleedIn:0.25,safeIn:0.25,dpi:300,
 })
 const rounded=(x:number)=>Math.round(x*10000)/10000
 export function printSpecification(widthMm:number,heightMm:number,
@@ -38,7 +38,11 @@ export function printSpecification(widthMm:number,heightMm:number,
     bleedMethod:'extended-edge-pixels' as const,
     colorSpace:'sRGB' as const,
     reviewStatus:'PROOF_REQUIRED' as const,
-    labInstructions:'Submit at native document dimensions with 300 DPI embedded. Lab must support an oversized bleed document; proof trim and physical mount first.',
+    labInstructions:'Submit at the stated '+rounded(documentWidthIn)+' x '+rounded(documentHeightIn)+
+      ' in document dimensions with embedded '+dpi+' DPI. The visible trim is '+
+      rounded(trimWidthIn)+' x '+rounded(trimHeightIn)+' in; bleed is '+
+      rounded(bleedIn)+' in per edge. Confirm the lab accepts this exact bleed size'+
+      ' and does not auto-fit or crop the file before print, mount, and drill proofs.',
   }
 }
 export type PrintSpecification = ReturnType<typeof printSpecification>
