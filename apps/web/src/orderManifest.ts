@@ -1,6 +1,6 @@
 import type { DesignSpec } from './designSpec'
 import type { AbovePhotoFitMode } from './frameSkyBalance'
-import { PRINT_VARIANTS } from './manufacturingPrint'
+import { PRINT_VARIANTS } from './manufacturingPrint.ts'
 import type { PrintSpecification,PrintVariantId } from './manufacturingPrint'
 
 export type OrderPreferences={
