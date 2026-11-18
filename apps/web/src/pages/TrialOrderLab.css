@@ -1,0 +1,45 @@
+.tol-page{min-height:100vh;background:radial-gradient(ellipse at 75% 5%,#233e59 0,#111d2f 45%,#070d17 95%);color:#e9e9e7;font-family:Inter,"Segoe UI",sans-serif;padding:35px 20px 80px}
+.tol-shell{max-width:1080px;margin:auto}
+.tol-back{color:#c6d6dd;text-decoration:none;font-size:13px}
+.tol-header{padding:45px 0 28px}
+.tol-eyebrow,.tol-card-head span:first-child{display:block;color:#cdb58b;text-transform:uppercase;font-size:11px;letter-spacing:.18em;margin:20px 0 10px}
+.tol-header h1{font:normal clamp(36px,5vw,62px) Georgia,serif;margin:0}
+.tol-header h1 em{color:#ddc493;font-weight:400}
+.tol-header>p{line-height:1.7;max-width:760px;color:#b7c6cf}
+.tol-alert{border:1px solid #97795f;background:#3d2b20;padding:15px 18px;border-radius:10px;line-height:1.7;color:#fde6c7;font-size:13px}
+.tol-alert strong{display:block;color:#fff3d7;letter-spacing:.11em;margin-bottom:3px}
+.tol-card{border:1px solid #35495e;background:#0f1e30;border-radius:16px;padding:23px;margin:22px 0}
+.tol-card-head{display:flex;align-items:start;justify-content:space-between;gap:12px}
+.tol-card-head span:first-child{margin:0 0 9px}
+.tol-card-head h2{font:normal 26px Georgia,serif;margin:0}
+.tol-tag{font-size:11px;color:#f6dca9;border:1px solid #6c604e;border-radius:80px;padding:7px 10px;white-space:nowrap}
+.tol-card>p,.tol-result p,.tol-manual p{font-size:13px;line-height:1.65;color:#b4c7d2}
+.tol-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-top:20px}
+.tol-controls label{display:grid;gap:7px;font-size:12px;color:#d0d8df;flex:1;min-width:220px}
+.tol-controls select{font:inherit;padding:12px 13px;border-radius:8px;background:#192c42;color:white;border:1px solid #63738a}
+.tol-card button{cursor:pointer;background:#233a4c;color:#f7e3be;border:1px solid #9b835e;border-radius:8px;padding:11px 14px;font:600 12px Inter,"Segoe UI",sans-serif}
+.tol-card button:hover{background:#345067}
+.tol-card button:disabled{opacity:.6;cursor:wait}
+.tol-card button.tol-primary{color:#1b2b35;background:#ecd29d;border-color:#f4daa1;min-height:43px}
+.tol-progress{color:#f4d4a0!important;margin-top:18px}
+.tol-score{display:flex;gap:18px;padding:14px 0;border-bottom:1px solid #425267;font-size:13px}
+.tol-score strong{color:#bcdfc6}.tol-score span:nth-child(2){color:#edb4ab}
+.tol-checks{margin:10px 0;display:grid;gap:8px}
+.tol-result{display:flex;align-items:start;gap:12px;padding:13px;border-radius:10px;border:1px solid #34465b;background:#101b2b}
+.tol-result>span{flex:0 0 24px;height:24px;display:grid;place-items:center;border-radius:50%;background:#375849;color:#e3f9e9;font-weight:bold}
+.tol-fail>span{background:#6e3d3d;color:#fce0d2}.tol-note>span{background:#526079;color:#fff}
+.tol-result strong{font-size:13px}.tol-result p{margin:5px 0 0}
+.tol-order-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:17px}
+.tol-order-preview>div{padding:12px;border:1px solid #3a5368;border-radius:9px;display:grid;gap:7px;font-size:12px}
+.tol-order-preview small{font-size:11px;color:#afbdc7}
+.tol-exports{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:17px}
+.tol-exports article{border:1px solid #465466;border-radius:10px;padding:14px;display:grid;gap:10px}
+.tol-exports article strong{font-size:13px}.tol-exports article span{font-size:12px;color:#c8cbd0}
+.tol-actions,.tol-links{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+.tol-links a{border:1px solid #ad966e;color:#f5ddac;padding:11px 13px;border-radius:8px;text-decoration:none;font-size:12px}
+.tol-manual{display:grid;gap:9px}.tol-manual label{display:flex;gap:12px;padding:14px 10px;border-top:1px solid #2c4053;cursor:pointer}
+.tol-manual input{accent-color:#dcb979;width:19px;height:19px}
+.tol-manual strong{font-size:13px}.tol-manual p{margin:6px 0 0}
+.tol-warning{border-left:3px solid #d4ac76;padding-left:12px;color:#e3cfae!important}
+.tol-footer{text-align:center;color:#8098a9;font-size:11px;margin:40px auto}
+@media(max-width:710px){.tol-card-head{display:grid}.tol-order-preview,.tol-exports{grid-template-columns:1fr}.tol-controls{display:grid}.tol-page{padding:20px 10px}.tol-card{padding:18px}}

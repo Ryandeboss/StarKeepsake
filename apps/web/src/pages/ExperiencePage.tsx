@@ -18,7 +18,8 @@ import { FULL_PHOTO_CROP } from '../photoCrop'
 import { INITIAL_DESIGN_SPEC, getFrameLayout, toRect } from '../designSpec'
 import type { DesignSpec } from '../designSpec'
 import { isOfflineCity, searchOfflineCities } from '../offlineCitySearch'
-import { resolveSampleMoment } from '../sampleLocationFallback'
+import { isSampleLocation,resolveSampleMoment,SAMPLE_LOCATIONS } from '../sampleLocationFallback'
+import { createTrialPhoto,TRIAL_DATE,TRIAL_TIME } from '../trialOrderFixture'
 import { suggestedObserverHeading } from '../skyImmersiveData'
 import { wrapWorkshopHeading, clampWorkshopPitch } from '../skyWorkshopMath'
 import { skyAboveArtworkAspect } from '../frameSkyBalance'
@@ -101,6 +102,7 @@ function WizardLoader({kind,progress}: {kind:'detecting'|'calculating';progress:
 export function ExperiencePage() {
   const [stage,setStage]=useState<Stage>('welcome')
   const physicalInspector=new URLSearchParams(window.location.search).get('physicalInspector')==='1'
+  const trialPhotoMode=new URLSearchParams(window.location.search).get('trial')==='1'
   const [physicalOnly,setPhysicalOnly]=useState(true)
   const [customizingLights,setCustomizingLights]=useState(false)
   const [physicalMessage,setPhysicalMessage]=useState('')
@@ -545,6 +547,24 @@ export function ExperiencePage() {
     }
   }
 
+  async function loadTrialSample(){
+    if(photo && !window.confirm('Replace this photo with the synthetic trial photograph?'))return
+    try{
+      const trial=await createTrialPhoto()
+      await acceptPhoto(trial)
+      // After acceptPhoto clears the old place, seed a known date/time/location
+      // for the normal, real astronomy calculation in Chapter 03.
+      setDate(TRIAL_DATE)
+      setTime(TRIAL_TIME)
+      setUnknownTime(false)
+      setSelected(SAMPLE_LOCATIONS[0])
+      setQuery(SAMPLE_LOCATIONS[0].displayName)
+      setOffline(false)
+      setChapterNotice('Trial photo and example date/place loaded. Continue through the real workshop. Nothing has been saved or purchased.')
+    }catch(error){
+      setError(error instanceof Error?error.message:'Could not prepare the trial photograph.')
+    }
+  }
   function onDrop(event:DragEvent<HTMLElement>){
     event.preventDefault()
     setDragging(false)
@@ -652,7 +672,7 @@ export function ExperiencePage() {
     setProgress(7)
     setStage('calculating')
     try{
-      const moment=isOfflineCity(selected)
+      const moment=isOfflineCity(selected)||isSampleLocation(selected)
         ? resolveSampleMoment(date,unknownTime?null:time,unknownTime,selected)
         : await resolveMoment({date,time:unknownTime?null:time,
           exactTimeUnknown:unknownTime,locationQuery:query,location:selected})
@@ -826,6 +846,13 @@ export function ExperiencePage() {
             <span>02 / WE’LL FIND YOUR SKY</span><span>03 / MAKE IT YOURS</span></div>
           <button type="button" className="at-primary" onClick={()=>upload.current?.click()}>
             {photo?'Replace your photograph':'Choose your photograph'} <span>↗</span></button>
+          {trialPhotoMode&&<div className="at-trial-sample">
+            <button type="button" className="at-outline" onClick={()=>void loadTrialSample()}>
+              ✧ Use prepared trial photo and example date/place
+            </button>
+            <small>TEST SAMPLE ONLY · This prepares synthetic artwork and example details.
+              Saving a design is optional; Etsy payment is never simulated here.</small>
+          </div>}
           {photo&&<button type="button" className="at-outline at-welcome-resume"
             onClick={()=>goToChapter(1)}>Continue with this photo ↗</button>}
           {photo&&<button type="button" className="at-reset-draft"
