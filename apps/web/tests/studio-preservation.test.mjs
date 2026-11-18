@@ -53,7 +53,7 @@ test('Chapter 05 restore choices displays live selected count and replayable suc
 const ownerFiles=file('../src/pages/OwnerProductionFiles.tsx')
 const paidApi=file('../../api/EtsyProduction.cs')
 test('paid-only owner files are linked to authenticated job and three variants',()=>{
-  assert.match(studio,/OwnerProductionFiles/)
+  assert.match(dashboard,/OwnerProductionFiles/)
   assert.match(ownerFiles,/createCustomerPacket/)
   assert.match(ownerFiles,/PRINT_VARIANTS\.map/)
   assert.match(ownerFiles,/X-Starkeepsake-Admin-Key/)
