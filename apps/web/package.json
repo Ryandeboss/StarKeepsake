@@ -38,11 +38,13 @@
     "test:pricing": "node --experimental-strip-types --test tests/storefront-pricing.test.mjs",
     "test:studio-preservation": "node --test tests/studio-preservation.test.mjs",
     "test:manual-amazon": "node --experimental-strip-types --test tests/manual-amazon-queue.test.mjs",
-    "test:etsy-checkout": "node --experimental-strip-types --test tests/etsy-checkout-journey.test.mjs"
+    "test:etsy-checkout": "node --experimental-strip-types --test tests/etsy-checkout-journey.test.mjs",
+    "test:production-storage": "node --test tests/private-production-storage.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "@vercel/blob": "2.9.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

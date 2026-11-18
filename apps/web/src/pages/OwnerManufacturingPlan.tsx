@@ -31,28 +31,65 @@ function stockSnapshot(part:MakerPart,materials:MaterialSnapshot|null){
 function safeLink(url:string|null|undefined){
   return url&&/^https:\/\//i.test(url)?url:null
 }
-export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId}:{
-  plan:MakerPlan;materials:MaterialSnapshot|null;receiptId:number;transactionId:number
+export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,adminKey}:{
+  plan:MakerPlan;materials:MaterialSnapshot|null;receiptId:number;transactionId:number;
+  adminKey:string
 }){
-  const localKey='starkeepsake-owner-checks:v1:'+receiptId+':'+transactionId+':'+plan.designId
-  const [done,setDone]=useState<Record<string,boolean>>(()=>{
-    try{
-      const raw=localStorage.getItem(localKey)
-      const saved=raw?JSON.parse(raw) as Record<string,boolean>:{}
-      return Object.fromEntries(plan.steps.map(s=>[s.id,saved[s.id]===true]))
-    }catch{return {}}
-  })
+  const [done,setDone]=useState<Record<string,boolean>>({})
+  const [serverReady,setServerReady]=useState(false)
+  const [progressError,setProgressError]=useState('')
+  const [pending,setPending]=useState('')
+  const endpoint='/api/production/checklist?receiptId='+receiptId+
+    '&transactionId='+transactionId
   useEffect(()=>{
-    try{localStorage.setItem(localKey,JSON.stringify(done))}catch{/** export still works */}
-  },[localKey,done])
+    let active=true
+    void (async()=>{
+      try{
+        const response=await fetch(endpoint,{cache:'no-store',
+          headers:{'X-Starkeepsake-Admin-Key':adminKey}})
+        if(!response.ok)throw Error('Server checklist unavailable (HTTP '+
+          response.status+').')
+        const json=await response.json() as {
+          durable:boolean;progress:Record<string,{checked:boolean;updatedAt:string}>}
+        if(!json.durable)throw Error('Server did not confirm durable checklist.')
+        if(!active)return
+        setDone(Object.fromEntries(plan.steps.map(step=>[
+          step.id,json.progress[step.id]?.checked===true
+        ])))
+        setProgressError('');setServerReady(true)
+      }catch(error){
+        if(active){setServerReady(false);setProgressError(
+          error instanceof Error?error.message:'Server checklist unavailable.')}
+      }
+    })()
+    return()=>{active=false}
+  },[adminKey,endpoint,plan])
+  async function updateStep(id:string,checked:boolean){
+    if(!serverReady||pending)return
+    setPending(id);setProgressError('')
+    try{
+      const response=await fetch(endpoint,{method:'POST',cache:'no-store',
+        headers:{'Content-Type':'application/json',
+          'X-Starkeepsake-Admin-Key':adminKey},
+        body:JSON.stringify({stepId:id,checked})})
+      if(!response.ok)throw Error('Server checklist write failed (HTTP '+
+        response.status+').')
+      const result=await response.json() as {durable:boolean}
+      if(!result.durable)throw Error('Server did not confirm the saved step.')
+      setDone(prev=>({...prev,[id]:checked}))
+    }catch(error){
+      setProgressError(error instanceof Error?error.message:
+        'Could not save production checklist step.')
+    }finally{setPending('')}
+  }
   const complete=plan.steps.filter(s=>done[s.id]).length
   const getDownload=(name:string,body:string,mime:string)=>
     downloadFile(new Blob([body],{type:mime}),plan.designId+'-'+name)
   const savedChecklist=()=>JSON.stringify({
     ...JSON.parse(makerChecklistJson(plan)),
     receiptId,transactionId,
-    warning:'Browser-only checklist state. NOT an authorized production-job workflow or server-side audit.',
-    steps:plan.steps.map(s=>({...s,status:done[s.id]?'checked_locally':'not_started'}))
+    warning:'Private Vercel Blob server-persisted checklist. Not an audited electrical safety approval or authorization to ship.',
+    steps:plan.steps.map(s=>({...s,status:done[s.id]?'saved_on_server':'not_started'}))
   },null,2)
   return <section className="omp-panel" aria-label="Saved-design physical manufacturing plan">
     <div className="omp-header">
@@ -149,16 +186,20 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId}:
       })}</tbody></table></div>
     </details>)}
     <details className="omp-details">
-      <summary>Build and QA checklist — {complete} / {plan.steps.length} checked on this browser</summary>
-      <p>This list is <b>local to this browser only</b>, not durable job progress
-        or evidence of safety approval. Download the JSON after each session.
-        No step changes Etsy or server production status.</p>
+      <summary>Build and QA checklist — {complete} / {plan.steps.length} steps saved</summary>
+      <p>{serverReady?'Your progress is stored privately on Vercel and will reload on other devices.':
+        'Checking private server storage. Editing stays disabled until it is available.'}
+        {' '}Step completion does not replace physical quality inspection,
+        certification or owner permission to ship.</p>
+      {progressError&&<p role="alert" className="production-error">{progressError}</p>}
       <div className="omp-checklist">{plan.steps.map((s,i)=><label key={s.id}>
         <input type="checkbox" checked={Boolean(done[s.id])}
-          onChange={e=>setDone(prev=>({...prev,[s.id]:e.target.checked}))}/>
+          disabled={!serverReady||Boolean(pending)}
+          onChange={e=>void updateStep(s.id,e.target.checked)}/>
         <span>{i+1}. {s.title}</span></label>)}</div>
-      <button type="button" onClick={()=>getDownload('build-checklist-LOCAL.json',
-        savedChecklist(),'application/json')}>↓ Export local checklist progress</button>
+      <button type="button" disabled={!serverReady}
+        onClick={()=>getDownload('build-checklist-SERVER.json',
+        savedChecklist(),'application/json')}>↓ Export saved checklist JSON</button>
     </details>
   </section>
 }

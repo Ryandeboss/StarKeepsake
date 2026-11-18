@@ -23,3 +23,11 @@
 .opf-quality-review{border-color:#b98477;background:#422b2a;color:#ffe1d2}
 .opf-quality strong{font-size:13px;color:inherit}
 .opf-quality p{margin:6px 0;color:inherit;font-size:12px}
+
+.opf-archive-confirm{display:grid;gap:7px;margin:13px 0;padding:14px;
+  border:1px solid #5b9d80;background:#17372f;color:#d8f4df;border-radius:10px}
+.opf-archive-confirm strong{font-size:13px}
+.opf-archive-confirm small{color:#bde3d1;font-size:11px}
+.opf-archive-confirm button{justify-self:start}
+.opf-archive-warning{border-left:3px solid #ce9568;color:#e9caa7;
+  padding:10px 14px;margin:10px 0}

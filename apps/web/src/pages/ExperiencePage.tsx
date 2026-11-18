@@ -30,6 +30,7 @@ import { maskWorkingDimensions } from '../skyMaskMath'
 import { physicalToggleError } from '../physicalStarSelection'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { createCustomerPacket, downloadFile, orderPersonalization } from '../customerOrder'
+import {freezeManufacturingPacket} from '../frozenPacket'
 import type { OrderPreferences } from '../customerOrder'
 import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
 import type { SavedDesignReceipt } from '../savedDesign'
@@ -828,6 +829,8 @@ export function ExperiencePage() {
       const packet=await createCustomerPacket({design:activeDesign,prefs:preferences,
         photo,photoUrl,cutoutUrl,quote:frameQuote,
         savedDesignId:receipt.designId})
+      // Privately freeze exact maker ZIP before enabling Etsy checkout.
+      await freezeManufacturingPacket(receipt,packet)
       setPreparedOrder({key,packet})
     }catch(cause){
       setOrderError(cause instanceof Error?cause.message:'Could not prepare your order files.')
@@ -1499,7 +1502,7 @@ export function ExperiencePage() {
               </button>
               {orderError&&<p role="alert" className="at-error">{orderError}</p>}
               {currentOrder&&<div className="at-ready-packet" role="status">
-                <div><strong>Your design is saved for Etsy</strong>
+                <div><strong>Your design and maker packet are securely archived for Etsy</strong>
                   <span className="at-order-reference">{currentOrder.manifest.reference}</span>
                   <small>Use this exact Design ID in Etsy's required “StarKeepsake Design ID” text field.
                     This is not an Etsy order or proof of payment.</small>
@@ -1528,7 +1531,8 @@ export function ExperiencePage() {
                   {copied==='details'?'✓ Summary copied!':'Optional · Copy full design summary'}
                 </button>
                 <ol className="at-etsy-order-steps">
-                  <li>Your original photograph and sky design are safely stored with this Design ID.</li>
+                  <li>Your original photograph and exact maker ZIP are privately stored
+                    before Etsy checkout. This is not a receipt or payment.</li>
                   <li>On Etsy, paste <strong>only the Design ID</strong> into the required
                     “StarKeepsake Design ID” personalization field.</li>
                   <li>Choose <strong>{finish==='walnut'?'Two-tone walnut':'Matte black'}</strong>

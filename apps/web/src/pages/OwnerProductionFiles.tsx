@@ -20,6 +20,12 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
   const [packet,setPacket]=useState<Packet|null>(null)
   const [savedMeta,setSavedMeta]=useState<LoadedDesign|null>(null)
   const [metaError,setMetaError]=useState('')
+  const [archived,setArchived]=useState<{archived:boolean;frozenAt:string|null;
+    bytes:number|null}|null>(null)
+  const [archiveBusy,setArchiveBusy]=useState(false)
+  const [archiveError,setArchiveError]=useState('')
+  const archiveUrl='/api/production/archive?receiptId='+receiptId+
+    '&transactionId='+transactionId
   const url=BASE+'/api/admin/production/jobs/'+receiptId+'/'+transactionId
   // The saved design metadata alone is enough to show the N-dependent BOM.
   // Original photo bytes are requested only when owner explicitly clicks Prepare.
@@ -35,12 +41,24 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
         if(!active)return
         if(saved.designId!==designId)throw Error('Saved Design ID mismatches the paid Etsy item.')
         setSavedMeta(saved);setMetaError('')
+        try{
+          const check=await fetch(archiveUrl,{cache:'no-store',
+            headers:{'X-Starkeepsake-Admin-Key':adminKey}})
+          if(!active)return
+          if(check.status===404)
+            setArchived({archived:false,frozenAt:null,bytes:null})
+          else if(check.ok){setArchived(await check.json());setArchiveError('')}
+          else throw Error('Private archive lookup failed (HTTP '+check.status+').')
+        }catch(error){
+          if(active)setArchiveError(error instanceof Error?
+            error.message:'Private archive lookup unavailable.')
+        }
       }catch(e){
         if(active)setMetaError(e instanceof Error?e.message:'Saved design unavailable.')
       }
     })()
     return ()=>{active=false}
-  },[adminKey,url,designId])
+  },[adminKey,url,designId,archiveUrl])
   const plan=useMemo(()=>{
     if(!savedMeta)return null
     try{return buildManufacturingJobPlan(savedMeta.design,savedMeta.preferences)}
@@ -82,6 +100,19 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
       setBusy(false)
     }
   }
+  async function downloadArchived(){
+    if(archiveBusy)return
+    setArchiveBusy(true);setArchiveError('')
+    try{
+      const result=await fetch(archiveUrl+'&download=1',{
+        cache:'no-store',headers:{'X-Starkeepsake-Admin-Key':adminKey}})
+      if(!result.ok)throw Error('Private archive download failed (HTTP '+
+        result.status+').')
+      downloadFile(await result.blob(),designId+'-frozen-maker-packet.zip')
+    }catch(error){setArchiveError(error instanceof Error?
+      error.message:'Frozen packet could not be downloaded.')}
+    finally{setArchiveBusy(false)}
+  }
   const specs=packet?.manifest.manufacturing?.printVariants
   function downloadSupplement(id:PrintVariantId,kind:'spec'|'guide'){
     const variant=PRINT_VARIANTS.find(v=>v.id===id)
@@ -94,17 +125,33 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
   return <section className="opf-panel" aria-label="Private paid-order manufacturing files">
     <div className="opf-heading">
       <div><h4>Owner manufacturing files</h4>
-        <p>Prepare three formats from this paid Etsy job’s securely saved design.</p></div>
+        <p>Download the exact checkout ZIP frozen before Etsy payment. New print
+          regenerations are only reference copies and may change with later code.</p></div>
       <button type="button" className="production-primary" onClick={()=>void prepare()}
         disabled={!adminKey||busy}>{busy?'Rendering print formats…':
-          packet?'↻ Regenerate files':'Prepare production files'}</button>
+          packet?'↻ Regenerate reference files':'Generate reference files (not frozen)'}</button>
     </div>
+    {archived?.archived&&<div className="opf-archive-confirm" role="status">
+      <strong>✓ Original checkout maker ZIP preserved in private Vercel storage</strong>
+      <small>{archived.frozenAt?'Frozen '+new Date(archived.frozenAt).toLocaleString():
+        'Frozen time not available'} · {archived.bytes?
+          Math.round(archived.bytes/1024/1024)+' MB':'Size not available'}</small>
+      <button type="button" onClick={()=>void downloadArchived()} disabled={archiveBusy}>
+        {archiveBusy?'Downloading frozen ZIP…':'↓ Download original frozen maker ZIP'}
+      </button>
+    </div>}
+    {archived?.archived===false&&<p className="opf-archive-warning" role="status">
+      No frozen checkout packet exists for this order (possibly saved before this release).
+      Regenerated files below are not an immutable customer-checkout copy.
+    </p>}
+    {archiveError&&<p role="alert" className="production-error">{archiveError}</p>}
     {metaError&&<p role="alert" className="production-error">{metaError}</p>}
     {savedMeta&&!plan&&<p role="alert" className="production-error">
       Saved design manufacturing data is invalid; do not purchase parts.
     </p>}
     {plan&&<OwnerManufacturingPlan key={plan.designId} plan={plan}
-      materials={materials} receiptId={receiptId} transactionId={transactionId}/>}
+      materials={materials} receiptId={receiptId} transactionId={transactionId}
+      adminKey={adminKey}/>}
     {error&&<p role="alert" className="production-error">{error}</p>}
     {packet&&<div className="opf-results" role="status">
       <p><strong>Owner print files generated.</strong> Each retains the identical

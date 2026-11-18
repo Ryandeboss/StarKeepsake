@@ -157,3 +157,45 @@ after a sandbox-to-GitHub source transfer truncated files. This documented
 safe supplier update is live; the Blob-backed customer archive and cross-device
 checklist endpoints are NOT deployed or tested. Existing manual maker ZIP
 and browser-local checklist behavior remains until a fully verified release.
+
+
+## November 18, 2026 — Private Vercel manufacturing storage and permanent checklist
+
+A **private Vercel Blob store** was connected to the StarKeepsake Vite
+project. New customer checkout makes the exact locally rendered maker ZIP
+available for short-lived, direct private upload only after the saved
+SK Design ID and private access key pass the existing Azure saved-design
+authorization endpoint. The serverless endpoint enforces no overwrite,
+a versioned pathname and a size/content-type limit. The buyer may not
+proceed to Etsy until the private archive reports it exists. All three
+300-DPI print formats, saved physical star map, N-dependent candidate BOM,
+quality report and artwork source are included in the frozen ZIP.
+
+Paid Etsy orders in the owner Production Studio can download the *original
+frozen* maker ZIP only after the Vercel Function revalidates the paid and
+matched receipt via the existing Azure server, including refund/cancel
+protection. The existing owner regeneration action is available as an
+explicit **reference copy**, not the original frozen customer archive.
+A pre-rollout legacy order without a frozen ZIP shows a visible warning.
+
+Each of the 23 assembly/QA checklist steps is now independently persisted
+as a private Vercel Blob JSON object, keyed by receipt, transaction and
+Design ID. Every read/writer requires Azure owner authentication and a
+matched paid job; checklist writes also require a job in awaiting_review or
+in_progress status. The UI disables checkboxes if storage is unavailable
+rather than silently falling back to browser-only records. The checklist
+does not automatically approve physical safety, a print run, or shipment.
+Current updates store latest per-step state, **not a full append-only audit**.
+
+Supplier links are researched manufacturer/distributor pages and are
+deliberately labeled compatibility holds, not verified stock, quotes,
+electrical certification, order authorization, or parts purchased.
+
+**Still required before announcing a launch:** verify positive frozen
+client upload and exact ZIP retrieval through live Vercel functions; perform
+a deliberate real paid Etsy order to validate private owner download and
+cross-device checklist; verify purchased frame finish variation, lab bleed
+selection and physical 1:1 star drilling registration; approve actual
+supplier SKU, wiring, power and thermal testing. The initial server freeze
+authenticates the Design ID but does not cryptographically prove the client
+ZIP pixel bytes equal server-saved original/photo fields.
