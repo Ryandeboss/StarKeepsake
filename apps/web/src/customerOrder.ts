@@ -8,6 +8,7 @@ import type { FrameQuote } from './storefrontPricing'
 import { printSpecification,trimSafeGuideSvg,embedPngDpi,PRINT_VARIANTS,DEFAULT_PRINT_SETTINGS } from './manufacturingPrint'
 import type {PrintSpecification,PrintVariantId} from './manufacturingPrint'
 import {assessPhotoPrintQuality,samplePhotoVisualMetrics} from './photoPrintQuality'
+import type {PhotoVisualMetrics} from './photoPrintQuality'
 export type { OrderManifest, OrderPreferences } from './orderManifest'
 export { orderPersonalization } from './orderManifest'
 const encoder=new TextEncoder()
@@ -203,11 +204,10 @@ export async function createCustomerPacket(input:{
   const foreground=input.prefs.layout==='within'?
     await fetch(input.cutoutUrl).then(r=>r.blob()):null
   const originalBitmap=await createImageBitmap(input.photo)
-  let originalWidth=0,originalHeight=0,visual
-  try{
-    originalWidth=originalBitmap.width;originalHeight=originalBitmap.height
-    visual=samplePhotoVisualMetrics(originalBitmap)
-  }finally{originalBitmap.close()}
+  const originalWidth=originalBitmap.width,originalHeight=originalBitmap.height
+  let visual:PhotoVisualMetrics
+  try{visual=samplePhotoVisualMetrics(originalBitmap)}
+  finally{originalBitmap.close()}
   let preparedWidth:number|undefined,preparedHeight:number|undefined
   if(foreground){
     const bitmap=await createImageBitmap(foreground)

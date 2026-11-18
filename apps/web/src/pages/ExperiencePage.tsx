@@ -176,7 +176,7 @@ export function ExperiencePage() {
   const [draftReady,setDraftReady]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
   // Source-only sampling never uploads the photo and also runs for restored drafts.
   useEffect(()=>{
-    if(!photo){setPhotoVisual(null);return}
+    if(!photo)return
     let canceled=false
     void (async()=>{
       try{
@@ -522,6 +522,7 @@ export function ExperiencePage() {
     overlayObject.current=''
     cutoutObject.current=''
     setPhoto(file)
+    setPhotoVisual(null)
     setPhotoUrl(url)
     setOverlayUrl('')
     setCutoutUrl('')
