@@ -135,3 +135,25 @@ catalog, M3 design-specific durable BOM snapshots, durable step/QA approval,
 physical 1:1 drill-to-print registration, power/burn-in safety and actual paid
 Etsy end-to-end acceptance. No live Etsy payment, supplier order or inventory
 change occurs in these software changes.
+
+## Research-source suppliers (Nov 18, 2026)
+
+The owner dashboard now shows specific researched distributor/manufacturer catalog
+links for the LED3FWAW LED, Adafruit TLC5947, Pico W, 11x14 shadowbox category,
+Nations Photo Lab photo print, black expanded-PVC, 3M 467MP transfer tape,
+PETG and hookup wire. All carry LISTED_NOT_BUILD_VALIDATED. Suppliers, exact
+fit, lead times, compatible ratings, actual availability, price, purchase
+quantities and physical prototype tests are NOT yet approved. The M3 catalog
+is not modified or auto-seeded, and none of these links initiates a purchase.
+
+The prior selected-N formulas remain live: physicalStars.length is N;
+N LED3FWAW, N StarPods, ceil(N/24) TLC5947 boards, ceil(N/12) connector
+groups. Default capacity 24 with 48/72 development modes still requires
+multi-board and power/prototype QA.
+
+A private Vercel Blob store has been provisioned for future immutable packets
+and durable checklist records, but a Vercel function release was rolled back
+after a sandbox-to-GitHub source transfer truncated files. This documented
+safe supplier update is live; the Blob-backed customer archive and cross-device
+checklist endpoints are NOT deployed or tested. Existing manual maker ZIP
+and browser-local checklist behavior remains until a fully verified release.

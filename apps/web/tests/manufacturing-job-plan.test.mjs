@@ -89,3 +89,13 @@ test('legacy non-11x14 design is never silently approved',()=>{
  assert.throws(()=>makerDrillTemplateSvg(x),/held/)
  assert.equal(x.status,'HOLD_FOR_MANUFACTURING_APPROVAL')
 })
+
+test('supplier candidates have real HTTPS listing URLs and explicitly unapproved status',async()=>{
+  const {SUPPLIER_CANDIDATES,supplierCandidateFor}=
+    await import('../src/supplierCandidates.ts')
+  assert.ok(SUPPLIER_CANDIDATES.length>=8)
+  assert.ok(SUPPLIER_CANDIDATES.every(x=>x.status==='LISTED_NOT_BUILD_VALIDATED'&&
+    new URL(x.url).protocol==='https:'&&x.checked==='2026-11-18'))
+  assert.match(supplierCandidateFor('star_led').product,/LED3FWAW/)
+  assert.equal(supplierCandidateFor('wall_power'),null)
+})

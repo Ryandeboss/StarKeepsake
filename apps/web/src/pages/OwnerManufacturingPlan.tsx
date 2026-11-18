@@ -1,5 +1,6 @@
 import {useEffect,useState} from 'react'
 import {downloadFile} from '../customerOrder'
+import {supplierCandidateFor} from '../supplierCandidates'
 import type {MaterialSnapshot} from '../manualAmazonQueue'
 import type {MakerGroup,MakerPart,MakerPlan} from '../manufacturingJobPlan'
 import {makerPartsCsv,makerStarMapCsv,makerDrillTemplateSvg,makerChecklistJson}
@@ -112,8 +113,8 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId}:
         </tr>)}</tbody></table></div>
     </details>
     <div className="omp-section-title"><h4>Job-specific parts, derived from N = {plan.physicalCount}</h4>
-      <small>Recorded M3 stock is global, not reserved for this job.
-        A missing catalog match means no verified supplier or purchase quantity.</small></div>
+      <small>Stock is global, not reserved for this job. Research listing links are not
+        approved supplier SKUs, price quotes, availability, or tested component compatibility.</small></div>
     {groups.map(group=><details key={group.id} className="omp-details" open>
       <summary>{group.name} · {plan.parts.filter(p=>p.group===group.id).length} entries</summary>
       <p>{group.intro}</p>
@@ -124,6 +125,7 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId}:
         const stock=stockSnapshot(p,materials)
         const vendor=stock?.found
         const link=safeLink(vendor?.supplier_url)
+        const candidate=supplierCandidateFor(p.key)
         return <tr key={p.key}>
           <td><b>{p.name}</b><small>{p.notes}</small></td>
           <td>{unitName(p.quantity,p.unit)}</td>
@@ -133,7 +135,11 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId}:
             <small>Provisional gap {stock.estimate??'TBD'} · not reserved</small>
           </>:'Not in verified M3 catalog'}</td>
           <td>{link?<a href={link} target="_blank" rel="noopener noreferrer">
-              Recorded supplier link</a>:'Supplier not verified'}
+              Recorded M3 supplier link</a>:
+            candidate?<a href={candidate.url} target="_blank" rel="noopener noreferrer">
+              Research listing · {candidate.supplier}</a>:'No researched listing'}
+            {candidate&&!link&&<small>{candidate.product}.
+              {' '}Listed as of {candidate.checked}. Compatibility HOLD: {candidate.notes}</small>}
             {vendor?.unit_cost_cents!=null&&
               <small>Recorded unit price ${(vendor.unit_cost_cents/100).toFixed(2)};
                 shipping and tax not included</small>}
