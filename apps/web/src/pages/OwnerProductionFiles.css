@@ -1,0 +1,19 @@
+.opf-panel{grid-column:1/-1;margin-top:12px;padding:17px 18px;border:1px solid #53677a;
+  border-radius:12px;background:linear-gradient(120deg,#101f30,#142434)}
+.opf-heading{display:flex;justify-content:space-between;gap:15px;align-items:center}
+.opf-heading h4{margin:0 0 5px;color:#f1d7aa;font:normal 20px Georgia,serif}
+.opf-panel p{font-size:12px;line-height:1.6;color:#bcd0d9;margin:5px 0}
+.opf-panel button{color:#f7e0b6;background:#203649;border:1px solid #8f7955;
+  border-radius:8px;padding:9px 12px;cursor:pointer}
+.opf-panel button.production-primary{color:#142232;background:#e2c58e;font-weight:650}
+.opf-panel button:disabled{opacity:.6;cursor:wait}
+.opf-results{margin-top:15px;display:grid;gap:10px}
+.opf-results>button{justify-self:start}
+.opf-variants{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.opf-variants article{min-width:0;display:flex;flex-wrap:wrap;align-items:center;
+  gap:8px;padding:13px;border:1px solid #3f5868;border-radius:10px;background:#0b1826}
+.opf-variants article strong{font-size:12px;color:#e8d2a9;width:100%}
+.opf-variants article small{font-size:11px;color:#a8bfcd;width:100%}
+.opf-results>small{font-size:11px;line-height:1.65;color:#a8bbc8}
+@media(max-width:850px){.opf-heading{flex-direction:column;align-items:flex-start}
+  .opf-variants{grid-template-columns:1fr}}

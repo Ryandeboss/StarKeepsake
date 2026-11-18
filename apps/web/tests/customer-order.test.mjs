@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {orderReference,makeOrderManifest,orderPersonalization,zipFiles}
   from '../src/orderManifest.ts'
+import {PRINT_VARIANTS} from '../src/manufacturingPrint.ts'
 // Fixture avoids runtime dependencies on the React/Vite-only designSpec module.
 const INITIAL_DESIGN_SPEC={
   schemaVersion:'1.5',designId:'test',photoAspectRatio:1,
@@ -27,6 +28,12 @@ test('order manifest is unpaid, with source and canonical mm geometry',()=>{
   assert.equal(m.preferences.finish,'walnut')
   assert.ok(orderPersonalization(m).includes('Frame: walnut'))
   assert.equal(m.expectedFiles[0],'order-sheet.png')
+  for(const v of PRINT_VARIANTS){
+    assert.ok(m.expectedFiles.includes(v.artwork))
+    assert.ok(m.expectedFiles.includes(v.spec))
+    assert.ok(m.expectedFiles.includes(v.guide))
+  }
+  assert.equal(m.expectedFiles.length,11)
   assert.ok(orderPersonalization(m).includes('SK-1234567890AB'))
 })
 test('ZIP includes local and central headers, files and rejects path traversal',()=>{

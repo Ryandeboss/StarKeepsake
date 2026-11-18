@@ -113,4 +113,24 @@ Check(!EtsyWebhookVerifier.TryExtractReceipt(Parse(eventBody),203,
 Check(!EtsyWebhookVerifier.TryExtractReceipt(Parse(
     """{"event_type":"order.paid","resource_url":"https://evil.com/v3/application/shops/202/receipts/101","shop_id":"202"}"""),202,
     out _,out _), "Arbitrary webhook resource URL rejected");
+var paidAssetReceipt=Parse("""{"is_paid":true,"is_canceled":false,"has_refunds":false,"etsy_status":"paid"}""");
+var paidAssetItem=Parse("""{"quantity":1,"match_state":"matched","design_id":"SK-0123456789ABCDEF"}""");
+var paidAssetJob=Parse("""{"design_id":"SK-0123456789ABCDEF","status":"awaiting_review"}""");
+Check(PaidJobFilePolicy.MatchedDesign(paidAssetReceipt,paidAssetItem,paidAssetJob)==design,
+    "Verified paid matched Etsy job can access private owner assets");
+Check(PaidJobFilePolicy.MatchedDesign(Parse(
+    """{"is_paid":false,"is_canceled":false,"has_refunds":false,"etsy_status":"open"}"""),
+    paidAssetItem,paidAssetJob) is null,"Saved but unpaid job cannot access owner files");
+Check(PaidJobFilePolicy.MatchedDesign(Parse(
+    """{"is_paid":true,"is_canceled":false,"has_refunds":true,"etsy_status":"paid"}"""),
+    paidAssetItem,paidAssetJob) is null,"Refunded job cannot access owner files");
+Check(PaidJobFilePolicy.MatchedDesign(Parse(
+    """{"is_paid":true,"is_canceled":true,"has_refunds":false,"etsy_status":"paid"}"""),
+    paidAssetItem,paidAssetJob) is null,"Canceled job cannot access owner files");
+Check(PaidJobFilePolicy.MatchedDesign(paidAssetReceipt,Parse(
+    """{"quantity":2,"match_state":"matched","design_id":"SK-0123456789ABCDEF"}"""),
+    paidAssetJob) is null,"Multi-unit item cannot access single-unit maker files");
+Check(PaidJobFilePolicy.MatchedDesign(paidAssetReceipt,Parse(
+    """{"quantity":1,"match_state":"matched","design_id":"SK-AAAAAAAAAAAAAAAA"}"""),
+    paidAssetJob) is null,"Mismatched Design ID is denied");
 Console.WriteLine("All M2 Etsy production contract tests passed.");

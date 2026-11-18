@@ -49,3 +49,15 @@ test('Chapter 05 restore choices displays live selected count and replayable suc
   assert.match(chapter5,/Restore automatic choices/)
   assert.equal((chapter5.match(/className="at-auto-restored"/g)||[]).length,2)
 })
+
+const ownerFiles=file('../src/pages/OwnerProductionFiles.tsx')
+const paidApi=file('../../api/EtsyProduction.cs')
+test('paid-only owner files are linked to authenticated job and three variants',()=>{
+  assert.match(studio,/OwnerProductionFiles/)
+  assert.match(ownerFiles,/createCustomerPacket/)
+  assert.match(ownerFiles,/PRINT_VARIANTS\.map/)
+  assert.match(ownerFiles,/X-Starkeepsake-Admin-Key/)
+  assert.match(paidApi,/FindVerifiedPaidJobDesignAsync/)
+  assert.match(paidApi,/PaidJobFilePolicy\.MatchedDesign/)
+  assert.match(paidApi,/Results\.Unauthorized\(\)/)
+})

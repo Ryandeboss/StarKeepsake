@@ -6,13 +6,26 @@ export type PrintSettings = {bleedIn:number;safeIn:number;dpi:number}
 export const DEFAULT_PRINT_SETTINGS: Readonly<PrintSettings> = Object.freeze({
   bleedIn:0.25,safeIn:0.25,dpi:300,
 })
+/** Three printer files, always derived from the same unscaled visible trim. */
+export const PRINT_VARIANTS=[
+  {id:'exact',label:'Exact trim / no bleed',bleedIn:0,
+    artwork:'print-artwork-exact-11x14.png',
+    spec:'print-spec-exact.json',guide:'print-guide-exact.svg'},
+  {id:'bleed_1_8',label:'⅛-inch bleed',bleedIn:0.125,
+    artwork:'print-artwork-bleed-1-8.png',
+    spec:'print-spec-bleed-1-8.json',guide:'print-guide-bleed-1-8.svg'},
+  {id:'bleed_1_4',label:'¼-inch bleed (master)',bleedIn:0.25,
+    artwork:'print-artwork-bleed-1-4.png',
+    spec:'print-spec-bleed-1-4.json',guide:'print-guide-bleed-1-4.svg'},
+] as const
+export type PrintVariantId=typeof PRINT_VARIANTS[number]['id']
 const rounded=(x:number)=>Math.round(x*10000)/10000
 export function printSpecification(widthMm:number,heightMm:number,
   settings:PrintSettings=DEFAULT_PRINT_SETTINGS){
   const {bleedIn,safeIn,dpi}=settings
   if (![widthMm,heightMm,bleedIn,safeIn,dpi].every(Number.isFinite) ||
       widthMm<100||heightMm<100||widthMm>650||heightMm>750||
-      bleedIn<0.0625||bleedIn>0.5||safeIn<0.125||safeIn>1||
+      bleedIn<0||bleedIn>0.5||safeIn<0.125||safeIn>1||
       !Number.isInteger(dpi)||dpi<150||dpi>600||
       safeIn*2>=Math.min(widthMm,heightMm)/25.4){
     throw new Error('Invalid lab print settings or physical artwork dimensions.')

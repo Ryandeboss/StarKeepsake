@@ -5,6 +5,7 @@ import { ProcurementPanel } from './ProcurementPanel'
 import { ManualAmazonPurchasingPanel } from './ManualAmazonPurchasingPanel'
 import type { MaterialSnapshot } from '../manualAmazonQueue'
 import { materialsForProductionJob } from '../orderFulfillment'
+import { OwnerProductionFiles } from './OwnerProductionFiles'
 
 type Receipt = {
   shop_id: number
@@ -355,6 +356,12 @@ export function ProductionDashboardPage() {
                 {eligible&&<small>Match the saved frame finish to the variation the buyer
                   selected on Etsy before preparing this physical order.</small>}
               </div>
+              {receiptStatus(selectedRow.receipt)==='Paid'&&
+                item.match_state==='matched'&&item.quantity===1&&Boolean(job)&&
+                item.design_id===job?.design_id&&item.design_id&&
+                <OwnerProductionFiles key={item.transaction_id} adminKey={key}
+                  receiptId={selectedRow.receipt.receipt_id}
+                  transactionId={item.transaction_id} designId={item.design_id}/>}
               {eligible&&<div className="production-job-bom">
                 <h4>Materials for this Etsy order</h4>
                 {!bom?.prepared

@@ -1,6 +1,7 @@
 import type { DesignSpec } from './designSpec'
 import type { AbovePhotoFitMode } from './frameSkyBalance'
-import type { PrintSpecification } from './manufacturingPrint'
+import { PRINT_VARIANTS } from './manufacturingPrint'
+import type { PrintSpecification,PrintVariantId } from './manufacturingPrint'
 
 export type OrderPreferences={
   layout:'above'|'within'; heading:number; pitch:number; fov:number
@@ -15,7 +16,9 @@ export type OrderManifest={
   /** Historical website estimate only; not proof of payment or the Etsy sale price. */
   pricing?:{priceCents:number;currency:'USD';mode:'planning'|'catalog';
     revision:string;updatedAtUtc:string|null;binding:false}
-  manufacturing?: {print:PrintSpecification;selectedPhysicalStars:number|null;
+  manufacturing?: {print:PrintSpecification;
+    printVariants?:{id:PrintVariantId;spec:PrintSpecification}[];
+    selectedPhysicalStars:number|null;
     physicalMax:number|null;physicalSelectionVersion:string|null;
     status:'PROOF_REQUIRED';warning:string}
   expectedFiles:string[]
@@ -38,7 +41,7 @@ export function makeOrderManifest(ref:string,design:DesignSpec,prefs:OrderPrefer
     preferences:{...prefs},original,expectedFiles:['order-sheet.png','original-photo.'+
       (original.mime==='image/png'?'png':original.mime==='image/webp'?'webp':'jpg'),
       ...(prefs.layout==='within'?['prepared-foreground.png']:[]),
-      'print-artwork-with-bleed.png','print-trim-safe-guide.svg','print-spec.json']}
+      ...PRINT_VARIANTS.flatMap(v=>[v.artwork,v.guide,v.spec])]}
 }
 export function orderPersonalization(manifest:OrderManifest):string{
   return ['Reference: '+manifest.reference,'Date: '+manifest.design.moment.date,

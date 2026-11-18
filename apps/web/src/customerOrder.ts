@@ -5,7 +5,8 @@ import { observerPointInPanel } from './skyWorkshopMath'
 import { orderReference, makeOrderManifest, zipFiles } from './orderManifest'
 import type { OrderManifest, OrderPreferences } from './orderManifest'
 import type { FrameQuote } from './storefrontPricing'
-import { printSpecification,trimSafeGuideSvg,embedPngDpi } from './manufacturingPrint'
+import { printSpecification,trimSafeGuideSvg,embedPngDpi,PRINT_VARIANTS,DEFAULT_PRINT_SETTINGS } from './manufacturingPrint'
+import type {PrintSpecification,PrintVariantId} from './manufacturingPrint'
 export type { OrderManifest, OrderPreferences } from './orderManifest'
 export { orderPersonalization } from './orderManifest'
 const encoder=new TextEncoder()
@@ -94,8 +95,8 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
  * order-sheet PNG for print. Trim remains exactly the intended composition.
  * Bleed extends colored edge pixels: obtain lab approval of the proof first.
  */
-async function createManufacturingArt(manifest:OrderManifest,photoUrl:string,
-  foregroundUrl:string):Promise<Blob>{
+async function createManufacturingTrim(manifest:OrderManifest,photoUrl:string,
+  foregroundUrl:string):Promise<HTMLCanvasElement>{
   const {design,preferences:p}=manifest
   const spec=manifest.manufacturing!.print
   const trim=document.createElement('canvas')
@@ -146,6 +147,12 @@ async function createManufacturingArt(manifest:OrderManifest,photoUrl:string,
     ctx.fillText(caption,w/2,y,Math.max(10,w-2*inset))
   }
   ctx.shadowBlur=0
+  return trim
+}
+/** Never resize visible artwork: extend just its edge pixels per lab variant. */
+async function exportPrintVariant(trim:HTMLCanvasElement,spec:PrintSpecification):Promise<Blob>{
+  const w=trim.width,h=trim.height
+  if(w!==spec.trimPixels.width||h!==spec.trimPixels.height)throw Error('Mismatched trim size.')
   const canvas=document.createElement('canvas')
   canvas.width=spec.documentPixels.width;canvas.height=spec.documentPixels.height
   const out=canvas.getContext('2d');if(!out)throw Error('Print canvas unavailable.')
@@ -154,15 +161,15 @@ async function createManufacturingArt(manifest:OrderManifest,photoUrl:string,
   const x=spec.trimPixels.x,y=spec.trimPixels.y
   // Extend artwork to all four bleed edges; no white pixels/borders.
   out.drawImage(trim,x,y,w,h)
-  out.drawImage(trim,0,0,1,h,0,y,x,h)
-  out.drawImage(trim,w-1,0,1,h,x+w,y,canvas.width-x-w,h)
-  out.drawImage(trim,0,0,w,1,x,0,w,y)
-  out.drawImage(trim,0,h-1,w,1,x,y+h,w,canvas.height-y-h)
+  if(x>0)out.drawImage(trim,0,0,1,h,0,y,x,h)
+  if(canvas.width-x-w>0)out.drawImage(trim,w-1,0,1,h,x+w,y,canvas.width-x-w,h)
+  if(y>0)out.drawImage(trim,0,0,w,1,x,0,w,y)
+  if(canvas.height-y-h>0)out.drawImage(trim,0,h-1,w,1,x,y+h,w,canvas.height-y-h)
   for(const [sx,sy,dx,dy,dw,dh] of [
     [0,0,0,0,x,y],[w-1,0,x+w,0,canvas.width-x-w,y],
     [0,h-1,0,y+h,x,canvas.height-y-h],
     [w-1,h-1,x+w,y+h,canvas.width-x-w,canvas.height-y-h]
-  ])out.drawImage(trim,sx,sy,1,1,dx,dy,dw,dh)
+  ])if(dw>0&&dh>0)out.drawImage(trim,sx,sy,1,1,dx,dy,dw,dh)
   const pngBlob=await png(canvas)
   const bytes=embedPngDpi(new Uint8Array(await pngBlob.arrayBuffer()),spec.dpi)
   return new Blob([new Uint8Array(bytes).buffer],{type:'image/png'})
@@ -171,7 +178,8 @@ async function createManufacturingArt(manifest:OrderManifest,photoUrl:string,
 export async function createCustomerPacket(input:{
   design:DesignSpec;prefs:OrderPreferences;photo:File;photoUrl:string;cutoutUrl:string;savedDesignId?:string;
   quote?:FrameQuote|null;
-}):Promise<{manifest:OrderManifest;zip:Blob;sheet:Blob;prepared:Blob|null}>{
+}):Promise<{manifest:OrderManifest;zip:Blob;sheet:Blob;prepared:Blob|null;
+  printVariants:Record<PrintVariantId,Blob>}>{
   if(!input.design.astronomy||!input.design.moment.location)throw Error('Finish the workshop first.')
   if(input.prefs.layout==='within'&&!input.cutoutUrl)throw Error('Save the polished foreground first.')
   const photo=new Uint8Array(await input.photo.arrayBuffer())
@@ -194,14 +202,26 @@ export async function createCustomerPacket(input:{
   const foreground=input.prefs.layout==='within'?
     await fetch(input.cutoutUrl).then(r=>r.blob()):null
   const sheet=await createOrderSheet(manifest,input.photoUrl,input.cutoutUrl)
-  const printArt=await createManufacturingArt(manifest,input.photoUrl,input.cutoutUrl)
+  const trim=await createManufacturingTrim(manifest,input.photoUrl,input.cutoutUrl)
+  const printVariants={} as Record<PrintVariantId,Blob>
+  const variantFiles:{name:string;data:Uint8Array}[]=[]
+  manifest.manufacturing.printVariants=[]
+  for(const variant of PRINT_VARIANTS){
+    const spec=printSpecification(input.design.physicalArtwork.widthMm,
+      input.design.physicalArtwork.heightMm,
+      {...DEFAULT_PRINT_SETTINGS,bleedIn:variant.bleedIn})
+    const art=await exportPrintVariant(trim,spec)
+    printVariants[variant.id]=art
+    manifest.manufacturing.printVariants.push({id:variant.id,spec})
+    variantFiles.push(
+      {name:variant.artwork,data:new Uint8Array(await art.arrayBuffer())},
+      {name:variant.spec,data:encoder.encode(JSON.stringify(spec,null,2))},
+      {name:variant.guide,data:encoder.encode(trimSafeGuideSvg(spec))})
+  }
   const content=[
     {name:'order.json',data:encoder.encode(JSON.stringify(manifest,null,2))},
     {name:'order-sheet.png',data:new Uint8Array(await sheet.arrayBuffer())},
-    {name:'print-artwork-with-bleed.png',data:new Uint8Array(await printArt.arrayBuffer())},
-    {name:'print-trim-safe-guide.svg',
-      data:encoder.encode(trimSafeGuideSvg(manifest.manufacturing!.print))},
-    {name:'print-spec.json',data:encoder.encode(JSON.stringify(manifest.manufacturing,null,2))},
+    ...variantFiles,
     {name:manifest.expectedFiles[1],data:photo},
     {name:'HOW-TO-ORDER.txt',data:encoder.encode([
       'STARKEEP SAKE · DESIGN REFERENCE '+reference,
@@ -210,11 +230,14 @@ export async function createCustomerPacket(input:{
       'In the Etsy custom options upload: order-sheet.png, original-photo image',
       'and prepared-foreground.png if this design uses stars inside the photo.',
       'Enter the reference in the Etsy design reference field.',
-      'Manufacturing export: 300 DPI, 1/4-inch default bleed per edge and 1/4-inch safe area.',
-      'Use print-spec.json for exact document, trim and safe-area dimensions.',
-      'print-trim-safe-guide.svg is a proof OVERLAY ONLY, NOT for printing over artwork.',
-      'IMPORTANT: Confirm this exact 1/4-inch bleed document is accepted by the print lab.',
-      'A lab specifying 1/8-inch bleed may REQUIRE a separate 1/8-inch file; never assume extra bleed is accepted.',
+      'Three 300-DPI formats from one exact 11x14-inch visible composition:',
+      '  print-artwork-exact-11x14.png (11x14 in; no bleed)',
+      '  print-artwork-bleed-1-8.png (11.25x14.25 in; 1/8 in bleed per edge)',
+      '  print-artwork-bleed-1-4.png (11.5x14.5 in; 1/4 in bleed per edge)',
+      'Each file has corresponding print-spec-*.json and print-guide-*.svg.',
+      'SVG guides are proof overlays ONLY, not part of print image.',
+      'Print at native dimensions; do not Fit to Page, resize or autocrop.',
+      'Verify the accepted bleed size and physical printed proof with the shop.',
       'Print a physical trim and mounting proof before drilling or production.',
       'Physical LED coordinate registration still requires manual calibration.',
       'The maker must verify that Etsy marks the order paid before assembly.',
@@ -224,5 +247,5 @@ export async function createCustomerPacket(input:{
     data:new Uint8Array(await foreground.arrayBuffer())})
   const bytes=zipFiles(content)
   return {manifest,zip:new Blob([new Uint8Array(bytes).buffer],{type:'application/zip'}),
-    sheet,prepared:foreground}
+    sheet,prepared:foreground,printVariants}
 }

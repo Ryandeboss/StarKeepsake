@@ -73,6 +73,30 @@ public sealed class EtsyProductionClient(
     }
 }
 
+public static class PaidJobFilePolicy
+{
+    public static string? MatchedDesign(JsonElement receipt,JsonElement item,JsonElement job)
+    {
+        static bool Yes(JsonElement row,string key) =>
+            row.TryGetProperty(key,out var value) && value.ValueKind==JsonValueKind.True;
+        static string? Str(JsonElement row,string key) =>
+            row.TryGetProperty(key,out var value) && value.ValueKind==JsonValueKind.String
+                ?value.GetString():null;
+        if(!Yes(receipt,"is_paid") || Yes(receipt,"is_canceled") ||
+           Yes(receipt,"has_refunds") ||
+           Str(receipt,"etsy_status") is not ("paid" or "completed"))return null;
+        if(Str(item,"match_state")!="matched" ||
+           !item.TryGetProperty("quantity",out var qty) ||
+           qty.ValueKind!=JsonValueKind.Number ||
+           !qty.TryGetInt32(out var count) || count!=1)return null;
+        var id=Str(item,"design_id");
+        if(!DesignSecurity.ValidId(id) || Str(job,"design_id")!=id ||
+           Str(job,"status") is not ("awaiting_review" or "in_progress" or "hold" or "complete"))
+            return null;
+        return id;
+    }
+}
+
 public sealed class EtsyProductionRepository(
     HttpClient http, DesignPersistenceOptions options)
 {
@@ -107,6 +131,28 @@ public sealed class EtsyProductionRepository(
             p_receipt = receipt, p_items = items,
             p_webhook_id = webhookId, p_event_type = eventType
         }, ct);
+
+    public async Task<string?> FindVerifiedPaidJobDesignAsync(
+        long shopId,long receiptId,long transactionId,CancellationToken ct)
+    {
+        if(shopId<1 || receiptId<1 || transactionId<1)return null;
+        var prefix="shop_id=eq."+shopId.ToString(CultureInfo.InvariantCulture)+
+            "&receipt_id=eq."+receiptId.ToString(CultureInfo.InvariantCulture);
+        var txn=transactionId.ToString(CultureInfo.InvariantCulture);
+        var receipts=await SendJsonAsync(HttpMethod.Get,
+            "rest/v1/etsy_receipts?"+prefix+
+            "&select=is_paid,is_canceled,has_refunds,etsy_status&limit=1",null,ct);
+        if(receipts.ValueKind!=JsonValueKind.Array || receipts.GetArrayLength()!=1)return null;
+        var items=await SendJsonAsync(HttpMethod.Get,
+            "rest/v1/etsy_order_items?"+prefix+"&transaction_id=eq."+txn+
+            "&select=design_id,match_state,quantity&limit=1",null,ct);
+        if(items.ValueKind!=JsonValueKind.Array || items.GetArrayLength()!=1)return null;
+        var jobs=await SendJsonAsync(HttpMethod.Get,
+            "rest/v1/production_jobs?"+prefix+"&transaction_id=eq."+txn+
+            "&select=design_id,status&limit=1",null,ct);
+        if(jobs.ValueKind!=JsonValueKind.Array || jobs.GetArrayLength()!=1)return null;
+        return PaidJobFilePolicy.MatchedDesign(receipts[0],items[0],jobs[0]);
+    }
 
     // Only server-authorized, minimized data is exposed to the admin dashboard.
     public async Task<object> DashboardAsync(long shopId, CancellationToken ct)
@@ -189,6 +235,63 @@ public static class EtsyProductionEndpoints
             catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or
                 JsonException or InvalidDataException)
             { return Results.Problem("Unable to load production orders.", statusCode: 503); }
+        }).RequireRateLimiting("production-admin");
+
+        app.MapGet("/api/admin/production/jobs/{receiptId:long}/{transactionId:long}/design",
+            async (long receiptId,long transactionId,HttpContext context,
+                EtsyConnectionOptions opts,DesignPersistenceOptions designOptions,
+                EtsyProductionClient etsy,EtsyProductionRepository db,DesignRepository designs) =>
+        {
+            NoStore(context);
+            if(!Authorized(context,opts))return Results.Unauthorized();
+            if(!opts.IsConfigured || !designOptions.IsConfigured)return Results.StatusCode(503);
+            try
+            {
+                var shop=await etsy.AuthorizedShopAsync(context.RequestAborted);
+                var id=await db.FindVerifiedPaidJobDesignAsync(
+                    shop.ShopId,receiptId,transactionId,context.RequestAborted);
+                if(id is null)return Results.NotFound();
+                var saved=await designs.FindAsync(id,context.RequestAborted);
+                if(saved is null)return Results.NotFound();
+                return Results.Ok(new {
+                    designId=saved.DesignId,
+                    design=JsonSerializer.Deserialize<JsonElement>(saved.DesignJson),
+                    preferences=JsonSerializer.Deserialize<JsonElement>(saved.PreferencesJson),
+                    hasPreparedForeground=saved.ForegroundMime is not null
+                });
+            }
+            catch(Exception ex) when(ex is HttpRequestException or InvalidOperationException
+                or JsonException or InvalidDataException or FormatException)
+            {return Results.Problem("Owner design lookup is unavailable.",statusCode:503);}
+        }).RequireRateLimiting("production-admin");
+
+        app.MapGet("/api/admin/production/jobs/{receiptId:long}/{transactionId:long}/assets/{type}",
+            async (long receiptId,long transactionId,string type,HttpContext context,
+                EtsyConnectionOptions opts,DesignPersistenceOptions designOptions,
+                EtsyProductionClient etsy,EtsyProductionRepository db,DesignRepository designs) =>
+        {
+            NoStore(context);
+            if(!Authorized(context,opts))return Results.Unauthorized();
+            if(!opts.IsConfigured || !designOptions.IsConfigured)return Results.StatusCode(503);
+            if(type!="original" && type!="foreground")return Results.NotFound();
+            try
+            {
+                var shop=await etsy.AuthorizedShopAsync(context.RequestAborted);
+                var id=await db.FindVerifiedPaidJobDesignAsync(
+                    shop.ShopId,receiptId,transactionId,context.RequestAborted);
+                if(id is null)return Results.NotFound();
+                var saved=await designs.FindAsync(id,context.RequestAborted);
+                if(saved is null || (type=="foreground" && saved.ForegroundMime is null))
+                    return Results.NotFound();
+                var data=await designs.DownloadAssetAsync(id,type,context.RequestAborted);
+                var mime=type=="foreground"?saved.ForegroundMime!:saved.OriginalMime;
+                if(!DesignSecurity.IsImage(data,mime))return Results.NotFound();
+                return Results.File(data,mime);
+            }
+            catch(FileNotFoundException){return Results.NotFound();}
+            catch(Exception ex) when(ex is HttpRequestException or InvalidOperationException
+                or JsonException or InvalidDataException or FormatException)
+            {return Results.Problem("Owner design asset is unavailable.",statusCode:503);}
         }).RequireRateLimiting("production-admin");
 
         app.MapPost("/api/admin/production/sync", async (

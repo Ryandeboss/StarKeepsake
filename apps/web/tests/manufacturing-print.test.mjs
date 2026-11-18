@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {printSpecification,embedPngDpi,trimSafeGuideSvg} from '../src/manufacturingPrint.ts'
+import {printSpecification,embedPngDpi,trimSafeGuideSvg,PRINT_VARIANTS} from '../src/manufacturingPrint.ts'
 
 test('11x14 at 300 DPI has true oversize bleed with centered trim and safe area',()=>{
   const spec=printSpecification(279.4,355.6)
@@ -35,4 +35,18 @@ test('PNG physical DPI metadata is set to 300 not browser default 96',()=>{
   assert.equal(new DataView(updated.buffer).getUint32(41,false),Math.round(300/.0254))
   assert.equal(updated.length,png.length+21)
   assert.throws(()=>embedPngDpi(new Uint8Array([1,2]),300))
+})
+
+test('exact, 1/8 and 1/4-inch variants share 11x14 trim at 300 DPI',()=>{
+  const a=PRINT_VARIANTS.map(v=>printSpecification(279.4,355.6,
+    {bleedIn:v.bleedIn,safeIn:.25,dpi:300}))
+  assert.deepEqual(a.map(x=>x.documentPixels),[
+    {width:3300,height:4200},{width:3375,height:4275},{width:3450,height:4350}
+  ])
+  assert.deepEqual(a.map(x=>x.documentSizeIn),[
+    {width:11,height:14},{width:11.25,height:14.25},{width:11.5,height:14.5}
+  ])
+  assert.ok(a.every(x=>x.trimPixels.width===3300&&x.trimPixels.height===4200))
+  assert.ok(a.every(x=>x.reviewStatus==='PROOF_REQUIRED'&&x.dpi===300))
+  assert.equal(new Set(PRINT_VARIANTS.map(v=>v.artwork)).size,3)
 })

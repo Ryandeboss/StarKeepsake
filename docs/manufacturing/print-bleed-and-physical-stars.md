@@ -97,3 +97,22 @@ artwork is print-shop-approved until the specific shop confirms its preferred
 document size and production proof. The owner's next phases include secure
 admin retrieval of saved design files and job-specific, selected-N-driven
 components rather than a fixed 24-LED recipe.
+
+
+## Three print-lab variants (2026-11-18)
+**One unscaled 11x14-in (3300x4200px at 300 DPI) trim canvas** produces:
+- `print-artwork-exact-11x14.png`: 11x14 in, 3300x4200 px.
+- `print-artwork-bleed-1-8.png`: 11.25x14.25 in, 3375x4275 px.
+- `print-artwork-bleed-1-4.png`: 11.5x14.5 in, 3450x4350 px, preferred internal master.
+Matching `print-spec-*.json` and `print-guide-*.svg` accompany each image.
+No rescaling or Fit to Page; obtain supplier-specific acceptance and proof.
+
+**Owner retrieval:** From a paid, non-canceled/unrefunded, matched single-unit Etsy
+job in /admin/production, an admin-key-validated Azure endpoint checks the
+OAuth shop and exact DB receipt, transaction, job, matched design ID before
+releasing saved design metadata and private original/foreground. The browser
+regenerates the same three files and a complete ZIP. Private access key
+is NOT required or shared with owner UI. No supplier purchases are triggered.
+
+**Not yet fulfilled:** image quality preflight, printed-hole alignment,
+supplier sample proof and dynamic selected-N electronics BOM.
