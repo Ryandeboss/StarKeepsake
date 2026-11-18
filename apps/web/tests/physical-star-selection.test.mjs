@@ -67,3 +67,11 @@ test('invalid manual choices cannot exceed cap or violate physical spacing',()=>
     {mode:'manual',selectedHipIds:[2,3]}).physicalStars.length,2)
   assert.throws(()=>selectVisiblePhysicalStars(stars,129))
 })
+
+test('an empty manual set stays empty until the buyer restores automatic selection', () => {
+  const input=spaced(12)
+  const manual=selectVisiblePhysicalStars(input,24,4.5,{mode:'manual',selectedHipIds:[]})
+  assert.equal(manual.physicalStars.length,0)
+  const automatic=selectVisiblePhysicalStars(input,24)
+  assert.equal(automatic.physicalStars.length,12)
+})

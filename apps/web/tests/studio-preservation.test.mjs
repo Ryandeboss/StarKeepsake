@@ -23,3 +23,18 @@ test('Production dashboard keeps saved-design section and M3 materials panel', (
   assert.match(dashboard, /Recently saved designs/)
   assert.match(dashboard, /<MaterialsPanel adminKey=\{key\} \/>/)
 })
+
+test('Chapter 05 owns physical light editing and the showroom visualizes selected LEDs', () => {
+  const chapter4=studio.split('CHAPTER 04 / THE OBSERVATORY WORKSHOP')[1].split('CHAPTER 05 / BRING YOUR NIGHT HOME')[0]
+  const chapter5=studio.split('CHAPTER 05 / BRING YOUR NIGHT HOME')[1]
+  assert.doesNotMatch(chapter4,/className="at-physical-choices"/)
+  assert.match(chapter5,/className="at-physical-choices"/)
+  assert.match(chapter5,/className="at-home-star-edit-preview"/)
+  assert.ok(chapter5.includes('editingPhysicalStars={true}'))
+  assert.ok(chapter5.includes('stars={!physicalInspector||physicalOnly?(activeDesign.physicalStars??[]):design.stars}'))
+  assert.ok(chapter5.includes('Restore automatic LED selection'))
+  assert.ok(chapter5.includes('No stars currently qualify for an LED'))
+})
+test('a newly calculated sky clears stale manual HIP selections', () => {
+  assert.ok(studio.includes('physicalStarOverrides:undefined,moment,astronomy:calculated.calculation'))
+})

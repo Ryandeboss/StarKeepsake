@@ -739,3 +739,16 @@
 .at-physical-choice-list button strong{margin-left:auto;color:#d9c491;font-size:10px}
 .at-physical-choice-list button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .at-physical-choices .at-physical-message{color:#fff0cb;font-weight:600}
+
+/* Chapter 05 light picker uses an independent editable star map: the realistic
+   photographic showroom intentionally has noninteractive compositing layers. */
+.at-home-star-edit-preview{margin:14px 0;padding:14px;background:#0a1b29;
+  border:1px solid #4d6875;border-radius:12px}
+.at-home-star-edit-preview>p{margin:0 0 12px;color:#d1e2e5;font-size:12px}
+.at-home-star-edit-preview .skw-frame-rail{min-height:350px}
+.at-physical-choices .at-physical-choice-mode{color:#f2d7a4;font-weight:600}
+.at-physical-choices .at-physical-warning{padding:12px 13px;border:1px solid #b48d58;
+  border-radius:8px;background:#322b23;color:#ffe5b6}
+.at-physical-reset{padding:10px 12px;margin:7px 0;border:1px solid #c7a875;
+  border-radius:8px;background:#203e4d;color:#f2deb3;cursor:pointer;font-weight:650}
+.at-physical-reset:focus-visible{outline:2px solid #fff;outline-offset:2px}

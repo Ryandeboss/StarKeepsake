@@ -101,7 +101,7 @@ function WizardLoader({kind,progress}: {kind:'detecting'|'calculating';progress:
 export function ExperiencePage() {
   const [stage,setStage]=useState<Stage>('welcome')
   const physicalInspector=new URLSearchParams(window.location.search).get('physicalInspector')==='1'
-  const [physicalOnly,setPhysicalOnly]=useState(false)
+  const [physicalOnly,setPhysicalOnly]=useState(true)
   const [customizingLights,setCustomizingLights]=useState(false)
   const [physicalMessage,setPhysicalMessage]=useState('')
   const [design,setDesign]=useState<DesignSpec>(()=>({...INITIAL_DESIGN_SPEC,stars:[],astronomy:null}))
@@ -189,7 +189,10 @@ export function ExperiencePage() {
   function togglePhysicalLight(hip:number){
     if(!physicalView)return
     const target=physicalView.candidates.find(c=>c.star.hipparcosId===hip)
-    if(!target)return
+    if(!target){
+      setPhysicalMessage('That star is outside the final print-safe light area or hidden by the foreground. Try another star or adjust your view in Chapter 04.')
+      return
+    }
     const selected=activeDesign.physicalStars??[]
     const chosen=selected.map(s=>s.hipparcosId)
     if(physicalStarIds.has(hip)){
@@ -649,13 +652,15 @@ export function ExperiencePage() {
       const calculated=await generateAstronomy(moment,design.skySettings,
         design.framePresetId,design.photoAspectRatio)
       if(version!==astronomyVersion.current)return
-      setDesign(current=>({...current,moment,astronomy:calculated.calculation,
+      setDesign(current=>({...current,physicalStarOverrides:undefined,moment,astronomy:calculated.calculation,
         stars:calculated.displayStars??calculated.stars,
         displayStars:calculated.displayStars??calculated.stars,
         physicalStars:calculated.physicalStars,physicalSelection:calculated.physicalSelection}))
       setHeading(wrapWorkshopHeading(suggestedObserverHeading(calculated.stars)))
       setPitch(18)
       setFov(105)
+      setCustomizingLights(false)
+      setPhysicalMessage('')
       setProgress(100)
       setStage('preview')
     }catch(cause){
@@ -1020,13 +1025,13 @@ export function ExperiencePage() {
         <div className="at-stage-intro at-stage-intro--center">
           <span className="at-kicker">CHAPTER 04 / THE OBSERVATORY WORKSHOP</span>
           <h1>See the night<br/><em>from where you stood.</em></h1>
-          <p>Turn toward north, east, south or west. Tilt your gaze. Your stars move with the perspective, just as they would above that place.</p>
+          <p>Turn toward north, east, south or west. Tilt your gaze. Your stars move with the perspective, just as they would above that place. Choose the illuminated stars in Chapter 05.</p>
         </div>
         <div className="at-preview-grid">
           <div className="at-preview-main">
             <SkyWorkshopPreview
               showroom={false} lightsOn={lightsOn} finish={finish}
-              stars={physicalInspector&&physicalOnly?(activeDesign.physicalStars??[]):design.stars}
+              stars={design.stars}
               physicalStarIds={physicalStarIds} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
               layout={placement}
               imageAspect={dimensions?dimensions.width/dimensions.height:1}
@@ -1042,81 +1047,6 @@ export function ExperiencePage() {
               <div><span>THE NIGHT OF {date}</span><strong>{chosenName}</strong></div>
               <div><span>REAL HIPPARCOS STARS</span><strong>{design.stars.length} plotted in the calculated sky</strong></div>
             </div>
-            {physicalView&&<section className="at-physical-choices"
-                aria-label="Choose which stars have real LED lights">
-              <div className="at-physical-choices-heading">
-                <div><span className="at-kicker">YOUR ILLUMINATED STARS</span>
-                  <strong>{physicalView.physicalStars.length} real star lights ·
-                    {' '}{physicalView.visibleDigitalCount} stars in view</strong></div>
-                <button type="button" aria-expanded={customizingLights}
-                  onClick={()=>{setCustomizingLights(v=>!v);setPhysicalMessage('')}}>
-                  {customizingLights?'✓ Done choosing':'✦ Choose illuminated stars'}
-                </button>
-              </div>
-              <p>StarKeepsake automatically lights every safely spaced star in
-                your chosen view when there are up to {physicalView.physicalSelection.maxPhysicalStars}.
-                For busier skies, the brightest stars and their spacing guide the
-                selection. All other stars remain visible digitally.</p>
-              {physicalView.unavailableForDrilling>0&&<small>
-                {physicalView.unavailableForDrilling} visible stars are near the
-                print edge or outside the matching print crop, so they cannot
-                receive drilled lights without revising the composition.</small>}
-              {physicalView.tooClose>0&&<small>
-                {physicalView.tooClose} stars were left digital-only because
-                their projected holes would be too close together.</small>}
-              {customizingLights&&<>
-                <div className="at-physical-choice-actions">
-                  <span>{physicalView.physicalSelection.selectedStars} selected /
-                    {' '}{physicalView.physicalSelection.maxPhysicalStars} maximum</span>
-                  <button type="button" onClick={resetPhysicalLights}>↺ Restore automatic choices</button>
-                </div>
-                <p>Tap a star in the sky or its row below to include/exclude its
-                  physical LED. This does not remove it from the digital sky.
-                  The cap and minimum hole spacing still apply.</p>
-                <div className="at-physical-choice-list">
-                  {physicalView.candidates.map(({star})=><button key={star.hipparcosId}
-                    type="button" aria-pressed={physicalStarIds.has(star.hipparcosId)}
-                    className={physicalStarIds.has(star.hipparcosId)?'is-lit':''}
-                    onClick={()=>togglePhysicalLight(star.hipparcosId)}>
-                    <span aria-hidden="true">{physicalStarIds.has(star.hipparcosId)?'✦':'✧'}</span>
-                    HIP {star.hipparcosId} <small>Magnitude {star.magnitude.toFixed(2)}</small>
-                    <strong>{physicalStarIds.has(star.hipparcosId)?'LED ON':'Digital only'}</strong>
-                  </button>)}
-                </div>
-              </>}
-              {physicalMessage&&<p role="status" className="at-physical-message">{physicalMessage}</p>}
-              <small>Changes to the viewing direction can hide a chosen star;
-                review your selection before saving. Physical registration still
-                requires a production proof.</small>
-            </section>}
-            {physicalInspector&&<section className="at-physical-inspector"
-              aria-label="Development physical LED star inspector">
-              <div className="at-inspector-header">
-                <strong>MANUFACTURING STAR INSPECTOR · DEV ONLY</strong>
-                <label><input type="checkbox" checked={physicalOnly}
-                  onChange={e=>setPhysicalOnly(e.target.checked)}/>
-                  Show physical LED stars only</label>
-              </div>
-              <p>{activeDesign.physicalStars?.length??0} selected /
-                {' '}{activeDesign.physicalSelection?.eligibleStars??'unknown'} in view and print-safe ·
-                {' '}configured maximum {activeDesign.physicalSelection?.maxPhysicalStars??'unknown'} ·
-                {' '}{design.stars.length} digital display stars</p>
-              {!design.physicalSelection&&<p role="status">
-                This saved design predates physical-star selection. Recalculate the night
-                to obtain a verified physical subset; no legacy assumptions were made.</p>}
-              {activeDesign.physicalStars&&<div className="at-inspector-table-wrap">
-                <table><thead><tr><th>LED</th><th>HIP</th><th>Mag.</th>
-                  <th>X mm</th><th>Y mm</th><th>Priority / reason</th></tr></thead>
-                  <tbody>{activeDesign.physicalStars.map(star=><tr key={star.hipparcosId}>
-                    <td>{star.ledIndex}</td><td>{star.hipparcosId}</td>
-                    <td>{star.magnitude.toFixed(2)}</td><td>{(star.printXMm??star.xMm).toFixed(3)}</td>
-                    <td>{(star.printYMm??star.yMm).toFixed(3)}</td>
-                    <td>{star.selectionReason} ({star.selectionPriority.toFixed(2)})</td>
-                  </tr>)}</tbody></table>
-              </div>}
-              <small>Projected print coordinates for this camera view, not a drill-ready plan.
-                Compare against the physical printed proof.</small>
-            </section>}
             {placement==='above'&&<div className="at-balance-box">
               <label>How much sky should frame your photograph? <strong>{skyPercent}%</strong>
                 <input type="range" min="20" max="70" value={skyPercent}
@@ -1181,7 +1111,7 @@ export function ExperiencePage() {
           <span className="at-kicker">CHAPTER 05 / BRING YOUR NIGHT HOME</span>
           <h1>A memory made<br/><em>to live with.</em></h1>
           <p>Imagine your moment on the wall, gently illuminated after dark.
-            Find the finish that feels like you, and see it in a space that feels like home.</p>
+            Choose which stars shine in the physical frame, find your finish, and picture it at home.</p>
         </div>
         <div className="at-home-layout">
           <div className="at-home-left">
@@ -1191,7 +1121,7 @@ export function ExperiencePage() {
                 :dimensions?dimensions.width/dimensions.height:1}>
               <SkyWorkshopPreview
                 showroom={true} lightsOn={lightsOn} finish={finish}
-                stars={physicalInspector&&physicalOnly?(activeDesign.physicalStars??[]):design.stars}
+                stars={!physicalInspector||physicalOnly?(activeDesign.physicalStars??[]):design.stars}
               physicalStarIds={physicalStarIds} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
                 layout={placement}
                 imageAspect={dimensions?dimensions.width/dimensions.height:1}
@@ -1202,6 +1132,124 @@ export function ExperiencePage() {
                 onPerspectiveInteract={()=>{}}
                 onHeading={()=>{}} onPitch={()=>{}}/>
             </HomeShowroom>
+            {physicalView&&<section className="at-physical-choices"
+                aria-label="Choose which stars have real LED lights">
+              <div className="at-physical-choices-heading">
+                <div><span className="at-kicker">YOUR ILLUMINATED STARS</span>
+                  <strong>{physicalView.physicalStars.length} real star lights ·
+                    {' '}{physicalView.visibleDigitalCount} stars in view</strong></div>
+                <button type="button" aria-expanded={customizingLights}
+                  onClick={()=>{setCustomizingLights(v=>!v);setPhysicalMessage('')}}>
+                  {customizingLights?'✓ Done choosing':'✦ Choose illuminated stars'}
+                </button>
+              </div>
+              <p>StarKeepsake automatically lights every safely spaced star in
+                your chosen view when there are up to {physicalView.physicalSelection.maxPhysicalStars}.
+                For busier skies, the brightest stars and their spacing guide the
+                selection. All other stars remain visible digitally.</p>
+              <p className="at-physical-choice-mode" role="status">
+                {design.physicalStarOverrides?.mode==='manual'
+                  ?'Manual star choices active. Only your selected lights will illuminate.'
+                  :'Automatic selection active. Your frame preview shows the chosen physical lights.'}
+              </p>
+              {physicalView.candidates.length===0&&<p className="at-physical-warning" role="status">
+                No stars currently qualify for an LED in the print-safe area.
+                Return to Chapter 04 to adjust the direction or sky composition,
+                and check the foreground mask if stars are woven into your photograph.
+              </p>}
+              {design.physicalStarOverrides?.mode==='manual'&&physicalView.physicalStars.length===0&&
+                <p className="at-physical-warning" role="status">
+                  Your manual selection currently contains no visible LED stars.
+                  Choose stars below, or restore the automatic selection.
+                </p>}
+              {design.physicalStarOverrides?.mode==='manual'&&!customizingLights&&
+                <button type="button" className="at-physical-reset" onClick={resetPhysicalLights}>
+                  ↺ Restore automatic LED selection
+                </button>
+              {physicalView.unavailableForDrilling>0&&<small>
+                {physicalView.unavailableForDrilling} visible stars are near the
+                print edge or outside the matching print crop, so they cannot
+                receive drilled lights without revising the composition.</small>}
+              {physicalView.tooClose>0&&<small>
+                {physicalView.tooClose} stars were left digital-only because
+                their projected holes would be too close together.</small>}
+              {customizingLights&&<>
+                <div className="at-home-star-edit-preview">
+                  <p>Tap an outlined star here to add or remove its physical light.
+                    This editing map shows the full digital sky so unlit stars
+                    remain available for selection. Gold rings are selected;
+                    dashed rings are digital-only.</p>
+                  <SkyWorkshopPreview
+                    showroom={true} lightsOn={true} finish={finish}
+                    stars={design.stars} physicalStarIds={physicalStarIds}
+                    photoUrl={photoUrl} cutoutUrl={cutoutUrl}
+                    layout={placement}
+                    imageAspect={dimensions?dimensions.width/dimensions.height:1}
+                    heading={heading} pitch={pitch} fov={fov} skyHeight={skyPercent}
+                    photoFit={photoFit} glow={atmosphericGlow} tone={skyTone}
+                    maskAlpha={savedAlpha} maskDimensions={dimensions}
+                    showPerspectiveGuide={false}
+                    editingPhysicalStars={true} onTogglePhysicalStar={togglePhysicalLight}
+                    onPerspectiveInteract={()=>{}} onHeading={()=>{}} onPitch={()=>{}}/>
+                </div>
+                <div className="at-physical-choice-actions">
+                  <span>{physicalView.physicalSelection.selectedStars} selected /
+                    {' '}{physicalView.physicalSelection.maxPhysicalStars} maximum</span>
+                  <button type="button" onClick={resetPhysicalLights}>↺ Restore automatic choices</button>
+                </div>
+                <p>Tap a star in the sky or its row below to include/exclude its
+                  physical LED. This does not remove it from the digital sky.
+                  The cap and minimum hole spacing still apply.</p>
+                <div className="at-physical-choice-list">
+                  {physicalView.candidates.map(({star})=><button key={star.hipparcosId}
+                    type="button" aria-pressed={physicalStarIds.has(star.hipparcosId)}
+                    className={physicalStarIds.has(star.hipparcosId)?'is-lit':''}
+                    onClick={()=>togglePhysicalLight(star.hipparcosId)}>
+                    <span aria-hidden="true">{physicalStarIds.has(star.hipparcosId)?'✦':'✧'}</span>
+                    HIP {star.hipparcosId} <small>Magnitude {star.magnitude.toFixed(2)}</small>
+                    <strong>{physicalStarIds.has(star.hipparcosId)?'LED ON':'Digital only'}</strong>
+                  </button>)}
+                </div>
+              </>}
+              {physicalMessage&&<p role="status" className="at-physical-message">{physicalMessage}</p>}
+              <small>Changes to the viewing direction can hide a chosen star;
+                review your selection before saving. Physical registration still
+                requires a production proof.</small>
+            </section>}
+            {physicalInspector&&<section className="at-physical-inspector"
+              aria-label="Development physical LED star inspector">
+              <div className="at-inspector-header">
+                <strong>MANUFACTURING STAR INSPECTOR · DEV ONLY</strong>
+                <label><input type="checkbox" checked={physicalOnly}
+                  onChange={e=>setPhysicalOnly(e.target.checked)}/>
+                  Show physical LED stars only in the showroom</label>
+              </div>
+              <p>{design.physicalStarOverrides?.mode==='manual'?'Manual':'Automatic'} ·
+                {' '}{activeDesign.physicalStars?.length??0} selected /
+                {' '}{activeDesign.physicalSelection?.eligibleStars??'unknown'} in view and print-safe ·
+                {' '}configured maximum {activeDesign.physicalSelection?.maxPhysicalStars??'unknown'} ·
+                {' '}{design.stars.length} digital display stars</p>
+              {!design.physicalSelection&&<p role="status">
+                This saved design predates physical-star selection. Recalculate the night
+                to obtain a verified physical subset; no legacy assumptions were made.</p>}
+              {activeDesign.physicalStars&&<div className="at-inspector-table-wrap">
+                <table><thead><tr><th>LED</th><th>HIP</th><th>Mag.</th>
+                  <th>X mm</th><th>Y mm</th><th>Priority / reason</th></tr></thead>
+                  <tbody>{activeDesign.physicalStars.map(star=><tr key={star.hipparcosId}>
+                    <td>{star.ledIndex}</td><td>{star.hipparcosId}</td>
+                    <td>{star.magnitude.toFixed(2)}</td><td>{(star.printXMm??star.xMm).toFixed(3)}</td>
+                    <td>{(star.printYMm??star.yMm).toFixed(3)}</td>
+                    <td>{star.selectionReason} ({star.selectionPriority.toFixed(2)})</td>
+                  </tr>)}</tbody></table>
+              </div>}
+              {(activeDesign.physicalStars?.length??0)===0&&<p role="status">
+                Zero LEDs selected. Inspect the print-safe candidate count above,
+                restore automatic selections if manual mode is active, or adjust
+                your sky perspective in Chapter 04.
+              </p>}
+              <small>Projected print coordinates for this camera view, not a drill-ready plan.
+                Compare against the physical printed proof.</small>
+            </section>}
             <div className="at-home-customize">
               <fieldset className="at-home-choice">
                 <legend><span>01</span> Choose your room</legend>
