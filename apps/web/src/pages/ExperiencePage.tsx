@@ -104,6 +104,9 @@ export function ExperiencePage() {
   const [physicalOnly,setPhysicalOnly]=useState(true)
   const [customizingLights,setCustomizingLights]=useState(false)
   const [physicalMessage,setPhysicalMessage]=useState('')
+  // Incrementing this id replays the confirmation animation even if the
+  // customer clicks restore twice without changing their selection.
+  const [physicalRestoreId,setPhysicalRestoreId]=useState(0)
   const [design,setDesign]=useState<DesignSpec>(()=>({...INITIAL_DESIGN_SPEC,stars:[],astronomy:null}))
   const [photo,setPhoto]=useState<File|null>(null)
   const [photoUrl,setPhotoUrl]=useState('')
@@ -184,9 +187,11 @@ export function ExperiencePage() {
     [activeDesign.physicalStars])
   function resetPhysicalLights(){
     setDesign(current=>({...current,physicalStarOverrides:undefined}))
-    setPhysicalMessage('Brightest visible stars selected automatically.')
+    setPhysicalMessage('')
+    setPhysicalRestoreId(id=>id+1)
   }
   function togglePhysicalLight(hip:number){
+    setPhysicalRestoreId(0)
     if(!physicalView)return
     const target=physicalView.candidates.find(c=>c.star.hipparcosId===hip)
     if(!target){
@@ -275,6 +280,7 @@ export function ExperiencePage() {
         const p=loaded.saved.preferences
         const d=loaded.saved.design
         setDesign(d)
+        setPhysicalRestoreId(0)
         setPhoto(restoredPhoto)
         setPhotoUrl(originalUrl)
         setCutoutUrl(foregroundUrl)
@@ -341,6 +347,7 @@ export function ExperiencePage() {
         setDimensions(draft.dimensions);setDetected(draft.detected)
         setSavedAlpha(draft.savedAlpha)
         setDesign(draft.design)
+        setPhysicalRestoreId(0)
         setPlacement(draft.placement);setShowMask(draft.showMask)
         setDate(draft.date);setTime(draft.time);setUnknownTime(draft.unknownTime)
         setQuery(draft.query);setSelected(draft.selected);setOffline(draft.offline)
@@ -510,6 +517,7 @@ export function ExperiencePage() {
     setQuery('')
     setCandidates([])
     setDesign({...INITIAL_DESIGN_SPEC,stars:[],astronomy:null})
+    setPhysicalRestoreId(0)
     setSavedDesign(null)
     setSaveError('')
     window.history.replaceState(null,'',window.location.pathname+window.location.search)
@@ -661,6 +669,7 @@ export function ExperiencePage() {
       setFov(105)
       setCustomizingLights(false)
       setPhysicalMessage('')
+      setPhysicalRestoreId(0)
       setProgress(100)
       setStage('preview')
     }catch(cause){
@@ -1166,6 +1175,15 @@ export function ExperiencePage() {
                 <button type="button" className="at-physical-reset" onClick={resetPhysicalLights}>
                   ↺ Restore automatic LED selection
                 </button>}
+              {!customizingLights&&physicalRestoreId>0&&
+                design.physicalStarOverrides?.mode!=='manual'&&
+                <p key={physicalRestoreId} className="at-auto-restored" role="status">
+                  <span className="at-auto-restored-check" aria-hidden="true">✓</span>
+                  <span><strong>Automatic choices restored.</strong> {' '}
+                    {physicalView.physicalStars.length} physical lights selected from
+                    {' '}{physicalView.physicalSelection.eligibleStars} print-safe stars.
+                    The frame preview has been updated.</span>
+                </p>}
               {physicalView.unavailableForDrilling>0&&<small>
                 {physicalView.unavailableForDrilling} visible stars are near the
                 print edge or outside the matching print crop, so they cannot
@@ -1197,6 +1215,14 @@ export function ExperiencePage() {
                     {' '}{physicalView.physicalSelection.maxPhysicalStars} maximum</span>
                   <button type="button" onClick={resetPhysicalLights}>↺ Restore automatic choices</button>
                 </div>
+                {physicalRestoreId>0&&design.physicalStarOverrides?.mode!=='manual'&&
+                  <p key={physicalRestoreId} className="at-auto-restored" role="status">
+                    <span className="at-auto-restored-check" aria-hidden="true">✓</span>
+                    <span><strong>Automatic choices restored.</strong> {' '}
+                      {physicalView.physicalStars.length} physical lights selected from
+                      {' '}{physicalView.physicalSelection.eligibleStars} print-safe stars.
+                      The frame preview has been updated.</span>
+                  </p>}
                 <p>Tap a star in the sky or its row below to include/exclude its
                   physical LED. This does not remove it from the digital sky.
                   The cap and minimum hole spacing still apply.</p>

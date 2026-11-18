@@ -752,3 +752,29 @@
 .at-physical-reset{padding:10px 12px;margin:7px 0;border:1px solid #c7a875;
   border-radius:8px;background:#203e4d;color:#f2deb3;cursor:pointer;font-weight:650}
 .at-physical-reset:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+
+/* Visible, accessible feedback next to the Chapter 05 restore controls.
+   key={physicalRestoreId} replays the acknowledgment on repeated clicks. */
+.at-auto-restored{
+  display:flex;align-items:center;gap:10px;margin:11px 0 13px!important;
+  padding:12px 14px;border:1px solid #c5a66b;border-radius:11px;
+  background:linear-gradient(115deg,#21433d,#173748);
+  color:#f5ebd6!important;font-size:12px;line-height:1.55;
+  box-shadow:0 0 0 0 #e8cf89;
+  animation:at-auto-restored-pulse .85s ease-out both;
+}
+.at-auto-restored strong{color:#fff0bf}
+.at-auto-restored-check{
+  flex:none;display:grid;place-items:center;width:28px;height:28px;
+  border-radius:50%;background:#d7bf89;color:#16342d;
+  font-size:16px;font-weight:800;
+}
+@keyframes at-auto-restored-pulse{
+  0%{transform:translateY(4px);opacity:.55;box-shadow:0 0 0 7px #e8cf893e}
+  55%{opacity:1;box-shadow:0 0 0 3px #e8cf891e}
+  100%{transform:translateY(0);opacity:1;box-shadow:0 0 0 0 #e8cf8900}
+}
+@media(prefers-reduced-motion:reduce){
+  .at-auto-restored{animation:none}
+}

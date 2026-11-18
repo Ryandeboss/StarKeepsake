@@ -38,3 +38,14 @@ test('Chapter 05 owns physical light editing and the showroom visualizes selecte
 test('a newly calculated sky clears stale manual HIP selections', () => {
   assert.ok(studio.includes('physicalStarOverrides:undefined,moment,astronomy:calculated.calculation'))
 })
+
+test('Chapter 05 restore choices displays live selected count and replayable success feedback', () => {
+  assert.match(studio,/setPhysicalRestoreId\(id=>id\+1\)/)
+  assert.match(studio,/key=\{physicalRestoreId\} className="at-auto-restored" role="status"/)
+  assert.match(studio,/Automatic choices restored\./)
+  assert.match(studio,/physicalView\.physicalStars\.length\} physical lights selected/)
+  assert.match(studio,/setPhysicalRestoreId\(0\)/)
+  const chapter5=studio.split('CHAPTER 05 / BRING YOUR NIGHT HOME')[1]
+  assert.match(chapter5,/Restore automatic choices/)
+  assert.equal((chapter5.match(/className="at-auto-restored"/g)||[]).length,2)
+})
