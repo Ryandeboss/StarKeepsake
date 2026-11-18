@@ -1039,7 +1039,7 @@ export function ExperiencePage() {
               photoFit={photoFit} glow={atmosphericGlow} tone={skyTone}
               maskAlpha={savedAlpha} maskDimensions={dimensions}
               showPerspectiveGuide={showPerspectiveGuide}
-              editingPhysicalStars={customizingLights} onTogglePhysicalStar={togglePhysicalLight}
+              editingPhysicalStars={false}
               onPerspectiveInteract={()=>setShowPerspectiveGuide(false)}
               onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
               onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}/>
@@ -1165,7 +1165,7 @@ export function ExperiencePage() {
               {design.physicalStarOverrides?.mode==='manual'&&!customizingLights&&
                 <button type="button" className="at-physical-reset" onClick={resetPhysicalLights}>
                   ↺ Restore automatic LED selection
-                </button>
+                </button>}
               {physicalView.unavailableForDrilling>0&&<small>
                 {physicalView.unavailableForDrilling} visible stars are near the
                 print edge or outside the matching print crop, so they cannot
