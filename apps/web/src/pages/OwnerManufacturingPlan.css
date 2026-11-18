@@ -1,0 +1,38 @@
+.omp-panel{grid-column:1/-1;margin-top:15px;padding:18px;border:1px solid #625849;
+  border-radius:12px;background:#152236;color:#e8eef0}
+.omp-header{display:flex;justify-content:space-between;align-items:start;gap:12px}
+.omp-kicker{font-size:10px;letter-spacing:.14em;color:#bfc7d3}
+.omp-header h4,.omp-section-title h4{font:normal 21px Georgia,serif;color:#f4dcb0;margin:7px 0}
+.omp-hold{color:#f4ccaa;background:#50342c;padding:7px 9px;border-radius:7px;font-size:11px;white-space:nowrap}
+.omp-alert{border:1px solid #9f7862;border-radius:8px;padding:12px 14px;
+  color:#f4d3bd!important;background:#33282c;font-size:12px!important;line-height:1.65}
+.omp-alert li{margin:5px 0}
+.omp-panel p{font-size:12px;line-height:1.65;color:#c3d1dc}
+.omp-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:15px 0}
+.omp-summary article{background:#0c1b2d;padding:12px;border:1px solid #425468;
+  border-radius:8px;display:grid;gap:8px;min-width:0}
+.omp-summary small{font-size:10px;color:#abbac8}.omp-summary b{font-size:20px;color:#f3e1ba}
+.omp-actions{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0}
+.omp-panel button{font-size:12px;background:#20384a;border:1px solid #9e8765;
+  color:#f8dfb9;border-radius:8px;cursor:pointer;padding:9px 11px}
+.omp-panel button:disabled{opacity:.45;cursor:not-allowed}
+.omp-details{border-top:1px solid #41576d;padding:15px 0}
+.omp-details summary{font-weight:650;color:#f2ddb4;cursor:pointer}
+.omp-details p{font-size:12px;line-height:1.6}
+.omp-scroll{max-width:100%;overflow-x:auto;margin:13px 0}
+.omp-scroll table{border-collapse:collapse;width:100%;min-width:760px;font-size:11px;text-align:left}
+.omp-scroll th,.omp-scroll td{border-bottom:1px solid #405468;padding:9px;vertical-align:top}
+.omp-scroll th{color:#ebd8b5;font-size:10px;white-space:nowrap}
+.omp-scroll td b{display:block;font-size:11px}
+.omp-scroll td small{display:block;color:#9fb6c5;font-size:10px;line-height:1.5;margin-top:4px}
+.omp-scroll td a{color:#f8d3a1}
+.omp-status{display:inline-block;background:#583b31;color:#f8dac6;
+  border-radius:6px;padding:4px 6px;font-size:10px;white-space:nowrap}
+.omp-section-title{padding:12px 0}
+.omp-section-title small{display:block;font-size:11px;color:#b3c1cb;line-height:1.6}
+.omp-checklist{display:grid;gap:7px;margin:12px 0}
+.omp-checklist label{display:flex;align-items:start;gap:9px;padding:6px 0;
+  font-size:12px;line-height:1.6}
+.omp-checklist input{accent-color:#d2bb89;flex:0 0 16px;width:16px;height:16px;margin-top:2px}
+@media(max-width:760px){.omp-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .omp-header{flex-direction:column}}

@@ -3,6 +3,7 @@ import {createCustomerPacket,downloadFile} from '../customerOrder'
 import type {OrderPreferences} from '../orderManifest'
 import {PRINT_VARIANTS} from '../manufacturingPrint'
 import {assessPhotoPrintQuality} from '../photoPrintQuality'
+import {buildManufacturingJobPlan} from '../manufacturingJobPlan'
 import {generateAstronomy} from '../api'
 import {INITIAL_DESIGN_SPEC} from '../designSpec'
 import type {DesignSpec} from '../designSpec'
@@ -138,6 +139,15 @@ export function TrialOrderLab(){
         ' print-safe candidates out of '+physical.visibleDigitalCount+' digital stars.')
       design={...design,physicalStars:physical.physicalStars,
         physicalSelection:physical.physicalSelection}
+      const makerPlan=buildManufacturingJobPlan(design,prefs)
+      mark('maker-bom','Design-specific manufacturing parts and star mapping',
+        makerPlan.physicalCount===physical.physicalStars.length &&
+        makerPlan.parts.find(x=>x.key==='star_led')?.quantity===makerPlan.physicalCount &&
+        makerPlan.driverCount===Math.ceil(makerPlan.physicalCount/24)&&
+        makerPlan.connectorGroupCount===Math.ceil(makerPlan.physicalCount/12)?'pass':'fail',
+        makerPlan.physicalCount+' star LEDs, '+makerPlan.driverCount+
+        ' TLC5947 driver(s), '+makerPlan.connectorGroupCount+
+        ' harness connector groups; candidate plan is on physical approval HOLD.')
       setPhysicalCount(physical.physicalStars.length)
       const fixtures:ViewedCandidate[]=Array.from({length:40},(_,i)=>({
         star:{hipparcosId:100000+i,xMm:12+(i%8)*28,yMm:14+Math.floor(i/8)*28,

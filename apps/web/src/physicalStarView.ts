@@ -8,7 +8,8 @@ import {skyAboveArtworkAspect} from './frameSkyBalance'
 import {projectObserverStar} from './skyImmersiveData'
 import {observerPointInPanel} from './skyWorkshopMath'
 import {maskWorkingDimensions} from './skyMaskMath'
-import {DEFAULT_MAX_PHYSICAL_STARS,DEFAULT_PHYSICAL_SPACING_MM,
+import {DEFAULT_MAX_PHYSICAL_STARS,MAX_DEVELOPMENT_PHYSICAL_STARS,
+  DEFAULT_PHYSICAL_SPACING_MM,
   selectVisiblePhysicalStars,type ViewedCandidate} from './physicalStarSelection'
 
 export type PhysicalViewOptions={
@@ -62,7 +63,7 @@ export function makePhysicalView(design:DesignSpec,view:PhysicalViewOptions){
   // on the temporary driver. Respect a smaller backend-configured maximum.
   const backendMax=design.physicalSelection?.maxPhysicalStars
   const productMax=Number.isInteger(backendMax)&&backendMax!==undefined&&backendMax>0
-    ?Math.min(DEFAULT_MAX_PHYSICAL_STARS,backendMax)
+    ?Math.min(MAX_DEVELOPMENT_PHYSICAL_STARS,backendMax)
     :DEFAULT_MAX_PHYSICAL_STARS
   const requestedSpacing=design.physicalSelection?.minSeparationMm
   const spacing=Number.isFinite(requestedSpacing)&&requestedSpacing!==undefined&&

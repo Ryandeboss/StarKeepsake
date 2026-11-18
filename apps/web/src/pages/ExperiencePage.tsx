@@ -1217,6 +1217,26 @@ export function ExperiencePage() {
                 your chosen view when there are up to {physicalView.physicalSelection.maxPhysicalStars}.
                 For busier skies, the brightest stars and their spacing guide the
                 selection. All other stars remain visible digitally.</p>
+              <label className="at-physical-capacity">
+                DEVELOPMENT CAPACITY · UNVERIFIED FOR MANUFACTURING
+                <select value={design.physicalSelection?.maxPhysicalStars??24}
+                  onChange={event=>{
+                    const maximum=Number(event.target.value)
+                    setDesign(current=>current.physicalSelection?{
+                      ...current,physicalStarOverrides:undefined,
+                      physicalSelection:{...current.physicalSelection,maxPhysicalStars:maximum},
+                    }:current)
+                    setPhysicalMessage('')
+                    setPhysicalRestoreId(0)
+                  }}>
+                  <option value={24}>Up to 24 LEDs · one prototype driver</option>
+                  <option value={48}>Up to 48 LEDs · two drivers (prototype HOLD)</option>
+                  <option value={72}>Up to 72 LEDs · three drivers (prototype HOLD)</option>
+                </select>
+                <small>More than 24 lights requires approved multi-board wiring,
+                  firmware, power and physical assembly. Changing capacity
+                  resets manual selections; no electronics have been qualified.</small>
+              </label>
               <p className="at-physical-choice-mode" role="status">
                 {design.physicalStarOverrides?.mode==='manual'
                   ?'Manual star choices active. Only your selected lights will illuminate.'

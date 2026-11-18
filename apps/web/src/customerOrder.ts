@@ -8,6 +8,8 @@ import type { FrameQuote } from './storefrontPricing'
 import { printSpecification,trimSafeGuideSvg,embedPngDpi,PRINT_VARIANTS,DEFAULT_PRINT_SETTINGS } from './manufacturingPrint'
 import type {PrintSpecification,PrintVariantId} from './manufacturingPrint'
 import {assessPhotoPrintQuality,samplePhotoVisualMetrics} from './photoPrintQuality'
+import {buildManufacturingJobPlan,makerChecklistJson,makerStarMapCsv,
+  makerPartsCsv,makerDrillTemplateSvg} from './manufacturingJobPlan'
 import type {PhotoVisualMetrics} from './photoPrintQuality'
 export type { OrderManifest, OrderPreferences } from './orderManifest'
 export { orderPersonalization } from './orderManifest'
@@ -223,6 +225,24 @@ export async function createCustomerPacket(input:{
   })
   manifest.manufacturing.photoQuality=quality
   manifest.expectedFiles.push('photo-quality-report.json')
+  const maker=buildManufacturingJobPlan(input.design,input.prefs)
+  manifest.manufacturing.candidatePlan={
+    version:maker.version,physicalCount:maker.physicalCount,
+    geometryValidated:maker.geometryValidated,
+    productionStatus:maker.status,holds:[...maker.holds]
+  }
+  const makerFiles=[
+    {name:'manufacturing-job-plan.json',
+      data:encoder.encode(JSON.stringify(maker,null,2))},
+    {name:'physical-star-map.csv',data:encoder.encode(makerStarMapCsv(maker))},
+    {name:'candidate-parts.csv',data:encoder.encode(makerPartsCsv(maker))},
+    {name:'assembly-checklist.json',data:encoder.encode(makerChecklistJson(maker))}
+  ]
+  if(maker.geometryValidated)makerFiles.push({
+    name:'drill-template-1to1-DRAFT.svg',
+    data:encoder.encode(makerDrillTemplateSvg(maker))
+  })
+  manifest.expectedFiles.push(...makerFiles.map(file=>file.name))
   const sheet=await createOrderSheet(manifest,input.photoUrl,input.cutoutUrl)
   const trim=await createManufacturingTrim(manifest,input.photoUrl,input.cutoutUrl)
   const printVariants={} as Record<PrintVariantId,Blob>
@@ -244,6 +264,7 @@ export async function createCustomerPacket(input:{
     {name:'order.json',data:encoder.encode(JSON.stringify(manifest,null,2))},
     {name:'order-sheet.png',data:new Uint8Array(await sheet.arrayBuffer())},
     {name:'photo-quality-report.json',data:encoder.encode(JSON.stringify(quality,null,2))},
+    ...makerFiles,
     ...variantFiles,
     {name:manifest.expectedFiles[1],data:photo},
     {name:'HOW-TO-ORDER.txt',data:encoder.encode([
@@ -259,6 +280,13 @@ export async function createCustomerPacket(input:{
       '  print-artwork-bleed-1-4.png (11.5x14.5 in; 1/4 in bleed per edge)',
       'Each file has corresponding print-spec-*.json and print-guide-*.svg.',
       'Read photo-quality-report.json for effective source PPI and print review hold.',
+      'manufacturing-job-plan.json: exact frozen N-star subset and CANDIDATE parts grouped by type.',
+      'physical-star-map.csv: stored camera-projected print coordinates and LED indices.',
+      'candidate-parts.csv: counts derived from N; HOLD items must be sourced and approved.',
+      'assembly-checklist.json: draft 23-step list, not server-persisted progress.',
+      'drill-template-1to1-DRAFT.svg when saved star coordinates validate; never drill without printed registration.',
+      'IMPORTANT: This client-created maker ZIP is NOT yet an immutable server-stored print snapshot.',
+      'Do not fabricate until real supplier, electrical and physical proof approvals are completed.',
       'SVG guides are proof overlays ONLY, not part of print image.',
       'Print at native dimensions; do not Fit to Page, resize or autocrop.',
       'Verify the accepted bleed size and physical printed proof with the shop.',

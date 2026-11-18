@@ -4,6 +4,8 @@
 import type { DesignStar, PhysicalStar, PhysicalSelection } from '../../../contracts/design-spec/design-spec'
 
 export const DEFAULT_MAX_PHYSICAL_STARS=24
+// Additional driver boards are a *development* option, not validated hardware.
+export const MAX_DEVELOPMENT_PHYSICAL_STARS=72
 export const DEFAULT_PHYSICAL_SPACING_MM=4.5
 export type ViewedCandidate={star:DesignStar;printXMm:number;printYMm:number}
 export type ManualPhysicalSelection={mode:'manual';selectedHipIds:number[]}

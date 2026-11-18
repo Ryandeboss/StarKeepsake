@@ -84,3 +84,54 @@ actual 11×14 raster across photo ratios, inspect saved legacy order geometry,
 verify the physical print/mount and drill registration, and add owner approval
 state to the private job lifecycle (currently a visible hold, not an enforced
 server-side production transition).
+
+
+## 2026-11-18 — Per-order owner engineering review (prototype CANDIDATE)
+
+Audit against owner 710-line builder/Etsy/manufacturing specification:
+the currently live M3 Supabase project had **zero** materials catalog rows,
+recipes, plans, real Etsy paid receipts or production jobs. Its recipes are
+fixed per-frame quantities rather than selected-N formulas, and Etsy item
+records lack verified frame-finish variation values. It is **not** accurate
+to claim that a paid job automatically has verified purchasable parts.
+
+The `manufacturingJobPlan.ts` versioned, deterministic client engineering
+preview now computes for every **verified paid matched** saved design:
+- actual physicalStars `N` (never digital stars or a fixed 24),
+  `ceil(N / 24)` TLC5947 boards, `ceil(N / 12)` star connector groups,
+  N LED3FWAW LEDs, N StarPods and N numbered harness branches;
+- separate Buy for Order / Pack Stock / Bulk Stock / Make per Order groups;
+  full proto-electronics bill, packaging and 23 QA/assembly steps;
+- product finish, 11x14 trim/orientation, saved sky moment and HIP/magnitude/
+  frozen print coordinates, manual selection state and star indices 0..N-1;
+- relevant uncalibrated component quantities as **TO MEASURE** instead of
+  inventing lengths, supplier SKUs, shipping or prices;
+- optional read-only M3 global inventory matching by explicit stable SKU hints
+  (never fuzzy links), and provisional shortfall clearly not a reservation;
+- **PRODUCTION HOLD** for hardware, drill/template registration,
+  electrical certification, missing stars and wrong legacy trim.
+- 1:1 **DRAFT** front-face drilling SVG and star CSV only if saved indexed
+  coordinate geometry passes numerical / spacing validation. Template must
+  be physically checked with printed 100%-size ruler and artwork alignment.
+- Maker ZIP (created in browser before Etsy) now adds engineering JSON, star
+  coordinate CSV, candidate parts CSV, optional draft SVG and draft checklist.
+  This is **not** a server-stored immutable final print packet.
+
+The admin job opens the owner planning preview automatically after authenticated
+paid/matched metadata fetch; full private photo and the print ZIP still require
+owner's deliberate Prepare action. Checklist can be checked in the current
+browser and exported as JSON, **NOT** saved on the server or synchronized
+between devices. Real permanent audit workflow/owner authorization is pending.
+Current M3 fixed BOM is explicitly labeled separate and potentially wrong
+for selected-N physical electronics. Do NOT purchase from it without reconciliation.
+
+For developer flexibility the default maximum remains 24, with explicit
+optional 48/72 LED capacity in Chapter 05; these larger designs remain
+physical PROTOTYPE HOLD for firmware/power/multi-board testing.
+
+**Still NOT launch ready**: server-frozen immutable final print/cutout/artifacts,
+paid Etsy variation mismatch verification, approved SKU/suppliers/pricing and
+catalog, M3 design-specific durable BOM snapshots, durable step/QA approval,
+physical 1:1 drill-to-print registration, power/burn-in safety and actual paid
+Etsy end-to-end acceptance. No live Etsy payment, supplier order or inventory
+change occurs in these software changes.

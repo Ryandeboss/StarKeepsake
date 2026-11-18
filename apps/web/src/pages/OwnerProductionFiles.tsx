@@ -1,20 +1,51 @@
-import {useState} from 'react'
+import {useEffect,useMemo,useState} from 'react'
 import {createCustomerPacket,downloadFile} from '../customerOrder'
 import {PRINT_VARIANTS,trimSafeGuideSvg} from '../manufacturingPrint'
 import type {PrintVariantId} from '../manufacturingPrint'
 import type {LoadedDesign} from '../savedDesign'
+import {buildManufacturingJobPlan} from '../manufacturingJobPlan'
+import {OwnerManufacturingPlan} from './OwnerManufacturingPlan'
+import type {MaterialSnapshot} from '../manualAmazonQueue'
 import './OwnerProductionFiles.css'
 
 const BASE=(import.meta.env.VITE_API_BASE_URL as string|undefined)?.replace(/\/$/,'')??''
 type Packet=Awaited<ReturnType<typeof createCustomerPacket>>
 
-export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId}:{
-  adminKey:string;receiptId:number;transactionId:number;designId:string
+export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,materials}:{
+  adminKey:string;receiptId:number;transactionId:number;designId:string;
+  materials:MaterialSnapshot|null
 }){
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
   const [packet,setPacket]=useState<Packet|null>(null)
+  const [savedMeta,setSavedMeta]=useState<LoadedDesign|null>(null)
+  const [metaError,setMetaError]=useState('')
   const url=BASE+'/api/admin/production/jobs/'+receiptId+'/'+transactionId
+  // The saved design metadata alone is enough to show the N-dependent BOM.
+  // Original photo bytes are requested only when owner explicitly clicks Prepare.
+  useEffect(()=>{
+    if(!adminKey)return
+    let active=true
+    void (async()=>{
+      try{
+        const response=await fetch(url+'/design',{
+          cache:'no-store',headers:{'X-Starkeepsake-Admin-Key':adminKey}})
+        if(!response.ok)throw Error('A verified, paid and matched Etsy design could not be loaded.')
+        const saved=await response.json() as LoadedDesign
+        if(!active)return
+        if(saved.designId!==designId)throw Error('Saved Design ID mismatches the paid Etsy item.')
+        setSavedMeta(saved);setMetaError('')
+      }catch(e){
+        if(active)setMetaError(e instanceof Error?e.message:'Saved design unavailable.')
+      }
+    })()
+    return ()=>{active=false}
+  },[adminKey,url,designId])
+  const plan=useMemo(()=>{
+    if(!savedMeta)return null
+    try{return buildManufacturingJobPlan(savedMeta.design,savedMeta.preferences)}
+    catch{return null}
+  },[savedMeta])
   async function get(path:string):Promise<Response>{
     const response=await fetch(url+path,{cache:'no-store',
       headers:{'X-Starkeepsake-Admin-Key':adminKey}})
@@ -68,6 +99,12 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId}
         disabled={!adminKey||busy}>{busy?'Rendering print formats…':
           packet?'↻ Regenerate files':'Prepare production files'}</button>
     </div>
+    {metaError&&<p role="alert" className="production-error">{metaError}</p>}
+    {savedMeta&&!plan&&<p role="alert" className="production-error">
+      Saved design manufacturing data is invalid; do not purchase parts.
+    </p>}
+    {plan&&<OwnerManufacturingPlan key={plan.designId} plan={plan}
+      materials={materials} receiptId={receiptId} transactionId={transactionId}/>}
     {error&&<p role="alert" className="production-error">{error}</p>}
     {packet&&<div className="opf-results" role="status">
       <p><strong>Owner print files generated.</strong> Each retains the identical

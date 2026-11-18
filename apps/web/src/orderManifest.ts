@@ -20,6 +20,8 @@ export type OrderManifest={
   manufacturing?: {print:PrintSpecification;
     printVariants?:{id:PrintVariantId;spec:PrintSpecification}[];
     photoQuality?:PhotoQualityReport;
+    candidatePlan?:{version:string;physicalCount:number;
+      geometryValidated:boolean;productionStatus:string;holds:string[]};
     selectedPhysicalStars:number|null;
     physicalMax:number|null;physicalSelectionVersion:string|null;
     status:'PROOF_REQUIRED';warning:string}

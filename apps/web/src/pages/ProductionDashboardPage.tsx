@@ -361,14 +361,17 @@ export function ProductionDashboardPage() {
                 item.design_id===job?.design_id&&item.design_id&&
                 <OwnerProductionFiles key={item.transaction_id} adminKey={key}
                   receiptId={selectedRow.receipt.receipt_id}
-                  transactionId={item.transaction_id} designId={item.design_id}/>}
+                  transactionId={item.transaction_id} designId={item.design_id}
+                  materials={materials}/>}
               {eligible&&<div className="production-job-bom">
-                <h4>Materials for this Etsy order</h4>
+                <h4>Existing M3 recipe snapshot — verify against the N-star plan above</h4>
                 {!bom?.prepared
                   ?<p>{bom?.note??'Load M3 inventory before preparing a shopping list.'}
                     {' '}<a href="#materials-planning">Prepare a matching frame BOM in M3</a></p>
                   :<>
-                    <p>{bom.note}</p>
+                    <p>{bom.note} The M3 recipe uses fixed per-frame quantities;
+                      it is NOT guaranteed to equal the saved number of physical stars.
+                      Do not purchase from this snapshot until the differences are reconciled.</p>
                     <div className="production-table-scroll"><table className="production-table">
                       <thead><tr><th>PART</th><th>JOB REQUIREMENT</th><th>GLOBAL STOCK</th><th>ON ORDER</th></tr></thead>
                       <tbody>{bom.rows.map(row=><tr key={row.sku}>
