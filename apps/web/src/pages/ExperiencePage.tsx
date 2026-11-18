@@ -106,6 +106,7 @@ export function ExperiencePage() {
   const [stage,setStage]=useState<Stage>('welcome')
   const physicalInspector=new URLSearchParams(window.location.search).get('physicalInspector')==='1'
   const trialPhotoMode=new URLSearchParams(window.location.search).get('trial')==='1'
+  const trialSampleStarted=useRef(false)
   const [physicalOnly,setPhysicalOnly]=useState(true)
   const [customizingLights,setCustomizingLights]=useState(false)
   const [physicalMessage,setPhysicalMessage]=useState('')
@@ -350,7 +351,17 @@ export function ExperiencePage() {
       try{
         const draft=await readLocalWorkshopDraft()
         if(!active)return
-        if(!draft){setDraftReady(true);return}
+        if(!draft){
+          setDraftReady(true)
+          // Keep test fixtures out of the customer-facing hero. The explicitly
+          // requested /?trial=1 route seeds a fresh workshop automatically.
+          // Never replace a private saved design or an existing local draft.
+          if(trialPhotoMode&&!trialSampleStarted.current){
+            trialSampleStarted.current=true
+            void loadTrialSample()
+          }
+          return
+        }
         const kind=draft.photo.type
         const extension=kind==='image/png'?'png':kind==='image/webp'?'webp':'jpg'
         const restored=new File([draft.photo],'local-workshop-photo.'+extension,{type:kind})
@@ -883,13 +894,6 @@ export function ExperiencePage() {
             <span>02 / WE’LL FIND YOUR SKY</span><span>03 / MAKE IT YOURS</span></div>
           <button type="button" className="at-primary" onClick={()=>upload.current?.click()}>
             {photo?'Replace your photograph':'Choose your photograph'} <span>↗</span></button>
-          {trialPhotoMode&&<div className="at-trial-sample">
-            <button type="button" className="at-outline" onClick={()=>void loadTrialSample()}>
-              ✧ Use prepared trial photo and example date/place
-            </button>
-            <small>TEST SAMPLE ONLY · This prepares synthetic artwork and example details.
-              Saving a design is optional; Etsy payment is never simulated here.</small>
-          </div>}
           {photo&&<button type="button" className="at-outline at-welcome-resume"
             onClick={()=>goToChapter(1)}>Continue with this photo ↗</button>}
           {photo&&<button type="button" className="at-reset-draft"

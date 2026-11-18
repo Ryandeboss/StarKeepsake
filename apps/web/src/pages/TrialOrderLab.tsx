@@ -334,11 +334,13 @@ export function TrialOrderLab(){
         <div className="tol-card-head"><div><span>03 / REAL WEBSITE WALKTHROUGH</span>
           <h2>Test the actual customer and admin experiences</h2></div>
           <span className="tol-tag">{checked} / {steps.length} reviewed</span></div>
-        <p>These checks require your eyes or an intentional Save click. Your sample
-          photo, date and city can be prepared by one button in the real workshop.</p>
+        <p>These checks require your eyes or an intentional Save click.
+          On a fresh workshop, the trial link automatically loads the synthetic
+          photograph and example date/place without cluttering the landing page.
+          An existing local draft is preserved instead of being overwritten.</p>
         <div className="tol-links">
           <a href="/?trial=1" target="_blank" rel="noopener noreferrer">
-            ↗ Open real customer workshop with sample loader</a>
+            ↗ Open real customer workshop with automatic sample</a>
           <a href="/admin/production" target="_blank" rel="noopener noreferrer">
             ↗ Open real owner Production Studio</a>
           {listing&&<a href={listing.url} target="_blank" rel="noopener noreferrer">

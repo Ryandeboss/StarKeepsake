@@ -111,3 +111,17 @@ test('paid Etsy jobs load design-specific N-star procurement and engineering pre
   assert.match(qualityPacket,/drill-template-1to1-DRAFT\.svg/)
   assert.match(studio,/DEVELOPMENT CAPACITY · UNVERIFIED FOR MANUFACTURING/)
 })
+
+// The customer landing page should stay clean even for /?trial=1.
+// Sample injection is automatic on a fresh trial workshop, not a hero CTA.
+const landingCss=file('../src/pages/ExperiencePage.css')
+test('landing hero omits trial controls and navigation uses balanced centered tracks',()=>{
+  assert.doesNotMatch(studio,/className="at-trial-sample"/)
+  assert.doesNotMatch(studio,/Use prepared trial photo and example date\/place/)
+  assert.match(studio,/if\(trialPhotoMode&&!trialSampleStarted\.current\)/)
+  assert.match(studio,/if\(!draft\)/)
+  assert.match(landingCss,/grid-template-columns:minmax\(190px,1fr\) minmax\(0,920px\) minmax\(190px,1fr\)/)
+  assert.match(landingCss,/\.at-header::after/)
+  assert.match(landingCss,/\.at-header \.at-steps\{[\s\S]*?grid-column:2;grid-row:1/)
+  assert.match(landingCss,/@media \(max-width:1080px\)/)
+})

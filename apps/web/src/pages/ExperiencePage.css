@@ -806,3 +806,31 @@
   border:1px solid #ba9784;border-radius:8px;margin:12px 0;
   color:#ffebdd;font-size:12px;line-height:1.6;cursor:pointer}
 .at-quality-confirm input{flex:none;width:17px;height:17px;margin-top:2px;accent-color:#d8bd89}
+
+/* Center the chapter navigation across the WHOLE header, independent of the
+   left-hand logo width. A balanced blank right track keeps the midpoint true. */
+@media (min-width:1081px){
+  .at-header{
+    display:grid;
+    grid-template-columns:minmax(190px,1fr) minmax(0,920px) minmax(190px,1fr);
+    align-items:center;
+    column-gap:clamp(12px,1.5vw,24px);
+  }
+  .at-header::after{content:"";display:block;grid-column:3;grid-row:1}
+  .at-header .at-wordmark{grid-column:1;grid-row:1;justify-self:start}
+  .at-header .at-steps{
+    grid-column:2;grid-row:1;
+    width:100%;min-width:0;max-width:none;margin:0;
+    justify-self:center;
+  }
+}
+@media (max-width:1080px){
+  .at-header{display:grid;grid-template-columns:minmax(0,1fr);row-gap:8px}
+  .at-header::after{display:none}
+  .at-header .at-wordmark{grid-column:1;grid-row:1;justify-self:start}
+  .at-header .at-steps{
+    grid-column:1;grid-row:2;
+    width:min(100%,920px);max-width:920px;margin-inline:auto;
+    min-width:0;order:unset;flex-basis:auto;
+  }
+}
