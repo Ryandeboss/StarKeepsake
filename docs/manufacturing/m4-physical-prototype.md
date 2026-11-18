@@ -12,7 +12,7 @@ From the repo root, with Python 3.11 or later:
 
 Output is local only:
 - registration_reference.svg: nominal millimeter artwork regions and star CENTER CROSSHAIRS ONLY, no cutting paths or hole contours.
-- led_map.json: 1–30 logical physical LED indices, catalog IDs, nominal XY mm and magnitudes.
+- led_map.json: 0..N-1 sequential logical physical LED indices, catalog IDs, nominal XY mm and magnitudes.
 - prototype_review.json: warning/status/physical dimensions without customer name, address, photo or secret access key.
 - READ_ME_FIRST.txt: explicit safety/QA preflight.
 The tool uses no web requests, databases or laser devices. It does not create paid orders or buy supplies.
@@ -23,7 +23,7 @@ IMPORTANT: Canonical astronomy stars are not necessarily the same physical compo
 
 - The artboard uses NOMINAL 8×10, 11×14 or 16×20 dimensions (or an auto layout). Measure actual frame inside opening/rabbet, backing, mat thickness and physical tolerance with tools. The printed reference must be verified at scale against these measurements.
 - Print registration_reference.svg and inspect manually. It contains no cutting power, speed, kerf, focus or laser machine commands. It is deliberately NOT machine-ready and must not be sent directly to a cutter. Use a separate reviewed manufacturing drawing after calibration.
-- Modern saved packets carry the deterministic physicalStars subset and M4 exports the exact saved N (from 1 up to the configured MAX_PHYSICAL_STARS, default 48), with sequential indices 0..N-1. Older saved packets without physicalStars use a legacy fallback and must be recalculated/reviewed before any fabrication. The canonical star map applies nominal minimum spacing and edge clearance, not machine calibration. Actual LED/light-guide diameters, drill bits, opacity, photo mask and optics determine final locations and acceptable spacing. Do not assume a flexible LED strip can occupy all XY positions without a light-guide manifold or fibers.
+- Modern saved packets carry the deterministic physicalStars subset and M4 exports the exact saved N (from 1 up to the configured MAX_PHYSICAL_STARS, default 24), with sequential indices 0..N-1. Older saved packets without physicalStars use a legacy fallback and must be recalculated/reviewed before any fabrication. The canonical star map applies nominal minimum spacing and edge clearance, not machine calibration. Actual LED/light-guide diameters, drill bits, opacity, photo mask and optics determine final locations and acceptable spacing. Do not assume a flexible LED strip can occupy all XY positions without a light-guide manifold or fibers.
 - The existing server grayscale photo engraving preview is NOT a calibrated laser raster or a real engraving proof. Check image crop, substrate material, photorealism and ink/engraving process on offcuts before offering it commercially.
 - Follow the actual laser equipment manufacturer's ventilation, shielding, fire-watch, lens/focus, material-compatibility and local safety guidance; never leave a running laser unattended.
 

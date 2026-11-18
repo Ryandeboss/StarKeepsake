@@ -714,3 +714,28 @@
 .at-physical-inspector th,.at-physical-inspector td{padding:5px 9px;border-bottom:1px solid #476073}
 .at-physical-inspector th{position:sticky;top:0;background:#1c3849;color:#f7dcb0}
 .at-physical-inspector small{display:block;color:#b2c6ce;margin-top:10px}
+
+/* Customer-visible illuminated-star choice, with opt-in manual override. */
+.at-physical-choices{margin:18px 0;padding:17px 18px;border:1px solid #47606f;border-radius:15px;
+  background:linear-gradient(135deg,#0c2334,#122d3e);color:#e6edf1}
+.at-physical-choices-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.at-physical-choices-heading>div{display:flex;flex-direction:column;gap:5px}
+.at-physical-choices-heading strong{font:500 17px Georgia,serif;color:#f3dfb6}
+.at-physical-choices-heading button,.at-physical-choice-actions button{
+  border:1px solid #c7a875;border-radius:8px;padding:9px 13px;
+  background:#1a3446;color:#f4e1b8;cursor:pointer;font-weight:600}
+.at-physical-choices p{font-size:12px;line-height:1.6;margin:12px 0;color:#d2dfe4}
+.at-physical-choices small{display:block;font-size:11px;line-height:1.5;color:#b9cbd2}
+.at-physical-choice-actions{display:flex;justify-content:space-between;align-items:center;gap:9px;flex-wrap:wrap;margin-top:16px}
+.at-physical-choice-actions span{font-weight:600;color:#f4d8a6}
+.at-physical-choice-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));
+  gap:7px;max-height:280px;overflow:auto;margin:12px 0;padding:2px}
+.at-physical-choice-list button{display:flex;align-items:center;gap:7px;
+  padding:9px;border:1px solid #38536a;background:#112738;border-radius:8px;
+  color:#dce6ee;text-align:left;cursor:pointer;flex-wrap:wrap}
+.at-physical-choice-list button.is-lit{border-color:#dfc48c;background:#254252}
+.at-physical-choice-list button>span{color:#efd8ad;font-size:19px}
+.at-physical-choice-list button small{width:100%;padding-left:26px}
+.at-physical-choice-list button strong{margin-left:auto;color:#d9c491;font-size:10px}
+.at-physical-choice-list button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.at-physical-choices .at-physical-message{color:#fff0cb;font-weight:600}

@@ -8,7 +8,7 @@
 - `services/design-engine/physical_star_selection.py` selects a deterministic, magnitude-aware, evenly distributed **physicalStars** subset from all eligible projected stars using bright anchors, 4.5 mm default minimum spacing and edge exclusion. Star coordinates are NEVER moved.
 - The existing **stars** array remains a backwards-compatible **displayStars** alias (normally about 96 digital stars) so old interactive previews and saved design v1.5 readers continue working.
 - New optional design fields: `displayStars`, `physicalStars` (with HIP, magnitude, xMm/yMm, holeSizeMm, 0..N-1 ledIndex, selectionReason, selectionPriority), `physicalSelection` (algorithm/version, maximum, eligible total, actual count N, spacing, 24-channel *driver estimate*).
-- The default `MAX_PHYSICAL_STARS=48` comes from the design-engine environment (valid 1..128). `PHYSICAL_STAR_MIN_SEPARATION_MM=4.5` is likewise adjustable. **24 is the TLC5947 channel grouping, not a product limit**. Driver board planning uses `ceil(N / 24)`. The older WS2812/Pico 2 W demo firmware under `firmware/pico2w` remains limited to 30 for its UNVERIFIED bench setup; DO NOT interpret that as a commercial N maximum or drive >30 from the old demo.
+- **Current product development cap is 24 physical stars in the chosen view** (configurable, not permanently coupled to the TLC5947's 24 output channels). Default `MAX_PHYSICAL_STARS=24` in design engine and M4; UI `DEFAULT_MAX_PHYSICAL_STARS=24` in one module. `PHYSICAL_STAR_MIN_SEPARATION_MM=4.5` is adjustable. After electrical/mechanical proof, raise all relevant config limits deliberately; driver planning is `ceil(N / 24)`. Old WS2812/Pico 2 W demonstration firmware remains limited to 30 for an unverified bench setup and is not a production driver.
 - For a new saved design, M4 uses physicalStars *without changing or renumbering* the selection and outputs N positions in `led_map.json` and M5. With `--leds 12`, M4 can intentionally output a lower bench subset, capped by the configured physical maximum. Legacy v1.5 designs with stars but NO physicalStars remain readable; M4 emits `legacy_reselected_HOLD` and requires regenerating the sky for authoritative selections. Do not silently overwrite an older paid design.
 - Developer overlay at `https://starkeepsake.vercel.app/?physicalInspector=1`: on the preview step toggle “Show physical LED stars only” and inspect N/eligible/max, HIP, magnitude, canonical X/Y and selection reason. No privileged data is exposed; the inspector is opt-in and not shown by default.
 
@@ -35,3 +35,51 @@ The whole print document is opaque artwork, not a white border; the trim stays t
 ## Deployment
 
 One cohesive release touches design engine, ASP.NET typed response, shared TS types, customer packet, development inspector and M4/M5 tests. Production builds are triggered only once by the single merged commit; no database migration or Etsy supplier purchase is authorized. Repeat tests in `services/design-engine/tests`, `tools/prototype/tests`, and web `npm run test:print` / build, and confirm both Azure container apps reach the same commit SHA after release.
+
+## 2026-11-17 — View-specific automatic and manual LED selection
+
+**Current product development setting:** `DEFAULT_MAX_PHYSICAL_STARS = 24` in
+`apps/web/src/physicalStarSelection.ts`; design-engine and offline M4
+`MAX_PHYSICAL_STARS` environment defaults also changed to 24.
+This is a configurable product policy, **not** a hardware channel-count rule.
+The selection algorithm independently accepts other tested maximums up to 128;
+a future deliberate production config change must keep web + engine + M4 consistent.
+
+**What counts as in view:** The user's final azimuth/altitude camera perspective,
+FOV, upper-sky split, photograph aspect ratio and visible open-sky mask. The
+website considers only stars which fall within BOTH the customer sky viewport
+and the actual printable 11×14 view, with an edge exclusion for drilling.
+The digital sky still renders many correct catalog stars. The displayed
+"stars in view" number can exceed the print-safe LED candidate count.
+
+**Automatic:** When there are 24 or fewer printable, safely spaced stars, each
+gets a physical LED. When there are more, brightest anchors are kept first,
+then a deterministic brightness-and-spatial-coverage fill excludes excess
+faint/clustered candidates. Close stars cannot become two overlapping drilled
+holes, even when there are fewer than 24. Show the customer such exclusions.
+
+**Manual:** Chapter 04 now has a "Choose illuminated stars" mode: tap a plotted
+star or toggle its HIP/magnitude row. A manual set records the exact chosen
+HIP ids (which may be under 24); no unwanted automatic refills. Reject
+overlapping LEDs and selection above the configured cap with an explanation.
+Reset restores automatic selection. Manual selections persist as the optional
+`physicalStarOverrides` field in DesignSpec v1.5 and its saved design JSON;
+no database migration. Changing the viewing angle can hide some manual choices;
+the inspector shows the current N and user should review before saving.
+
+**Coordinates:** Canonical astronomical xMm/yMm and altitude/azimuth are
+untouched. Final physicalStar records also include
+`printXMm`/`printYMm` computed from the *same observer camera projection*
+used by the manufacturing print renderer. M4 registration and LED maps use these
+print-space coordinates when present, retaining original canonical values
+separately as `catalogueXMm`/`catalogueYMm` for traceability.
+Selection remains a provisional physical plan: customer photos may lack a
+calibrated camera/lens and lab trimming/mounting requires measured proof.
+
+Older saved designs remain valid. Restored prepared PNG cutouts are sampled
+for alpha to avoid selecting LEDs hidden behind preserved foreground.
+Legacy packets without new print coords remain explicitly proof/HOLD.
+
+**Tests:** `npm run test:physical-stars` covers 12/24 auto inclusion, >24
+brightness/spread determinism, manual under-cap edits, spacing and cap;
+M4 offline tests cover final print coordinates and canonical retention.

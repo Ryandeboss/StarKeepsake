@@ -94,15 +94,29 @@ def parse_order(payload):
                      8 if k=="magnitude" else max(w,h))-canonical[k])>.002
                    for k in ("xMm","yMm","magnitude")):
                 raise PrototypeError("Physical star coordinates mismatch saved sky")
-            subset.append({**canonical,"index":i,
-                "selectionReason":record.get("selectionReason","unspecified")})
+            print_x=record.get("printXMm")
+            print_y=record.get("printYMm")
+            if (print_x is None)!=(print_y is None):
+                raise PrototypeError("Both print-space coordinates are required")
+            if print_x is not None:
+                print_x=check_num(print_x,"print x",0,w)
+                print_y=check_num(print_y,"print y",0,h)
+                edge=2+canonical["diameter"]/2
+                if not(edge<=print_x<=w-edge and edge<=print_y<=h-edge):
+                    raise PrototypeError("Physical LED print position is outside safe trim")
+            subset.append({**canonical,
+                "xMm":print_x if print_x is not None else canonical["xMm"],
+                "yMm":print_y if print_y is not None else canonical["yMm"],
+                "catalogueXMm":canonical["xMm"],"catalogueYMm":canonical["yMm"],
+                "index":i,"selectionReason":record.get("selectionReason","unspecified"),
+                "coordinateSpace":"observer-print-v1" if print_x is not None else "canonical-legacy"})
     return {"reference":ref,"widthMm":w,"heightMm":h,
             "framePresetId":d.get("framePresetId"),"regions":regions,"stars":normalized,
             "physicalStars":subset,"physicalSelection":d.get("physicalSelection"),
             "printSpec":payload.get("manufacturing",{}).get("print") if isinstance(payload.get("manufacturing"),dict) else None}
 
 def select_leds(design,count=None,spacing=3.5):
-    limit=int(os.getenv("MAX_PHYSICAL_STARS","48"))
+    limit=int(os.getenv("MAX_PHYSICAL_STARS","24"))
     if limit<1 or limit>128:
         raise PrototypeError("MAX_PHYSICAL_STARS must be 1..128")
     if count is not None and (isinstance(count,bool) or not isinstance(count,int) or not 1<=count<=limit):
@@ -120,8 +134,12 @@ def select_leds(design,count=None,spacing=3.5):
     for star in source:
         x,y=star["xMm"],star["yMm"]
         margin=2+star["diameter"]/2
-        if not sx+margin<=x<=sx+sw-margin or not sy+margin<=y<=sy+sh-margin:
-            if authoritative is not None:raise PrototypeError("Saved physical star is too close to sky edge")
+        if authoritative is not None and star.get("coordinateSpace")=="observer-print-v1":
+            within_edges=margin<=x<=design["widthMm"]-margin and margin<=y<=design["heightMm"]-margin
+        else:
+            within_edges=sx+margin<=x<=sx+sw-margin and sy+margin<=y<=sy+sh-margin
+        if not within_edges:
+            if authoritative is not None:raise PrototypeError("Saved physical star is too close to trim/sky edge")
             continue
         if any(math.hypot(x-s["xMm"],y-s["yMm"])<spacing for s in selected):
             if authoritative is not None:raise PrototypeError("Physical star separation failed validation")
@@ -171,12 +189,15 @@ def export(payload,max_leds=None):
         "leds":[{"index":s["index"],"hipparcosId":s["hipparcosId"],
                  "xMm":round(s["xMm"],3),"yMm":round(s["yMm"],3),
                  "magnitude":s["magnitude"],"apertureMm":s["diameter"],
-                 "selectionReason":s.get("selectionReason","legacy_unverified")} for s in leds],
+                 "selectionReason":s.get("selectionReason","legacy_unverified"),
+                 "coordinateSpace":s.get("coordinateSpace","canonical-legacy"),
+                 "catalogueXMm":s.get("catalogueXMm",s["xMm"]),
+                 "catalogueYMm":s.get("catalogueYMm",s["yMm"])} for s in leds],
         "powerNote":"At 60mA full white per WS2812-compatible RGB pixel, the LED-only theoretical upper estimate is %d mA; verify actual strip and supply."%(len(leds)*60)}
     report={"status":"REFERENCE_ONLY_NOT_APPROVED_FOR_LASER",
         "designReference":d["reference"],"nominalArtworkMm":{"width":d["widthMm"],"height":d["heightMm"]},
         "selectedLedCount":len(leds),"originalStarCount":len(d["stars"]),
-        "maxPhysicalStars":int(os.getenv("MAX_PHYSICAL_STARS","48")),
+        "maxPhysicalStars":int(os.getenv("MAX_PHYSICAL_STARS","24")),
         "printSpec":d["printSpec"],
         "driverCountEstimate":math.ceil(len(leds)/24),
         "selectionSource":mapping["selectionSource"],

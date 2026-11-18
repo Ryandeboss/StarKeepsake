@@ -15,6 +15,9 @@ import './SkyWorkshopPreview.css'
 
 type Props = {
   stars: DesignSpec['stars']
+  physicalStarIds?: ReadonlySet<number>
+  editingPhysicalStars?: boolean
+  onTogglePhysicalStar?: (hip:number)=>void
   photoUrl: string
   cutoutUrl: string
   layout: 'above' | 'within'
@@ -43,7 +46,8 @@ const SKY_DIRECTION_PRESETS = [
 ] as const
 
 export function SkyWorkshopPreview({
-  stars, photoUrl, cutoutUrl, layout, imageAspect,
+  stars, physicalStarIds, editingPhysicalStars=false, onTogglePhysicalStar,
+  photoUrl, cutoutUrl, layout, imageAspect,
   heading, pitch, fov, skyHeight, photoFit, glow, tone, maskAlpha, maskDimensions,
   showPerspectiveGuide, showroom, lightsOn, finish,
   onPerspectiveInteract, onHeading, onPitch,
@@ -108,15 +112,35 @@ export function SkyWorkshopPreview({
       role="group" aria-label="Click a glowing star for its astronomical catalogue entry">
       {visible.map(({star,point,look,twinkle,optics})=>{
         const isMajor=look.named&&star.magnitude<1.5
-        return <a key={star.hipparcosId} href={starCatalogUrl(star)}
-          target="_blank" rel="noopener noreferrer" data-star-hit="true"
-          aria-label={`Explore ${starDescription(star)} in the SIMBAD catalogue`}
+        return <a key={star.hipparcosId}
+          href={editingPhysicalStars?undefined:starCatalogUrl(star)}
+          role={editingPhysicalStars?'button':undefined}
+          tabIndex={0}
+          aria-pressed={editingPhysicalStars?physicalStarIds?.has(star.hipparcosId):undefined}
+          target={editingPhysicalStars?undefined:"_blank"}
+          rel="noopener noreferrer" data-star-hit="true"
+          onClick={event=>{
+            if(editingPhysicalStars){event.preventDefault();onTogglePhysicalStar?.(star.hipparcosId)}
+          }}
+          onKeyDown={event=>{
+            if(editingPhysicalStars&&(event.key==='Enter'||event.key===' ')){
+              event.preventDefault();onTogglePhysicalStar?.(star.hipparcosId)
+            }
+          }}
+          aria-label={editingPhysicalStars?
+            `${physicalStarIds?.has(star.hipparcosId)?'Remove':'Add'} physical LED for HIP ${star.hipparcosId}, magnitude ${star.magnitude.toFixed(2)}`:
+            `Explore ${starDescription(star)} in the SIMBAD catalogue`}
           onPointerDown={event=>event.stopPropagation()}
           onMouseEnter={()=>setHoveredHip(star.hipparcosId)}
           onMouseLeave={()=>setHoveredHip(null)}
           onFocus={()=>setFocusedHip(star.hipparcosId)}
           onBlur={()=>setFocusedHip(null)}>
           <g className="skw-star-hit">
+            {editingPhysicalStars&&<circle cx={point.x} cy={point.y} r={Math.max(12,optics.haloRadius*.85)}
+              fill="none" stroke={physicalStarIds?.has(star.hipparcosId)?'#f9d99d':'#7899a7'}
+              strokeWidth={physicalStarIds?.has(star.hipparcosId)?2.7:1.6}
+              strokeDasharray={physicalStarIds?.has(star.hipparcosId)?undefined:'5 5'}
+              pointerEvents="none" opacity=".96"/>}
             <circle cx={point.x} cy={point.y} r={Math.max(16,optics.haloRadius)}
               fill="transparent"/>
             <g pointerEvents="none"
@@ -225,7 +249,7 @@ export function SkyWorkshopPreview({
     </div>
     <div className="skw-footline">
       <span>{showroom?'✧ DIMENSIONAL PRODUCT MOCKUP · MOVE TO INSPECT':'✧ DRAG TO LOOK AROUND · HOVER FOR STAR NAMES · CLICK TO EXPLORE'}</span>
-      <span>{visible.length} STARS IN VIEW</span>
+      <span>{visible.length} STARS IN VIEW{editingPhysicalStars?' · CLICK TO TOGGLE PHYSICAL LEDs':''}</span>
     </div>
   </div>
 }

@@ -214,3 +214,7 @@
   .skw-frame-rail>.skw-star-detail--compact strong{font-size:10px;}
   .skw-frame-rail>.skw-star-detail--compact small{font-size:8px;}
 }
+
+/* In manual LED mode the stars remain astronomical, with an explicit ring. */
+.skw-catalog-stars [role="button"]{cursor:pointer}
+.skw-catalog-stars [role="button"]:focus-visible{outline:2px solid #f6daab;outline-offset:2px}

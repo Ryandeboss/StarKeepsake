@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { generateAstronomy, resolveMoment, searchLocations } from '../api'
 import type { LocationCandidate } from '../api'
@@ -22,6 +22,9 @@ import { resolveSampleMoment } from '../sampleLocationFallback'
 import { suggestedObserverHeading } from '../skyImmersiveData'
 import { wrapWorkshopHeading, clampWorkshopPitch } from '../skyWorkshopMath'
 import { skyAboveArtworkAspect } from '../frameSkyBalance'
+import { makePhysicalView } from '../physicalStarView'
+import { maskWorkingDimensions } from '../skyMaskMath'
+import { physicalToggleError } from '../physicalStarSelection'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { createCustomerPacket, downloadFile, orderPersonalization } from '../customerOrder'
 import type { OrderPreferences } from '../customerOrder'
@@ -33,6 +36,25 @@ import type { FrameQuote } from '../storefrontPricing'
 import './ExperiencePage.css'
 
 type Stage = 'welcome'|'detecting'|'choice'|'refine'|'moment'|'calculating'|'preview'|'home'
+
+// Reopening a saved within-photo design must retain its cutout's true open sky,
+// otherwise invisible foreground stars could be mistakenly offered as LEDs.
+async function restoreCutoutAlpha(blob:Blob,width:number,height:number){
+  const bitmap=await createImageBitmap(blob)
+  try{
+    const dims=maskWorkingDimensions(width,height)
+    const canvas=document.createElement('canvas')
+    canvas.width=dims.width;canvas.height=dims.height
+    const ctx=canvas.getContext('2d',{willReadFrequently:true})
+    if(!ctx)throw new Error('Could not inspect the saved sky cutout.')
+    ctx.clearRect(0,0,dims.width,dims.height)
+    ctx.drawImage(bitmap,0,0,dims.width,dims.height)
+    const rgba=ctx.getImageData(0,0,dims.width,dims.height).data
+    const alpha=new Uint8ClampedArray(dims.width*dims.height)
+    for(let i=0;i<alpha.length;i++)alpha[i]=rgba[i*4+3]
+    return alpha
+  }finally{bitmap.close()}
+}
 type Placement = 'above'|'within'
 const MAX_PHOTO = 10*1024*1024
 const STEPS = [
@@ -80,6 +102,8 @@ export function ExperiencePage() {
   const [stage,setStage]=useState<Stage>('welcome')
   const physicalInspector=new URLSearchParams(window.location.search).get('physicalInspector')==='1'
   const [physicalOnly,setPhysicalOnly]=useState(false)
+  const [customizingLights,setCustomizingLights]=useState(false)
+  const [physicalMessage,setPhysicalMessage]=useState('')
   const [design,setDesign]=useState<DesignSpec>(()=>({...INITIAL_DESIGN_SPEC,stars:[],astronomy:null}))
   const [photo,setPhoto]=useState<File|null>(null)
   const [photoUrl,setPhotoUrl]=useState('')
@@ -141,6 +165,48 @@ export function ExperiencePage() {
   const lookupVersion=useRef(0)
   const detectionOnDecode=useRef(true)
   const [draftReady,setDraftReady]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
+  // Physical-light choices depend on the FINAL perspective and visible photo.
+  // Recompute on camera/crop changes; retain the unchanged digital astronomy.
+  const physicalView=useMemo(()=>design.astronomy&&dimensions
+    ?makePhysicalView(design,{heading,pitch,fov,layout:placement,
+      skyHeight:skyPercent,imageAspect:dimensions.width/dimensions.height,
+      maskAlpha:savedAlpha,maskDimensions:dimensions,photoFit})
+    :null,[design,heading,pitch,fov,placement,skyPercent,dimensions,savedAlpha,photoFit])
+  const activeDesign=useMemo<DesignSpec>(()=>{
+    if(!physicalView||!dimensions)return design
+    return {...design,physicalStars:physicalView.physicalStars,
+      physicalSelection:{...physicalView.physicalSelection,
+        view:{heading,pitch,fov,layout:placement,skyHeight:skyPercent,
+          imageAspect:dimensions.width/dimensions.height}}}
+  },[design,physicalView,dimensions,heading,pitch,fov,placement,skyPercent])
+  const physicalStarIds=useMemo(()=>
+    new Set((activeDesign.physicalStars??[]).map(s=>s.hipparcosId)),
+    [activeDesign.physicalStars])
+  function resetPhysicalLights(){
+    setDesign(current=>({...current,physicalStarOverrides:undefined}))
+    setPhysicalMessage('Brightest visible stars selected automatically.')
+  }
+  function togglePhysicalLight(hip:number){
+    if(!physicalView)return
+    const target=physicalView.candidates.find(c=>c.star.hipparcosId===hip)
+    if(!target)return
+    const selected=activeDesign.physicalStars??[]
+    const chosen=selected.map(s=>s.hipparcosId)
+    if(physicalStarIds.has(hip)){
+      setDesign(current=>({...current,physicalStarOverrides:{
+        mode:'manual',selectedHipIds:chosen.filter(id=>id!==hip)}}))
+      setPhysicalMessage('That star will remain digital-only; its LED is off.')
+      return
+    }
+    const error=physicalToggleError(target,selected,
+      physicalView.physicalSelection.maxPhysicalStars,
+      physicalView.physicalSelection.minSeparationMm)
+    if(error){setPhysicalMessage(error);return}
+    setDesign(current=>({...current,physicalStarOverrides:{
+      mode:'manual',selectedHipIds:[...chosen,hip]}}))
+    setPhysicalMessage('This star is now included as a physical light.')
+  }
+
   const [draftNotice,setDraftNotice]=useState('')
   const [draftError,setDraftError]=useState('')
 
@@ -195,6 +261,11 @@ export function ExperiencePage() {
         if(overlayObject.current)URL.revokeObjectURL(overlayObject.current)
         const originalUrl=URL.createObjectURL(restoredPhoto)
         const foregroundUrl=loaded.foreground?URL.createObjectURL(loaded.foreground):''
+        let restoredMask:Uint8ClampedArray|null=null
+        if(loaded.foreground)try{
+          restoredMask=await restoreCutoutAlpha(loaded.foreground,width,height)
+        }catch{/* Keep saved design accessible; physical selection stays proof-only. */}
+        if(!active)return
         photoObject.current=originalUrl
         cutoutObject.current=foregroundUrl
         overlayObject.current=''
@@ -205,7 +276,7 @@ export function ExperiencePage() {
         setPhotoUrl(originalUrl)
         setCutoutUrl(foregroundUrl)
         setOverlayUrl('')
-        setSavedAlpha(null)
+        setSavedAlpha(restoredMask)
         setDetected(null)
         setDimensions({width,height})
         setPlacement(p.layout)
@@ -309,7 +380,7 @@ export function ExperiencePage() {
           if(canceled)return
           const draft:LocalWorkshopDraft={
             version:1,savedAtMs:Date.now(),photo,
-            dimensions,design,stage,placement,detected,cutout,savedAlpha,showMask,
+            dimensions,design:activeDesign,stage,placement,detected,cutout,savedAlpha,showMask,
             date,time,unknownTime,query,selected,offline,heading,pitch,fov,
             skyPercent,photoFit,atmosphericGlow,skyTone,lightsOn,finish,room,inscription,
           }
@@ -321,7 +392,7 @@ export function ExperiencePage() {
       })()
     },240)
     return ()=>{canceled=true;window.clearTimeout(timer)}
-  },[draftReady,restoreBusy,photo,dimensions,design,stage,placement,detected,
+  },[draftReady,restoreBusy,photo,dimensions,activeDesign,stage,placement,detected,
       cutoutUrl,savedAlpha,showMask,date,time,unknownTime,query,selected,offline,
       heading,pitch,fov,skyPercent,photoFit,atmosphericGlow,skyTone,lightsOn,
       finish,room,inscription])
@@ -334,14 +405,14 @@ export function ExperiencePage() {
       layout:placement,heading,pitch,fov,skyHeight:skyPercent,
       photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
     }
-    const currentSignature=designSnapshotSignature({design,preferences,
+    const currentSignature=designSnapshotSignature({design:activeDesign,preferences,
       photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
     if(savedDesign.signature===currentSignature)return
     const current=parseDesignLink(window.location.hash)
     if(current?.designId===savedDesign.receipt.designId)
       window.history.replaceState(null,'',window.location.pathname+window.location.search)
   },[draftReady,restoreBusy,savedDesign,placement,heading,pitch,fov,skyPercent,
-      photoFit,skyTone,atmosphericGlow,finish,inscription,design,photo,cutoutUrl])
+      photoFit,skyTone,atmosphericGlow,finish,inscription,activeDesign,photo,cutoutUrl])
 
   async function discardLocalDraft(){
     if(!window.confirm('Discard this local photo and all unsaved workshop changes? A separately saved design link will still work.'))return
@@ -602,11 +673,12 @@ export function ExperiencePage() {
     layout:placement,heading,pitch,fov,skyHeight:skyPercent,
     photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
   }
-  const snapshotSignature=designSnapshotSignature({design,preferences:orderPreferences,
+  const snapshotSignature=designSnapshotSignature({design:activeDesign,preferences:orderPreferences,
     photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
   const savedCurrent=Boolean(savedDesign&&savedDesign.signature===snapshotSignature)
-  const orderKey=JSON.stringify({moment:design.moment,stars:design.stars,
-    physicalStars:design.physicalStars,physicalSelection:design.physicalSelection,
+  const orderKey=JSON.stringify({moment:activeDesign.moment,stars:activeDesign.stars,
+    physicalStars:activeDesign.physicalStars,physicalSelection:activeDesign.physicalSelection,
+    physicalStarOverrides:activeDesign.physicalStarOverrides,
     preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl,
     priceRevision:frameQuote?.revision,priceCents:frameQuote?.priceCents})
   // A packet without the server-issued saved Design ID cannot be matched to Etsy.
@@ -646,7 +718,7 @@ export function ExperiencePage() {
         foreground=await response.blob()
       }
       const receipt=await saveCustomerDesign({
-        design,preferences:{...orderPreferences},photo,foreground,
+        design:activeDesign,preferences:{...orderPreferences},photo,foreground,
       })
       setSavedDesign({receipt,signature})
       window.history.replaceState(null,'',privateDesignLink(window.location.href,receipt))
@@ -671,6 +743,10 @@ export function ExperiencePage() {
 
   async function buildOrderPacket(){
     if(!photo)return
+    if(!activeDesign.physicalStars?.length){
+      setOrderError('Choose a view with at least one physical star light before preparing your Etsy order.')
+      return
+    }
     const key=orderKey
     const preferences={...orderPreferences}
     setOrderBusy(true);setOrderError('')
@@ -681,7 +757,7 @@ export function ExperiencePage() {
       const receipt=savedCurrent&&savedDesign
         ?savedDesign.receipt:await saveDesignNow()
       if(!receipt)throw Error('Your design could not be securely saved. Please save it before ordering.')
-      const packet=await createCustomerPacket({design,prefs:preferences,
+      const packet=await createCustomerPacket({design:activeDesign,prefs:preferences,
         photo,photoUrl,cutoutUrl,quote:frameQuote,
         savedDesignId:receipt.designId})
       setPreparedOrder({key,packet})
@@ -950,13 +1026,15 @@ export function ExperiencePage() {
           <div className="at-preview-main">
             <SkyWorkshopPreview
               showroom={false} lightsOn={lightsOn} finish={finish}
-              stars={physicalInspector&&physicalOnly?(design.physicalStars??[]):design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
+              stars={physicalInspector&&physicalOnly?(activeDesign.physicalStars??[]):design.stars}
+              physicalStarIds={physicalStarIds} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
               layout={placement}
               imageAspect={dimensions?dimensions.width/dimensions.height:1}
               heading={heading} pitch={pitch} fov={fov} skyHeight={skyPercent}
               photoFit={photoFit} glow={atmosphericGlow} tone={skyTone}
               maskAlpha={savedAlpha} maskDimensions={dimensions}
               showPerspectiveGuide={showPerspectiveGuide}
+              editingPhysicalStars={customizingLights} onTogglePhysicalStar={togglePhysicalLight}
               onPerspectiveInteract={()=>setShowPerspectiveGuide(false)}
               onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
               onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}/>
@@ -964,6 +1042,53 @@ export function ExperiencePage() {
               <div><span>THE NIGHT OF {date}</span><strong>{chosenName}</strong></div>
               <div><span>REAL HIPPARCOS STARS</span><strong>{design.stars.length} plotted in the calculated sky</strong></div>
             </div>
+            {physicalView&&<section className="at-physical-choices"
+                aria-label="Choose which stars have real LED lights">
+              <div className="at-physical-choices-heading">
+                <div><span className="at-kicker">YOUR ILLUMINATED STARS</span>
+                  <strong>{physicalView.physicalStars.length} real star lights ·
+                    {' '}{physicalView.visibleDigitalCount} stars in view</strong></div>
+                <button type="button" aria-expanded={customizingLights}
+                  onClick={()=>{setCustomizingLights(v=>!v);setPhysicalMessage('')}}>
+                  {customizingLights?'✓ Done choosing':'✦ Choose illuminated stars'}
+                </button>
+              </div>
+              <p>StarKeepsake automatically lights every safely spaced star in
+                your chosen view when there are up to {physicalView.physicalSelection.maxPhysicalStars}.
+                For busier skies, the brightest stars and their spacing guide the
+                selection. All other stars remain visible digitally.</p>
+              {physicalView.unavailableForDrilling>0&&<small>
+                {physicalView.unavailableForDrilling} visible stars are near the
+                print edge or outside the matching print crop, so they cannot
+                receive drilled lights without revising the composition.</small>}
+              {physicalView.tooClose>0&&<small>
+                {physicalView.tooClose} stars were left digital-only because
+                their projected holes would be too close together.</small>}
+              {customizingLights&&<>
+                <div className="at-physical-choice-actions">
+                  <span>{physicalView.physicalSelection.selectedStars} selected /
+                    {' '}{physicalView.physicalSelection.maxPhysicalStars} maximum</span>
+                  <button type="button" onClick={resetPhysicalLights}>↺ Restore automatic choices</button>
+                </div>
+                <p>Tap a star in the sky or its row below to include/exclude its
+                  physical LED. This does not remove it from the digital sky.
+                  The cap and minimum hole spacing still apply.</p>
+                <div className="at-physical-choice-list">
+                  {physicalView.candidates.map(({star})=><button key={star.hipparcosId}
+                    type="button" aria-pressed={physicalStarIds.has(star.hipparcosId)}
+                    className={physicalStarIds.has(star.hipparcosId)?'is-lit':''}
+                    onClick={()=>togglePhysicalLight(star.hipparcosId)}>
+                    <span aria-hidden="true">{physicalStarIds.has(star.hipparcosId)?'✦':'✧'}</span>
+                    HIP {star.hipparcosId} <small>Magnitude {star.magnitude.toFixed(2)}</small>
+                    <strong>{physicalStarIds.has(star.hipparcosId)?'LED ON':'Digital only'}</strong>
+                  </button>)}
+                </div>
+              </>}
+              {physicalMessage&&<p role="status" className="at-physical-message">{physicalMessage}</p>}
+              <small>Changes to the viewing direction can hide a chosen star;
+                review your selection before saving. Physical registration still
+                requires a production proof.</small>
+            </section>}
             {physicalInspector&&<section className="at-physical-inspector"
               aria-label="Development physical LED star inspector">
               <div className="at-inspector-header">
@@ -972,24 +1097,24 @@ export function ExperiencePage() {
                   onChange={e=>setPhysicalOnly(e.target.checked)}/>
                   Show physical LED stars only</label>
               </div>
-              <p>{design.physicalStars?.length??0} selected /
-                {' '}{design.physicalSelection?.eligibleStars??'unknown'} physically eligible ·
-                {' '}configured maximum {design.physicalSelection?.maxPhysicalStars??'unknown'} ·
+              <p>{activeDesign.physicalStars?.length??0} selected /
+                {' '}{activeDesign.physicalSelection?.eligibleStars??'unknown'} in view and print-safe ·
+                {' '}configured maximum {activeDesign.physicalSelection?.maxPhysicalStars??'unknown'} ·
                 {' '}{design.stars.length} digital display stars</p>
               {!design.physicalSelection&&<p role="status">
                 This saved design predates physical-star selection. Recalculate the night
                 to obtain a verified physical subset; no legacy assumptions were made.</p>}
-              {design.physicalStars&&<div className="at-inspector-table-wrap">
+              {activeDesign.physicalStars&&<div className="at-inspector-table-wrap">
                 <table><thead><tr><th>LED</th><th>HIP</th><th>Mag.</th>
                   <th>X mm</th><th>Y mm</th><th>Priority / reason</th></tr></thead>
-                  <tbody>{design.physicalStars.map(star=><tr key={star.hipparcosId}>
+                  <tbody>{activeDesign.physicalStars.map(star=><tr key={star.hipparcosId}>
                     <td>{star.ledIndex}</td><td>{star.hipparcosId}</td>
-                    <td>{star.magnitude.toFixed(2)}</td><td>{star.xMm.toFixed(3)}</td>
-                    <td>{star.yMm.toFixed(3)}</td>
+                    <td>{star.magnitude.toFixed(2)}</td><td>{(star.printXMm??star.xMm).toFixed(3)}</td>
+                    <td>{(star.printYMm??star.yMm).toFixed(3)}</td>
                     <td>{star.selectionReason} ({star.selectionPriority.toFixed(2)})</td>
                   </tr>)}</tbody></table>
               </div>}
-              <small>Canonical astronomical projection, not a drill-ready plan.
+              <small>Projected print coordinates for this camera view, not a drill-ready plan.
                 Compare against the physical printed proof.</small>
             </section>}
             {placement==='above'&&<div className="at-balance-box">
@@ -1066,7 +1191,8 @@ export function ExperiencePage() {
                 :dimensions?dimensions.width/dimensions.height:1}>
               <SkyWorkshopPreview
                 showroom={true} lightsOn={lightsOn} finish={finish}
-                stars={physicalInspector&&physicalOnly?(design.physicalStars??[]):design.stars} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
+                stars={physicalInspector&&physicalOnly?(activeDesign.physicalStars??[]):design.stars}
+              physicalStarIds={physicalStarIds} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
                 layout={placement}
                 imageAspect={dimensions?dimensions.width/dimensions.height:1}
                 heading={heading} pitch={pitch} fov={fov} skyHeight={skyPercent}

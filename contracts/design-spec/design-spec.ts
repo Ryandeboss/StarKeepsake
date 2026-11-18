@@ -90,8 +90,15 @@ export type DesignStar = MillimeterPoint & {
   ledIndex: number
 }
 export type PhysicalStar = DesignStar & {
-  selectionReason: 'bright_anchor' | 'balanced_field'
+  // Canonical xMm/yMm never change; these are coordinates on the visible print.
+  printXMm?: number
+  printYMm?: number
+  selectionReason: 'bright_anchor'|'balanced_field'|'view_auto'|'view_manual'
   selectionPriority: number
+}
+export type PhysicalStarOverrides = {
+  mode:'manual'
+  selectedHipIds:number[]
 }
 export type PhysicalSelection = {
   algorithm: string
@@ -101,6 +108,10 @@ export type PhysicalSelection = {
   selectedStars: number
   driverChannelsPerBoard: number
   estimatedDriverCount: number
+  coordinateSpace?:'observer-print-v1'
+  skippedForSpacing?:number
+  view?:{heading:number;pitch:number;fov:number;
+    layout:'above'|'within';skyHeight:number;imageAspect:number}
 }
 export type DesignSpec = {
   schemaVersion: typeof DESIGN_SPEC_VERSION
@@ -121,6 +132,7 @@ export type DesignSpec = {
   displayStars?: readonly DesignStar[]
   physicalStars?: readonly PhysicalStar[]
   physicalSelection?: PhysicalSelection
+  physicalStarOverrides?: PhysicalStarOverrides
 }
 
 type Geometry = { widthMm: number; heightMm: number; marginMm: number }

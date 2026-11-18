@@ -1,5 +1,6 @@
 import json
 import unittest
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 from tools.prototype.artwork import PrototypeError,parse_order,select_leds,export
 from firmware.pico2w.effects import intensity
@@ -65,6 +66,23 @@ class PrototypeTest(unittest.TestCase):
         self.assertEqual(mapping["leds"][-1]["index"],2)
         p["design"]["physicalStars"][0]["xMm"]+=7
         with self.assertRaises(PrototypeError):export(p)
+    def test_camera_view_print_positions_drive_registration(self):
+        p=packet()
+        originals=[p["design"]["stars"][0],p["design"]["stars"][2]]
+        p["design"]["physicalStars"]=[
+            dict(originals[0],ledIndex=0,printXMm=65.4,printYMm=186.2,
+                 selectionReason="view_auto"),
+            dict(originals[1],ledIndex=1,printXMm=185.4,printYMm=215.2,
+                 selectionReason="view_manual")]
+        m=json.loads(export(p)["led_map.json"])
+        self.assertEqual(m["count"],2)
+        self.assertEqual(m["leds"][0]["xMm"],65.4)
+        self.assertEqual(m["leds"][0]["yMm"],186.2)
+        self.assertEqual(m["leds"][0]["catalogueXMm"],40.0)
+        self.assertEqual(m["leds"][0]["coordinateSpace"],"observer-print-v1")
+        p["design"]["physicalStars"][1]["printXMm"]=300
+        with self.assertRaises(PrototypeError):export(p)
+
     def test_more_than_24_leds_without_one_driver_limit(self):
         p=packet()
         p["design"]["stars"]=[
@@ -73,7 +91,8 @@ class PrototypeTest(unittest.TestCase):
         p["design"]["physicalStars"]=[
             dict(s,ledIndex=i,selectionReason="balanced_field")
             for i,s in enumerate(p["design"]["stars"])]
-        m=json.loads(export(p)["led_map.json"])
+        with patch.dict("os.environ",{"MAX_PHYSICAL_STARS":"48"}):
+            m=json.loads(export(p)["led_map.json"])
         self.assertEqual(m["count"],36)
         self.assertEqual(m["estimatedDriverCount"],2)
         self.assertEqual([s["index"] for s in m["leds"]],list(range(36)))
