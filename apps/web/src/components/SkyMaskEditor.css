@@ -189,9 +189,3 @@
  .sky-mask-quick-history button{flex:1 1 auto}
  .sky-mask-brush-settings small{width:100%}
 }
-
-/* Image-print review is part of the full-screen Chapter 02 mask polishing workflow. */
-.sky-mask-quality{padding:5px 24px 15px;}
-.sky-mask-quality .at-photo-preflight{margin:0;padding:16px;}
-.sky-mask-quality .at-quality-summary{font-size:12px;}
-@media(max-width:700px){.sky-mask-quality{padding:5px 12px 12px;}}

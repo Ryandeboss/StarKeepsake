@@ -781,26 +781,6 @@
 }
 
 
-/* Original-file quality preflight — informational until owner print approval. */
-.at-photo-preflight{margin:16px 0 20px;padding:18px;border:1px solid #466f68;
-  border-radius:13px;background:linear-gradient(125deg,#132b32,#172639);color:#f2ecdd}
-.at-photo-preflight-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.at-photo-preflight-heading>div{display:grid;gap:5px}
-.at-photo-preflight-heading span{font-size:10px;letter-spacing:.14em;color:#b7cfbd}
-.at-photo-preflight-heading strong{font:normal 21px Georgia,serif;color:#fbebc7}
-.at-photo-preflight-heading b{font:650 20px Inter,system-ui,sans-serif;
-  color:#d9ead5;white-space:nowrap}
-.at-photo-preflight p,.at-photo-preflight li,.at-photo-preflight small{color:#d1dce2;
-  line-height:1.65;font-size:12px}
-.at-photo-preflight ul{margin:12px 0;padding-left:18px}
-.at-photo-preflight li{margin:4px 0}
-.at-quality-inspect{margin:12px 0;background:#0c1825;border:1px solid #3a5361;
-  border-radius:9px;padding:10px}
-.at-quality-inspect summary{cursor:pointer;font-size:12px;font-weight:600;color:#e5d4ad}
-.at-quality-pixel-window{position:relative;margin:12px auto;width:100%;
-  height:220px;max-width:400px;overflow:hidden;background:#07121b}
-.at-quality-pixel-window img{position:absolute;max-width:none;max-height:none}
-
 /* Center the chapter navigation across the WHOLE header, independent of the
    left-hand logo width. A balanced blank right track keeps the midpoint true. */
 @media (min-width:1081px){
@@ -963,47 +943,3 @@
 .at-home-star-notice button{padding:7px 10px;border:1px solid #aa8d63;
   border-radius:8px;background:#193846;color:#f0d6a3;cursor:pointer;}
 .at-home-star-notice button:focus-visible{outline:2px solid #fff;outline-offset:2px;}
-
-/* Chapter 02 source-photo detail checks, separated from checkout. */
-.at-horizon-quality{margin:20px 0 0;}
-.at-horizon-quality .at-photo-preflight{margin:0;}
-.at-quality-summary{margin:12px 0 8px;}
-.at-quality-technical{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0;}
-.at-quality-technical>div{padding:10px 12px;border-radius:9px;border:1px solid #426373;
-  background:#0e2634;display:grid;gap:4px;min-width:0;}
-.at-quality-technical span{font:9px ui-monospace,monospace;letter-spacing:.07em;color:#9fbec4;}
-.at-quality-technical strong{color:#f8ead0;font-size:12px;overflow-wrap:anywhere;}
-.at-quality-inspect-controls{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0;}
-.at-quality-inspect-controls button,.at-quality-replace{background:#1d3e4c;color:#f6e0b7;
-  border:1px solid #64818a;border-radius:8px;padding:8px 10px;font-size:11px;cursor:pointer;}
-.at-quality-inspect-controls button[aria-pressed=true]{background:#e4cc9e;
-  border-color:#f3dfb8;color:#172d39;}
-.at-quality-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-@media(max-width:560px){.at-quality-technical{grid-template-columns:1fr;}
-  .at-photo-preflight-heading{align-items:start;flex-wrap:wrap;}}
-
-/* An optional, calm photo-detail hint; no customer acknowledgement or blocking step. */
-.at-photo-quality-quiet{padding:15px 17px;background:#112b36;
-  border-color:#345766;box-shadow:none;}
-.at-photo-quality-quiet .at-photo-preflight-heading strong{
-  font:normal 22px Georgia,serif;color:#f2e4cd;}
-.at-photo-quality-quiet .at-photo-preflight-heading span{
-  color:#b4c9c9;letter-spacing:.10em;}
-.at-photo-quality-quiet .at-quality-mark{
-  display:grid;place-items:center;width:33px;height:33px;
-  border:1px solid #6f897b;border-radius:50%;
-  background:#1a3d42;color:#dfc99b;font-size:17px;}
-.at-photo-quality-quiet .at-quality-summary{margin:8px 0 10px;
-  color:#cfddda;line-height:1.65;}
-.at-photo-quality-quiet .at-quality-disclosure{margin:8px 0;padding:10px 12px;
-  background:#102733;border-color:#355363;}
-.at-photo-quality-quiet .at-quality-disclosure>summary{
-  display:list-item;color:#e9d8b9;font-size:12px;}
-.at-photo-quality-quiet .at-quality-disclosure>summary span{
-  margin-left:10px;color:#92acb4;font-size:10px;font-weight:400;}
-.at-quality-note-list{padding:7px 2px 3px;color:#cddedf;font-size:11px;}
-.at-quality-note-list>strong{font-size:11px;color:#e1d0b3;}
-.at-quality-note-list ul{margin:6px 0 9px;}
-.at-photo-quality-quiet .at-quality-actions{margin-top:10px;}
-.at-photo-quality-quiet .at-quality-actions small{max-width:490px;}
-@media(max-width:560px){.at-photo-quality-quiet .at-quality-disclosure>summary span{display:block;margin:5px 0 0;}}

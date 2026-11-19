@@ -87,9 +87,8 @@ const qualityOwner=file('../src/pages/OwnerProductionFiles.tsx')
 test('source-photo quality preflight follows the actual customer and admin packet',()=>{
   assert.match(studio,/getFrameLayout\('11x14'\)/)
   assert.match(studio,/framePresetId:'11x14'/)
-  assert.match(file('../src/components/PhotoQualityPanel.tsx'),/PHOTO DETAIL · OPTIONAL/)
-  assert.doesNotMatch(studio,/qualityAcceptedKey|qualityKey/)
-  assert.match(studio,/assessPhotoPrintQuality/)
+  assert.doesNotMatch(studio,/PhotoQualityPanel|photoQuality|qualityAcceptedKey|qualityKey/)
+  assert.match(qualityPacket,/assessPhotoPrintQuality/)
   assert.match(qualityModule,/needsOwnerReview/)
   assert.match(qualityPacket,/photo-quality-report\.json/)
   assert.match(qualityPacket,/manifest\.manufacturing\.photoQuality=quality/)
@@ -176,35 +175,23 @@ test('Chapter 05 only shows the full light picker for more than 24 print-safe st
   assert.match(chapter5,/onTogglePhysicalStar=\{togglePhysicalLight\}/)
 })
 
+
 const horizonPolish=file('../src/components/SkyMaskEditor.tsx')
-const photoQualityControls=file('../src/components/PhotoQualityPanel.tsx')
-test('photo quality review is in Chapter 02 and horizon polish, not the final purchase screen',()=>{
+test('no photo detail panel appears anywhere in the customer workshop',()=>{
   const chapter2=studio.split("stage==='choice'&&")[1].split("stage==='refine'&&")[0]
   const chapter5=studio.split("stage==='home'&&")[1].split('</main>')[0]
-  assert.match(chapter2,/<PhotoQualityPanel report=\{photoQuality\}/)
-  assert.match(horizonPolish,/<PhotoQualityPanel report=\{photoQuality\}/)
-  assert.doesNotMatch(studio,/qualityApproved=|onQualityApprovedChange=|qualityAcceptedKey/)
-  assert.match(photoQualityControls,/View photo details/)
-  assert.match(photoQualityControls,/Inspect the original photo at 100% detail/)
-  assert.match(photoQualityControls,/Upper detail/)
-  assert.match(photoQualityControls,/Lower detail/)
-  assert.match(photoQualityControls,/Choose another photo/)
-  assert.doesNotMatch(photoQualityControls,/type="checkbox"|onApprovedChange|owner print approval/)
-  assert.doesNotMatch(chapter5,/at-photo-preflight|PRINT QUALITY CHECK/)
-  assert.doesNotMatch(studio,/Review and acknowledge the photo-quality warning/)
-  assert.match(qualityPacket,/photo-quality-report\.json/)
-  assert.match(qualityOwner,/PRINT HOLD — owner review required/)
+  assert.doesNotMatch(chapter2,/PhotoQualityPanel|at-horizon-quality|PHOTO DETAIL/)
+  assert.doesNotMatch(chapter5,/PhotoQualityPanel|at-photo-preflight|PRINT QUALITY CHECK/)
+  assert.doesNotMatch(horizonPolish,/PhotoQualityPanel|sky-mask-quality|photoQuality|PHOTO DETAIL/)
+  assert.doesNotMatch(studio,/qualityAcceptedKey|qualityKey|Review and acknowledge the photo-quality warning/)
 })
-
-test('photo-quality messaging is optional and Etsy packet preparation has no customer approval gate',()=>{
+test('removing customer UI retains non-blocking Etsy packet and private maker quality review',()=>{
   const orderFunction=studio.split('async function buildOrderPacket()')[1].split('if(!draftReady)')[0]
   assert.doesNotMatch(orderFunction,/qualityAcceptedKey|needsOwnerReview|qualityKey/)
   assert.match(orderFunction,/createCustomerPacket/)
   assert.match(orderFunction,/freezeManufacturingPacket/)
-  assert.match(photoQualityControls,/PHOTO DETAIL · OPTIONAL/)
-  assert.match(photoQualityControls,/Your photo may print a little softer/)
-  assert.match(photoQualityControls,/If you love the photo, you can continue with it as-is/)
-  assert.doesNotMatch(photoQualityControls,/type="checkbox"|owner print approval|required to continue/)
+  assert.match(qualityPacket,/assessPhotoPrintQuality/)
+  assert.match(qualityPacket,/photo-quality-report\\.json/)
+  assert.match(qualityPacket,/manifest\\.manufacturing\\.photoQuality=quality/)
   assert.match(qualityOwner,/PRINT HOLD — owner review required/)
-  assert.match(qualityPacket,/manifest\.manufacturing\.photoQuality=quality/)
 })

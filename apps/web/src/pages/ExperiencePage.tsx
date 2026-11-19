@@ -5,7 +5,6 @@ import type { LocationCandidate } from '../api'
 import { SkyMaskEditor } from '../components/SkyMaskEditor'
 import { SkyWorkshopPreview, SkyWorkshopOrientation } from '../components/SkyWorkshopPreview'
 import { HomeShowroom } from '../components/HomeShowroom'
-import { PhotoQualityPanel } from '../components/PhotoQualityPanel'
 import { ROOM_OPTIONS, WOOD_OPTIONS } from '../components/HomeShowroomOptions'
 import type { RoomScene } from '../components/HomeShowroomOptions'
 import { detectWorkshopSky } from '../skyBlend'
@@ -16,8 +15,6 @@ import type { LocalWorkshopDraft } from '../localWorkshopDraft'
 import type { ChapterIndex } from '../workshopNavigation'
 import type { WorkshopDetection } from '../skyBlend'
 import { FULL_PHOTO_CROP } from '../photoCrop'
-import { assessPhotoPrintQuality,samplePhotoVisualMetrics } from '../photoPrintQuality'
-import type { PhotoVisualMetrics } from '../photoPrintQuality'
 import { INITIAL_DESIGN_SPEC, getFrameLayout, toRect } from '../designSpec'
 import type { DesignSpec } from '../designSpec'
 import { isOfflineCity, searchOfflineCities } from '../offlineCitySearch'
@@ -118,7 +115,6 @@ export function ExperiencePage() {
   const [photo,setPhoto]=useState<File|null>(null)
   const [photoUrl,setPhotoUrl]=useState('')
   const [dimensions,setDimensions]=useState<{width:number;height:number}|null>(null)
-  const [photoVisual,setPhotoVisual]=useState<PhotoVisualMetrics|null>(null)
   const [detected,setDetected]=useState<WorkshopDetection|null>(null)
   const [overlayUrl,setOverlayUrl]=useState('')
   const [detectorError,setDetectorError]=useState('')
@@ -176,20 +172,6 @@ export function ExperiencePage() {
   const lookupVersion=useRef(0)
   const detectionOnDecode=useRef(true)
   const [draftReady,setDraftReady]=useState(()=>Boolean(parseDesignLink(window.location.hash)))
-  // Source-only sampling never uploads the photo and also runs for restored drafts.
-  useEffect(()=>{
-    if(!photo)return
-    let canceled=false
-    void (async()=>{
-      try{
-        const bitmap=await createImageBitmap(photo)
-        try{const sampled=samplePhotoVisualMetrics(bitmap)
-          if(!canceled)setPhotoVisual(sampled)}
-        finally{bitmap.close()}
-      }catch{if(!canceled)setPhotoVisual(null)}
-    })()
-    return ()=>{canceled=true}
-  },[photo])
   // Physical-light choices depend on the FINAL perspective and visible photo.
   // Recompute on camera/crop changes; retain the unchanged digital astronomy.
   const physicalView=useMemo(()=>design.astronomy&&dimensions
@@ -534,7 +516,6 @@ export function ExperiencePage() {
     overlayObject.current=''
     cutoutObject.current=''
     setPhoto(file)
-    setPhotoVisual(null)
     setPhotoUrl(url)
     setOverlayUrl('')
     setCutoutUrl('')
@@ -740,12 +721,6 @@ export function ExperiencePage() {
     layout:placement,heading,pitch,fov,skyHeight:skyPercent,
     photoFit,tone:skyTone,glow:atmosphericGlow,finish,inscription:inscription.trim(),
   }
-  const photoQuality=dimensions&&photo?assessPhotoPrintQuality({
-    sourceWidth:dimensions.width,sourceHeight:dimensions.height,
-    artworkWidthMm:activeDesign.physicalArtwork.widthMm,
-    artworkHeightMm:activeDesign.physicalArtwork.heightMm,
-    layout:placement,skyHeight:skyPercent,photoFit,visual:photoVisual,
-  }):null
   const snapshotSignature=designSnapshotSignature({design:activeDesign,preferences:orderPreferences,
     photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
   const savedCurrent=Boolean(savedDesign&&savedDesign.signature===snapshotSignature)
@@ -980,10 +955,6 @@ export function ExperiencePage() {
             <p className="at-tiny-note">Sky detection runs on your device. If you choose to weave stars into the image, you’ll get a chance to tidy the edges with free editing tools.</p>
           </div>
         </div>
-        {photoQuality&&<div className="at-horizon-quality">
-          <PhotoQualityPanel report={photoQuality} photoUrl={photoUrl}
-            onReplacePhoto={openPhotoReplacement}/>
-        </div>}
       </section>}
 
       {stage==='refine'&&<section className="at-quiet-stage at-appear">
@@ -1550,8 +1521,6 @@ export function ExperiencePage() {
     <footer className="at-footer"><span>✳ STARKEEPSAKE</span><span>THE BEAUTY OF A NIGHT, HELD FOREVER.</span><span>PERSONAL SKY ATELIER · PREVIEW</span></footer>
     {stage==='refine'&&photo&&<SkyMaskEditor key={photoUrl} file={photo}
       initialMask={savedAlpha} detectedMask={detected}
-      photoQuality={photoQuality} photoUrl={photoUrl}
-      onReplacePhoto={openPhotoReplacement}
       showPolishGuide={showPolishGuide} onDismissPolishGuide={()=>setShowPolishGuide(false)}
       onChapterNavigate={goToChapter} chapterNotice={chapterNotice}
       onApply={saveMask} onClose={()=>setStage('choice')}/>}
