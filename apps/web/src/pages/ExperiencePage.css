@@ -794,19 +794,12 @@
   line-height:1.65;font-size:12px}
 .at-photo-preflight ul{margin:12px 0;padding-left:18px}
 .at-photo-preflight li{margin:4px 0}
-.at-quality-caution{border-color:#9c8653}
-.at-quality-review{border-color:#b17a6d;background:linear-gradient(125deg,#3a272b,#182639)}
-.at-quality-review .at-photo-preflight-heading b{color:#f2bea8}
 .at-quality-inspect{margin:12px 0;background:#0c1825;border:1px solid #3a5361;
   border-radius:9px;padding:10px}
 .at-quality-inspect summary{cursor:pointer;font-size:12px;font-weight:600;color:#e5d4ad}
 .at-quality-pixel-window{position:relative;margin:12px auto;width:100%;
   height:220px;max-width:400px;overflow:hidden;background:#07121b}
 .at-quality-pixel-window img{position:absolute;max-width:none;max-height:none}
-.at-quality-confirm{display:flex;gap:10px;align-items:start;padding:12px;
-  border:1px solid #ba9784;border-radius:8px;margin:12px 0;
-  color:#ffebdd;font-size:12px;line-height:1.6;cursor:pointer}
-.at-quality-confirm input{flex:none;width:17px;height:17px;margin-top:2px;accent-color:#d8bd89}
 
 /* Center the chapter navigation across the WHOLE header, independent of the
    left-hand logo width. A balanced blank right track keeps the midpoint true. */
@@ -986,7 +979,31 @@
 .at-quality-inspect-controls button[aria-pressed=true]{background:#e4cc9e;
   border-color:#f3dfb8;color:#172d39;}
 .at-quality-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-.at-photo-preflight .at-quality-confirm strong{display:block;font-size:12px;color:#ffe5bc;}
-.at-photo-preflight .at-quality-confirm small{display:block;font-size:11px;}
 @media(max-width:560px){.at-quality-technical{grid-template-columns:1fr;}
   .at-photo-preflight-heading{align-items:start;flex-wrap:wrap;}}
+
+/* An optional, calm photo-detail hint; no customer acknowledgement or blocking step. */
+.at-photo-quality-quiet{padding:15px 17px;background:#112b36;
+  border-color:#345766;box-shadow:none;}
+.at-photo-quality-quiet .at-photo-preflight-heading strong{
+  font:normal 22px Georgia,serif;color:#f2e4cd;}
+.at-photo-quality-quiet .at-photo-preflight-heading span{
+  color:#b4c9c9;letter-spacing:.10em;}
+.at-photo-quality-quiet .at-quality-mark{
+  display:grid;place-items:center;width:33px;height:33px;
+  border:1px solid #6f897b;border-radius:50%;
+  background:#1a3d42;color:#dfc99b;font-size:17px;}
+.at-photo-quality-quiet .at-quality-summary{margin:8px 0 10px;
+  color:#cfddda;line-height:1.65;}
+.at-photo-quality-quiet .at-quality-disclosure{margin:8px 0;padding:10px 12px;
+  background:#102733;border-color:#355363;}
+.at-photo-quality-quiet .at-quality-disclosure>summary{
+  display:list-item;color:#e9d8b9;font-size:12px;}
+.at-photo-quality-quiet .at-quality-disclosure>summary span{
+  margin-left:10px;color:#92acb4;font-size:10px;font-weight:400;}
+.at-quality-note-list{padding:7px 2px 3px;color:#cddedf;font-size:11px;}
+.at-quality-note-list>strong{font-size:11px;color:#e1d0b3;}
+.at-quality-note-list ul{margin:6px 0 9px;}
+.at-photo-quality-quiet .at-quality-actions{margin-top:10px;}
+.at-photo-quality-quiet .at-quality-actions small{max-width:490px;}
+@media(max-width:560px){.at-photo-quality-quiet .at-quality-disclosure>summary span{display:block;margin:5px 0 0;}}

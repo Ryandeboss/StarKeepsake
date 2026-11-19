@@ -21,8 +21,6 @@ type Props = {
   file: File
   photoQuality?: PhotoQualityReport | null
   photoUrl?: string
-  qualityApproved?: boolean
-  onQualityApprovedChange?: (approved: boolean) => void
   onReplacePhoto?: () => void
   initialMask?: Uint8ClampedArray | null
   detectedMask?: SkyAlphaMask | null
@@ -38,8 +36,7 @@ const MAX_HISTORY = 12
 
 /** Photo and its undo history stay in this browser tab; no upload or image service. */
 export function SkyMaskEditor({
-  file, photoQuality, photoUrl, qualityApproved=false, onQualityApprovedChange,
-  onReplacePhoto, initialMask, detectedMask, showPolishGuide = false,
+  file, photoQuality, photoUrl, onReplacePhoto, initialMask, detectedMask, showPolishGuide = false,
   onDismissPolishGuide, onApply, onClose, onChapterNavigate, chapterNotice,
 }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -416,10 +413,9 @@ export function SkyMaskEditor({
             ? '02 · Manual Sky Brush — select Add to sky or Keep in photo, then click and drag to paint exactly where you want, even across dark trees, buildings or faces. The brush follows your choice, not AI detection.'
             : '03 · Freehand Lasso — hold and drag a loop around any region. Release, choose Add to sky or Keep as photo, then click inside the outline to apply.'}
       </div>
-      {photoQuality&&photoUrl&&onQualityApprovedChange&&
+      {photoQuality&&photoUrl&&
         <div className="sky-mask-quality">
           <PhotoQualityPanel report={photoQuality} photoUrl={photoUrl}
-            approved={qualityApproved} onApprovedChange={onQualityApprovedChange}
             onReplacePhoto={onReplacePhoto}/>
         </div>}
       <div className="sky-mask-tools" aria-label="Sky mask editing tools"

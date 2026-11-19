@@ -119,7 +119,6 @@ export function ExperiencePage() {
   const [photoUrl,setPhotoUrl]=useState('')
   const [dimensions,setDimensions]=useState<{width:number;height:number}|null>(null)
   const [photoVisual,setPhotoVisual]=useState<PhotoVisualMetrics|null>(null)
-  const [qualityAcceptedKey,setQualityAcceptedKey]=useState('')
   const [detected,setDetected]=useState<WorkshopDetection|null>(null)
   const [overlayUrl,setOverlayUrl]=useState('')
   const [detectorError,setDetectorError]=useState('')
@@ -747,9 +746,6 @@ export function ExperiencePage() {
     artworkHeightMm:activeDesign.physicalArtwork.heightMm,
     layout:placement,skyHeight:skyPercent,photoFit,visual:photoVisual,
   }):null
-  const qualityKey=JSON.stringify({file:photo?.name,bytes:photo?.size,
-    stamp:photo?.lastModified,dimensions,layout:placement,skyPercent,photoFit,
-    artwork:activeDesign.physicalArtwork,status:photoQuality?.status})
   const snapshotSignature=designSnapshotSignature({design:activeDesign,preferences:orderPreferences,
     photoBytes:photo?.size??0,prepared:Boolean(cutoutUrl)})
   const savedCurrent=Boolean(savedDesign&&savedDesign.signature===snapshotSignature)
@@ -822,10 +818,6 @@ export function ExperiencePage() {
     if(!photo)return
     if(!activeDesign.physicalStars?.length){
       setOrderError('Choose a view with at least one physical star light before preparing your Etsy order.')
-      return
-    }
-    if(photoQuality?.needsOwnerReview&&qualityAcceptedKey!==qualityKey){
-      setOrderError('Review and acknowledge the photo-quality warning in Chapter 02 before preparing your Etsy order.')
       return
     }
     const key=orderKey
@@ -990,8 +982,6 @@ export function ExperiencePage() {
         </div>
         {photoQuality&&<div className="at-horizon-quality">
           <PhotoQualityPanel report={photoQuality} photoUrl={photoUrl}
-            approved={qualityAcceptedKey===qualityKey}
-            onApprovedChange={approved=>setQualityAcceptedKey(approved?qualityKey:'')}
             onReplacePhoto={openPhotoReplacement}/>
         </div>}
       </section>}
@@ -1561,8 +1551,6 @@ export function ExperiencePage() {
     {stage==='refine'&&photo&&<SkyMaskEditor key={photoUrl} file={photo}
       initialMask={savedAlpha} detectedMask={detected}
       photoQuality={photoQuality} photoUrl={photoUrl}
-      qualityApproved={qualityAcceptedKey===qualityKey}
-      onQualityApprovedChange={approved=>setQualityAcceptedKey(approved?qualityKey:'')}
       onReplacePhoto={openPhotoReplacement}
       showPolishGuide={showPolishGuide} onDismissPolishGuide={()=>setShowPolishGuide(false)}
       onChapterNavigate={goToChapter} chapterNotice={chapterNotice}
