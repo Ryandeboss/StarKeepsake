@@ -87,7 +87,7 @@ test('customer builder and owner dashboard keep the linked journey',()=>{
   assert.match(source,/savedDesignId:receipt\.designId/)
   assert.match(source,/await saveDesignNow\(\)/)
   assert.match(source,/canContinueToEtsy/)
-  assert.match(source,/Copy exact Design ID for Etsy/)
+  assert.match(source,/Copy my Design ID/)
   assert.match(source,/currentOrder\.manifest\.reference/)
   assert.ok(!source.includes('verifiedEtsyLink'))
   assert.match(owner,/materialsForProductionJob/)
