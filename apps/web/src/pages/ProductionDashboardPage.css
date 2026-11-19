@@ -73,3 +73,6 @@
 .production-job-bom .production-table th,.production-job-bom .production-table td{font-size:11px}
 .production-job-bom small{display:block;color:#9bb8c2;font-size:10px}
 @media(max-width:750px){.production-item-with-parts{grid-template-columns:1fr}}
+
+.production-purchased .production-table{min-width:770px}
+.production-purchased .production-table strong{color:#f0d49d}

@@ -195,3 +195,12 @@ test('removing customer UI retains non-blocking Etsy packet and private maker qu
   assert.match(qualityPacket,/manifest\.manufacturing\.photoQuality=quality/)
   assert.match(qualityOwner,/PRINT HOLD — owner review required/)
 })
+
+test('owner has a paid-only purchased Design ID table with matching maker files',()=>{
+  assert.match(dashboard,/Purchased Design IDs/)
+  assert.match(dashboard,/purchasedDesigns=useMemo/)
+  assert.match(dashboard,/receiptStatus\(r\)==='Paid'/)
+  assert.match(dashboard,/x\.match_state==='matched'&&x\.quantity===1&&x\.design_id===job\.design_id/)
+  assert.match(dashboard,/Open order &amp; maker files/)
+  assert.match(dashboard,/No matched paid designs yet/)
+})

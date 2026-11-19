@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
-import {etsyListingForFinish,canContinueToEtsy,trustedEtsyListing,isSavedDesignId}
+import {etsyListingForFinish,canContinueToEtsy,trustedEtsyListing,isSavedDesignId,etsyDesignCardFilename}
   from '../src/etsyCheckout.ts'
 import {materialsForProductionJob} from '../src/orderFulfillment.ts'
 import {makeOrderManifest} from '../src/orderManifest.ts'
@@ -93,4 +93,23 @@ test('customer builder and owner dashboard keep the linked journey',()=>{
   assert.match(owner,/materialsForProductionJob/)
   assert.match(owner,/View combined Amazon shopping checklist/)
   assert.match(owner,/Match the saved frame finish to the variation/)
+})
+
+test('Etsy buyer card is PNG named with public SK ID only',()=>{
+  assert.equal(etsyDesignCardFilename(GOOD),GOOD+'-starkeepsake-design.png')
+  for(const invalid of ['SK-1234','TRIAL-NO-ETSY-PAYMENT','SK-0123456789ABCDEF#key=secret'])
+    assert.throws(()=>etsyDesignCardFilename(invalid),/Save your design/)
+})
+test('prepare button produces Etsy PNG only after private frozen maker ZIP',()=>{
+  const source=readFileSync(new URL('../src/pages/ExperiencePage.tsx',import.meta.url),'utf8')
+  const maker=readFileSync(new URL('../src/customerOrder.ts',import.meta.url),'utf8')
+  const flow=source.split('async function buildOrderPacket()')[1].split('if(!draftReady)')[0]
+  assert.match(flow,/await freezeManufacturingPacket\(receipt,packet\)/)
+  assert.match(flow,/downloadFile\(packet\.sheet,etsyDesignCardFilename\(receipt\.designId\)\)/)
+  assert.match(source,/Download design card again \(PNG\)/)
+  assert.match(source,/Copy exact Design ID for Etsy/)
+  assert.match(source,/Do not upload maker ZIPs/)
+  assert.match(maker,/Illuminated stars:/)
+  assert.match(maker,/design\.physicalStars/)
+  assert.match(maker,/file upload alone is NOT an automatic design match/)
 })

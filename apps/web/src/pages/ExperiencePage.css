@@ -943,3 +943,24 @@
 .at-home-star-notice button{padding:7px 10px;border:1px solid #aa8d63;
   border-radius:8px;background:#193846;color:#f0d6a3;cursor:pointer;}
 .at-home-star-notice button:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+
+/* Three quiet, customer-facing steps instead of a developer-oriented ZIP handoff. */
+.at-order-intro-note{font-size:11px;line-height:1.6;color:#b5ccca;}
+.at-order-ready-heading{padding:3px 0 14px;border-bottom:1px solid #396062;}
+.at-order-ready-heading strong{font:normal 19px Georgia,serif;color:#f5e2bb;}
+.at-etsy-handoff-step{display:grid;grid-template-columns:31px minmax(0,1fr);gap:11px;
+  padding:14px 0;border-bottom:1px solid #34565c;}
+.at-etsy-handoff-step>div{min-width:0;display:grid;gap:8px;}
+.at-etsy-handoff-step strong{color:#f4e1b9;}
+.at-etsy-handoff-number{display:grid;place-items:center;width:29px;height:29px;
+  border:1px solid #c6ab7c;border-radius:50%;color:#f4d7a5;font:11px monospace;}
+.at-etsy-handoff-step button{justify-self:start;text-align:center;}
+.at-etsy-handoff-step .at-etsy-checkout{margin:5px 0;font-size:12px;}
+.at-maker-backup{padding:10px 12px;border:1px solid #3b5b61;border-radius:9px;}
+.at-maker-backup summary,.at-saved-design-private summary{cursor:pointer;font-size:11px;color:#e7d2a9;}
+.at-maker-backup p,.at-saved-design-private p{margin:10px 0;font-size:11px;}
+.at-maker-backup button{display:block;margin-top:8px;}
+.at-saved-design-private{margin-top:4px;}
+.at-saved-design-private>*:not(summary){margin-top:9px;}
+@media(max-width:480px){.at-etsy-handoff-step{grid-template-columns:26px minmax(0,1fr);gap:8px;}
+ .at-etsy-handoff-step button{width:100%;justify-self:stretch;}}

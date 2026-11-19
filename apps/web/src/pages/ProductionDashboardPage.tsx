@@ -130,12 +130,22 @@ export function ProductionDashboardPage() {
     })
   }, [data, filter])
   const selectedRow = rows.find(x => x.receipt.receipt_id === selected)
-  const paidDesignIds = useMemo(()=>{
-    if(!data)return new Set<string>()
-    const paid=new Set(data.receipts.filter(r=>receiptStatus(r)==='Paid').map(r=>r.receipt_id))
-    return new Set(data.items.filter(item=>paid.has(item.receipt_id)&&
-      item.match_state==='matched'&&item.design_id).map(item=>item.design_id!))
+  // Purchase is only verified with a paid receipt, matching single-unit item
+  // and corresponding owner-only production job. Never elevate an unpaid draft.
+  const purchasedDesigns=useMemo(()=>{
+    if(!data)return []
+    return data.jobs.flatMap(job=>{
+      const receipt=data.receipts.find(r=>r.shop_id===job.shop_id&&
+        r.receipt_id===job.receipt_id&&receiptStatus(r)==='Paid')
+      const item=data.items.find(x=>x.shop_id===job.shop_id&&
+        x.receipt_id===job.receipt_id&&x.transaction_id===job.transaction_id&&
+        x.match_state==='matched'&&x.quantity===1&&x.design_id===job.design_id)
+      return receipt&&item?[{receipt,item,job}]:[]
+    }).sort((a,b)=>(b.receipt.created_at_etsy??'').localeCompare(
+      a.receipt.created_at_etsy??''))
   },[data])
+  const paidDesignIds=useMemo(()=>new Set(purchasedDesigns.map(x=>x.job.design_id)),
+    [purchasedDesigns])
   const paidCount = data?.receipts.filter(r => receiptStatus(r) === 'Paid').length ?? 0
   const reviewCount = data?.receipts.filter(r =>
     ['Review design','Refund review','Not paid','On hold'].includes(
@@ -250,6 +260,38 @@ export function ProductionDashboardPage() {
           <article><span>Needs review</span><strong>{reviewCount}</strong></article>
           <article><span>Production jobs</span><strong>{data?.jobs.length ?? 0}</strong></article>
         </section>
+        <section className="production-data production-purchased" aria-label="Verified purchased designs">
+          <div className="production-actions">
+            <div><h2>Purchased Design IDs</h2>
+              <p>Paid Etsy orders linked to an exact saved design.
+                Review every job before purchasing parts or beginning production.</p></div>
+            <span className="production-design-count">{purchasedDesigns.length} verified</span>
+          </div>
+          {purchasedDesigns.length>0?<div className="production-table-scroll">
+            <table className="production-table">
+              <thead><tr><th>DESIGN ID</th><th>ETSY ORDER</th><th>PAID</th>
+                <th>FRAME</th><th>JOB STATUS</th><th>DETAILS</th></tr></thead>
+              <tbody>{purchasedDesigns.map(({receipt,job,item})=>{
+                const design=savedDesigns.find(d=>d.designId===job.design_id)
+                return <tr key={item.transaction_id}>
+                  <td><strong>{job.design_id}</strong></td>
+                  <td>#{receipt.receipt_id}</td><td>{money(receipt)}</td>
+                  <td>{design?.finish==='walnut'?'Two-tone walnut':
+                    design?.finish==='ebony'?'Matte black':'Verify finish'}</td>
+                  <td><span className="production-status">{job.status==='hold'?
+                    'On hold':job.status==='complete'?'Completed':'Paid · review before build'}</span></td>
+                  <td><button type="button" className="production-row-link"
+                    onClick={()=>{setFilter('all');setSelected(receipt.receipt_id)}}>
+                    Open order &amp; maker files</button></td>
+                </tr>
+              })}</tbody>
+            </table>
+          </div>:<div className="production-empty">
+            <h3>No matched paid designs yet</h3>
+            <p>After a genuine Etsy payment, select <strong>Sync Etsy now</strong> below.
+              Uploaded artwork without the text Design ID cannot be linked automatically.</p>
+          </div>}
+        </section>
         <section className="production-data production-designs" aria-label="Recent saved designs">
           <div className="production-actions">
             <div><h2>Recently saved designs</h2>
@@ -353,6 +395,10 @@ export function ProductionDashboardPage() {
                 <p>Job: <strong>{job?.status.replace(/_/g, ' ') ?? 'Not created'}</strong></p>
                 {!eligible&&<small>Do not purchase materials for this item until it has
                   a verified paid, matched, active production job.</small>}
+                {receiptStatus(selectedRow.receipt)==='Paid'&&item.match_state!=='matched'&&
+                  <small>Etsy file uploads are visual references, not automatic Design ID
+                    matches. Ask the buyer to provide their SK Design ID in Etsy's
+                    text personalization and review the unmatched order before building.</small>}
                 {eligible&&<small>Match the saved frame finish to the variation the buyer
                   selected on Etsy before preparing this physical order.</small>}
               </div>

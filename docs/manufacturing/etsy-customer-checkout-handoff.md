@@ -86,3 +86,24 @@ cannot check out as a current product.
 
 Future: connect Etsy listing price/variation verification for exact-priced
 order commitments, and owner emails when actual paid jobs arrive.
+
+## November 19, 2026 — buyer PNG handoff and paid ID dashboard
+
+Chapter 05 now auto-downloads an Etsy-compatible PNG design card *after* saving
+the exact design and securely freezing its full manufacturing ZIP. The card
+includes the server-issued public Design ID, actual photo/sky visual, selected N
+illuminated stars, date/location/time, orientation, frame finish and inscription.
+The owner still retrieves the exact saved photo, HIP star map, print variants,
+parts/candidate BOM and checklist through the private frozen ZIP of a verified
+paid and matched Etsy job. The public card is NOT manufacturing artwork.
+
+Etsy supports PNG file uploads but transaction upload personalizations are URLs,
+not dependable design IDs. Enter the SK ID into the Etsy text personalization
+for automated matching; the PNG upload is an **optional visual reference**.
+A file-only buyer upload is an unmatched paid order needing seller review.
+The private design reopening link MUST NEVER be pasted into Etsy.
+
+The Production Studio has an at-a-glance Purchased Design IDs list, filtered
+to actual Etsy-paid, noncancelled, nonrefunded, single-unit matched jobs; click
+through for receipt details and owner-only files. All items remain subject to
+physical print/electrical/procurement proof before fabrication.

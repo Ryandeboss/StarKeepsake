@@ -44,15 +44,15 @@ function placePhoto(ctx:CanvasRenderingContext2D,img:HTMLImageElement,
 }
 async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
   preparedUrl:string):Promise<Blob>{
-  const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=1800
+  const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=1900
   const ctx=canvas.getContext('2d');if(!ctx)throw Error('Canvas unsupported.')
-  ctx.fillStyle='#071723';ctx.fillRect(0,0,1400,1800)
+  ctx.fillStyle='#071723';ctx.fillRect(0,0,1400,1900)
   ctx.fillStyle='#f1deb9';ctx.font='44px Georgia'
   ctx.fillText('STARKEEPSAKE',90,95)
   ctx.font='22px sans-serif';ctx.fillStyle='#b9cfd0'
-  ctx.fillText('YOUR MOMENT  /  CUSTOMER DESIGN SHEET',90,142)
+  ctx.fillText('YOUR DESIGN CARD  /  ETSY REFERENCE',90,142)
   ctx.font='30px Georgia';ctx.fillStyle='#efd3a0'
-  ctx.fillText(manifest.reference,90,203)
+  ctx.fillText('DESIGN ID  '+manifest.reference,90,203)
   const {design,preferences:p}=manifest
   const x=112,y=270,w=1176,h=1220
   ctx.fillStyle='#684831';ctx.fillRect(x-17,y-17,w+34,h+34)
@@ -65,15 +65,17 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
   ctx.fillStyle=grad;ctx.fillRect(x,y,w,skyHeight)
   // Order sheet is illustrative; catalogue positions are camera-projected.
   const aspect=p.layout==='within'?w/h:w/skyHeight
+  const illuminatedHip=new Set((design.physicalStars??[]).map(star=>star.hipparcosId))
   for(const star of design.stars){
     const projected=projectObserverStar(star.azimuthDeg,star.altitudeDeg,p.heading,p.pitch,p.fov)
     if(!projected.inFront)continue
     const point=observerPointInPanel(projected.x,projected.y,aspect)
     if(!point.inside)continue
     const px=x+point.x*w,py=y+point.y*skyHeight
-    const radius=Math.max(1,4.4-star.magnitude*.55)
-    ctx.beginPath();ctx.fillStyle='rgba(255,247,227,.75)'
-    ctx.shadowBlur=radius*6;ctx.shadowColor='#eff2ff'
+    const lit=illuminatedHip.has(star.hipparcosId)
+    const radius=Math.max(1,4.4-star.magnitude*.55)*(lit?1.3:1)
+    ctx.beginPath();ctx.fillStyle=lit?'#fff1cd':'rgba(255,247,227,.75)'
+    ctx.shadowBlur=radius*(lit?8:6);ctx.shadowColor='#eff2ff'
     ctx.arc(px,py,radius,0,2*Math.PI);ctx.fill()
   }
   ctx.shadowBlur=0
@@ -91,8 +93,11 @@ async function createOrderSheet(manifest:OrderManifest,photoUrl:string,
   ctx.fillText('Place '+(design.moment.location?.displayName??'Unknown').slice(0,85),90,1672)
   ctx.fillText('View '+p.heading.toFixed(0)+'° / '+p.pitch.toFixed(0)+'° · '+p.layout+
     ' · '+p.finish+' wood · '+p.tone+' · '+(p.glow?'glow':'no glow'),90,1712)
-  ctx.font='15px sans-serif';ctx.fillStyle='#98b4bb'
-  ctx.fillText('Preview only · physical star lights, frame and materials may differ',90,1763)
+  ctx.fillText('Illuminated stars: '+illuminatedHip.size+' selected (up to 24) · 11 × 14 in',90,1760)
+  ctx.font='17px sans-serif';ctx.fillStyle='#abc4c8'
+  ctx.fillText('Your original photo and exact star map are privately saved under this Design ID.',90,1820)
+  ctx.font='14px sans-serif';ctx.fillStyle='#8ba8ad'
+  ctx.fillText('Etsy design reference only · Physical print and light placement require proof',90,1860)
   return png(canvas)
 }
 /** Separate high-resolution manufacturing artwork; never use the illustrative
@@ -271,9 +276,10 @@ export async function createCustomerPacket(input:{
       'STARKEEP SAKE · DESIGN REFERENCE '+reference,
       'This packet does not place an order and no payment has been taken.',
       'Complete purchase through the Etsy listing (when configured).',
-      'In the Etsy custom options upload: order-sheet.png, original-photo image',
-      'and prepared-foreground.png if this design uses stars inside the photo.',
-      'Enter the reference in the Etsy design reference field.',
+      'Paste only the saved SK-... Design ID in Etsy required text personalization.',
+      'OPTIONAL: upload the buyer design-card PNG in Etsy file personalization.',
+      'PNG is for visual reference; file upload alone is NOT an automatic design match.',
+      'Never upload maker ZIP, original asset bundle or private edit link to Etsy.',
       'Three 300-DPI formats from one exact 11x14-inch visible composition:',
       '  print-artwork-exact-11x14.png (11x14 in; no bleed)',
       '  print-artwork-bleed-1-8.png (11.25x14.25 in; 1/8 in bleed per edge)',
@@ -285,7 +291,7 @@ export async function createCustomerPacket(input:{
       'candidate-parts.csv: counts derived from N; HOLD items must be sourced and approved.',
       'assembly-checklist.json: draft 23-step list, not server-persisted progress.',
       'drill-template-1to1-DRAFT.svg when saved star coordinates validate; never drill without printed registration.',
-      'IMPORTANT: This client-created maker ZIP is NOT yet an immutable server-stored print snapshot.',
+      'At Etsy handoff the complete maker ZIP is frozen privately by the website.',
       'Do not fabricate until real supplier, electrical and physical proof approvals are completed.',
       'SVG guides are proof overlays ONLY, not part of print image.',
       'Print at native dimensions; do not Fit to Page, resize or autocrop.',
