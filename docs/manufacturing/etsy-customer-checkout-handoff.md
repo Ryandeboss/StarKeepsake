@@ -133,3 +133,46 @@ required **text** personalization named `StarKeepsake Design ID`; a file-only
 Etsy listing cannot be automatically matched. Check finish variation and
 actual listing price before accepting orders. Neither the payment flow nor
 an intentional paid transaction has been acceptance-tested end-to-end.
+
+## November 19, 2026 — Chapter 05 simplification, frame selection, progress and owner example
+
+Owner requested **remove the "Make it yours" title and its marketing paragraph,
+remove all prices from Chapter 05**, relocate both physical frame choices from
+the left side of the showroom to **Your night, framed** directly below
+**01 Choose your room**, and show a professional progress animation while
+**Save design & prepare Etsy order** securely generates and freezes files.
+
+Changes:
+- Inside the **Your night, framed** side panel, **02 Choose your frame finish**
+  now holds the two-tone walnut and matte-black swatches (plus legacy oak only
+  when loaded from a legacy saved design); selecting a swatch keeps frame and room
+  behavior. The left preview retains star illumination controls. The original
+  price estimate card and numeric prices are absent from Chapter 05. Hidden
+  internal quote metadata (non-binding) remains in the maker packet; actual
+  amounts paid are available from Etsy on owner dashboard, not customer Stage 05.
+- Customer checkout card keeps optional inscription, Save draft, and Save design
+  & prepare Etsy order. A stage-driven orbit, loading ring and gentle progress
+  track shows **save source/photo → render exact sky/prints/parts → private
+  Vercel ZIP freeze**. It does not fake completion or unlock Etsy before archive.
+  Interaction controls that affect the saved finish/text are disabled during save.
+- A new **Read-only Sample Production Order** viewer lives only behind the
+  existing owner login, below the real production metrics. Its demo identifier
+  `SK-DEMO-NOT-REAL` intentionally fails the real paid-match regex and is
+  obviously marked **SIMULATION · NO PAYMENT · NO DATABASE RECORD**. Opening it
+  shows a hypothetical $799 Etsy sale, matte-black 11×14 above-photo print,
+  Chicago moment on June 14, 2025 at 9 PM, 18 selected LEDs,
+  1 TLC5947 board, 2 connector groups, 18 StarPods, 23 unstarted QA steps,
+  sample purchase/material counts, print variants, and the actual types of
+  private maker archive files. It makes zero network requests or data writes,
+  never appears in Etsy paid counts, Saved Designs, real receipt register,
+  supplier stock, shipping, or CSV; there is no real synthetic paid order seeded.
+- Real paid-job data still shows actual Etsy receipt, verified payment amount,
+  matched SK-ID, saved finish/layout, and private maker ZIP. Photo is not shown
+  as a thumbnail in the listing; owner may retrieve source and print previews
+  from authorized files. Candidate BOM always needs safety, supply and
+  fit/alignment proof.
+
+**Remaining acceptance:** manually preview both finishes/rooms and a Chapter 05
+load, open owner sample after logging in, then deliberately purchase and match
+a real Etsy order when ready. The example alone does **not** verify live Etsy
+webhook/payment flow, printed star registration, hardware or supplier readiness.

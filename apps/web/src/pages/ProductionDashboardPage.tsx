@@ -6,6 +6,7 @@ import { ManualAmazonPurchasingPanel } from './ManualAmazonPurchasingPanel'
 import type { MaterialSnapshot } from '../manualAmazonQueue'
 import { materialsForProductionJob } from '../orderFulfillment'
 import { OwnerProductionFiles } from './OwnerProductionFiles'
+import { SampleProductionOrder } from './SampleProductionOrder'
 
 type Receipt = {
   shop_id: number
@@ -260,6 +261,7 @@ export function ProductionDashboardPage() {
           <article><span>Needs review</span><strong>{reviewCount}</strong></article>
           <article><span>Production jobs</span><strong>{data?.jobs.length ?? 0}</strong></article>
         </section>
+        <SampleProductionOrder />
         <section className="production-data production-purchased" aria-label="Verified purchased designs">
           <div className="production-actions">
             <div><h2>Purchased Design IDs</h2>

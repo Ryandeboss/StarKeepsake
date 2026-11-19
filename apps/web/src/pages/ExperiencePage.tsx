@@ -32,7 +32,7 @@ import {freezeManufacturingPacket} from '../frozenPacket'
 import type { OrderPreferences } from '../customerOrder'
 import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
 import type { SavedDesignReceipt } from '../savedDesign'
-import { PREVIEW_FRAME_QUOTES, frameQuoteFor, loadFramePrices, moneyUsd } from '../storefrontPricing'
+import { PREVIEW_FRAME_QUOTES, frameQuoteFor, loadFramePrices } from '../storefrontPricing'
 import { etsyListingForFinish, canContinueToEtsy } from '../etsyCheckout'
 import type { FrameQuote } from '../storefrontPricing'
 import './ExperiencePage.css'
@@ -143,11 +143,10 @@ export function ExperiencePage() {
   const [lightsOn,setLightsOn]=useState(true)
   const [finish,setFinish]=useState<'walnut'|'oak'|'ebony'>('walnut')
   const [frameQuotes,setFrameQuotes]=useState<FrameQuote[]>([...PREVIEW_FRAME_QUOTES])
-  const [priceNotice,setPriceNotice]=useState('')
-  const [pricesLoading,setPricesLoading]=useState(false)
   const [room,setRoom]=useState<RoomScene>('warm')
   const [inscription,setInscription]=useState('')
   const [orderBusy,setOrderBusy]=useState(false)
+  const [orderPreparingStep,setOrderPreparingStep]=useState<'save'|'render'|'archive'|null>(null)
   const [orderError,setOrderError]=useState('')
   const [saveBusy,setSaveBusy]=useState(false)
   const [saveError,setSaveError]=useState('')
@@ -236,19 +235,13 @@ export function ExperiencePage() {
     let alive=true
     const refresh=()=>{
       void loadFramePrices().then(prices=>{
-        if(alive){setFrameQuotes(prices);setPriceNotice('')}
-      }).catch(()=>{if(alive)setPriceNotice('Supplier cost catalog unavailable; showing estimates.')})
+        if(alive)setFrameQuotes(prices)
+      }).catch(()=>{/* Price estimates are internal to the packet; Etsy sets checkout price. */})
     }
     refresh()
     const timer=window.setInterval(refresh,180000)
     return()=>{alive=false;window.clearInterval(timer)}
   },[stage])
-  async function refreshFramePrices(){
-    setPricesLoading(true)
-    try{setFrameQuotes(await loadFramePrices());setPriceNotice('Estimates refreshed.')}
-    catch{setPriceNotice('Supplier cost catalog unavailable; showing estimates.')}
-    finally{setPricesLoading(false)}
-  }
   // Opening a private design link does not require an account. A public Etsy Design ID
   // alone is insufficient: only the 256-bit secret in the URL fragment grants read access.
   useEffect(()=>{
@@ -727,8 +720,7 @@ export function ExperiencePage() {
   const orderKey=JSON.stringify({moment:activeDesign.moment,stars:activeDesign.stars,
     physicalStars:activeDesign.physicalStars,physicalSelection:activeDesign.physicalSelection,
     physicalStarOverrides:activeDesign.physicalStarOverrides,
-    preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl,
-    priceRevision:frameQuote?.revision,priceCents:frameQuote?.priceCents})
+    preferences:orderPreferences,photo:photo?.name,photoSize:photo?.size,cutoutUrl})
   // A packet without the server-issued saved Design ID cannot be matched to Etsy.
   const currentOrder=preparedOrder?.key===orderKey&&savedCurrent&&
     preparedOrder.packet.manifest.reference===savedDesign?.receipt.designId
@@ -798,7 +790,7 @@ export function ExperiencePage() {
     }
     const key=orderKey
     const preferences={...orderPreferences}
-    setOrderBusy(true);setOrderError('')
+    setOrderBusy(true);setOrderError('');setOrderPreparingStep('save')
     try{
       // Save the customer's *exact* frame finish, night sky and photo first.
       // The server-created SK-ID is the only Etsy personalization ID our
@@ -806,15 +798,17 @@ export function ExperiencePage() {
       const receipt=savedCurrent&&savedDesign
         ?savedDesign.receipt:await saveDesignNow()
       if(!receipt)throw Error('Your design could not be securely saved. Please save it before ordering.')
+      setOrderPreparingStep('render')
       const packet=await createCustomerPacket({design:activeDesign,prefs:preferences,
         photo,photoUrl,cutoutUrl,quote:frameQuote,
         savedDesignId:receipt.designId})
       // Privately freeze exact maker ZIP before enabling Etsy checkout.
+      setOrderPreparingStep('archive')
       await freezeManufacturingPacket(receipt,packet)
       setPreparedOrder({key,packet})
     }catch(cause){
       setOrderError(cause instanceof Error?cause.message:'Could not prepare your order files.')
-    }finally{setOrderBusy(false)}
+    }finally{setOrderBusy(false);setOrderPreparingStep(null)}
   }
 
   if(!draftReady)return <div className="at-shell at-draft-loading" role="status">
@@ -1365,21 +1359,6 @@ export function ExperiencePage() {
                 Compare against the physical printed proof.</small>
             </section>}
             <div className="at-home-customize">
-              <fieldset className="at-home-choice">
-                <legend><span>02</span> Find your frame finish</legend>
-                <div className="at-home-wood-options">{WOOD_OPTIONS.filter(choice=>choice.id!=='oak'||finish==='oak').map(choice=>
-                  <button type="button" key={choice.id} aria-pressed={finish===choice.id}
-                    onClick={()=>{setFinish(choice.id);setRoom(choice.scene)}}>
-                    <i className={`at-home-wood-swatch at-swatch-${choice.id}`} aria-hidden="true"/>
-                    <strong>{choice.id==='walnut'?'Two-tone walnut':choice.id==='ebony'?'Matte black':'Natural oak (legacy)'}</strong>
-                    <span className="at-frame-option-depth">{choice.id==='walnut'?'2.5″ deep':choice.id==='ebony'?'3.5″ deep':'Legacy design'}</span>
-                    <span className="at-frame-option-price">{frameQuoteFor(frameQuotes,choice.id)?
-                      moneyUsd(frameQuoteFor(frameQuotes,choice.id)!.priceCents):'Price on request'}</span>
-                  </button>)}</div>
-                <small>11×14 illuminated luster-photo frame. Both finishes include individually
-                  twinkling stars and concealed warm-white accent lighting. Room mockups are
-                  illustrative; the frame pictured in each room keeps its original finish.</small>
-              </fieldset>
               <div className="at-home-lighting">
                 <div><span className="at-home-control-kicker">03 / LIGHT THE STARS</span>
                   <strong>{lightsOn?'Evening ambience · stars glowing':'Daylight ambience · star lights resting'}</strong></div>
@@ -1409,31 +1388,31 @@ export function ExperiencePage() {
                     {choice.label}
                   </button>)}</div>
               </fieldset>
+              <fieldset className="at-home-choice at-home-finish" aria-label="Choose your frame finish">
+                <legend><span>02</span> Choose your frame finish</legend>
+                <div className="at-home-wood-options">{WOOD_OPTIONS.filter(choice=>choice.id!=='oak'||finish==='oak').map(choice=>
+                  <button type="button" key={choice.id} aria-pressed={finish===choice.id}
+                    disabled={orderBusy||saveBusy}
+                    onClick={()=>{setFinish(choice.id);setRoom(choice.scene)}}>
+                    <i className={`at-home-wood-swatch at-swatch-${choice.id}`} aria-hidden="true"/>
+                    <strong>{choice.id==='walnut'?'Two-tone walnut':
+                      choice.id==='ebony'?'Matte black':'Natural oak (legacy)'}</strong>
+                    <span className="at-frame-option-depth">{choice.id==='walnut'?'2.5″ deep':
+                      choice.id==='ebony'?'3.5″ deep':'Legacy design'}</span>
+                  </button>)}</div>
+                <small>The selected finish is saved with your design. Select the same
+                  finish when ordering on Etsy. Room scenes are illustrative.</small>
+              </fieldset>
               <button type="button" className="at-home-back"
                 onClick={()=>{setStage('preview');window.scrollTo({top:0,behavior:'smooth'})}}>
                 ← Adjust my sky and perspective
               </button>
             </div>
             <div className="at-customer-order">
-              <span className="at-kicker">THE FINISHING TOUCH / YOUR KEEPSAKE</span>
-              <h2>Make it <em>yours.</em></h2>
-              <p>Make your own illuminated night-sky keepsake. Choose the frame finish,
-                preserve your photograph and star map, then carry the saved design
-                to Etsy to complete your purchase securely.</p>
-              <div className="at-frame-quote" aria-live="polite">
-                <small>11×14 PRICE ESTIMATE · {frameQuote?.mode==='catalog'?'CURRENT MATERIAL CATALOG':'PLANNING'}</small>
-                <strong>{frameQuote?moneyUsd(frameQuote.priceCents):'Price on request'}</strong>
-                <span>{frameQuote?.mode==='catalog'
-                  ?'Based on workshop material costs, labor, overhead and pricing policy.'
-                  :'Illustrative retail price until supplier-cost data is approved.'}</span>
-                <button type="button" disabled={pricesLoading} onClick={()=>void refreshFramePrices()}>
-                  {pricesLoading?'Checking prices…':'↻ Refresh estimate'}</button>
-                {priceNotice&&<small role="status">{priceNotice}</small>}
-                <small>Etsy sets the actual checkout price. This estimate is not a charge,
-                  and does not automatically update an Etsy listing.</small>
-              </div>
+              <span className="at-kicker">YOUR KEEPSAKE / COMPLETE YOUR DESIGN</span>
               <label htmlFor="at-order-inscription">A short inscription (optional)</label>
               <input id="at-order-inscription" type="text" maxLength={65}
+                disabled={orderBusy||saveBusy}
                 value={inscription} placeholder="e.g. The night our story began"
                 onChange={event=>setInscription(event.target.value)}/>
               <button type="button" className="at-outline at-wide" disabled={saveBusy||restoreBusy}
@@ -1443,8 +1422,25 @@ export function ExperiencePage() {
               {saveError&&<p role="alert" className="at-error">{saveError}</p>}
               {!currentOrder&&<button type="button" className="at-primary at-wide"
                 disabled={orderBusy||saveBusy||restoreBusy} onClick={()=>void buildOrderPacket()}>
-                {orderBusy?'Saving your keepsake…':'Save design & prepare Etsy order'} <span>✦</span>
+                {orderBusy?<><span className="at-order-button-spinner" aria-hidden="true"/>
+                  Preparing your keepsake…</>:
+                  <>Save design &amp; prepare Etsy order <span aria-hidden="true">✦</span></>}
               </button>}
+              {orderBusy&&<div className="at-order-preparing" role="status" aria-live="polite">
+                <span className="at-order-preparing-orbit" aria-hidden="true">✦</span>
+                <div>
+                  <strong>{orderPreparingStep==='save'?'Saving your photograph and choices…':
+                    orderPreparingStep==='render'?'Preparing your sky and print files…':
+                    'Securely archiving your finished design…'}</strong>
+                  <small>{orderPreparingStep==='save'?'Keeping your original photo and frame details together.':
+                    orderPreparingStep==='render'?'Including your selected illuminated stars and production references.':
+                    'Almost there. Your Etsy Design ID will appear when everything is saved.'}</small>
+                  <div className="at-order-preparing-track" aria-hidden="true">
+                    <span style={{width:orderPreparingStep==='save'?'24%':
+                      orderPreparingStep==='render'?'65%':'89%'}}/>
+                  </div>
+                </div>
+              </div>}
               {!currentOrder&&<small className="at-order-intro-note">
                 We'll securely save your design, including your photograph, stars and frame
                 selection. You'll only need your Design ID to finish ordering on Etsy.

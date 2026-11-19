@@ -980,3 +980,39 @@
   font-weight:750;box-shadow:0 7px 24px #0004;}
 .at-etsy-simple .at-etsy-unpaid-note{color:#b5cecc;line-height:1.7;padding-top:3px;}
 .at-etsy-simple .at-maker-backup{margin-top:4px;opacity:.92;}
+
+/* Chapter 05: room + finish belong to the same calm showroom card. */
+.at-home-spec .at-home-finish{padding:3px 0 20px;margin-bottom:14px;
+  border-bottom:1px solid #53697566;gap:12px}
+.at-home-spec .at-home-finish legend{font-size:12px;font-weight:650;
+  color:#efdbb8;margin-bottom:10px}
+.at-home-spec .at-home-wood-options{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.at-home-spec .at-home-wood-options button{min-width:0;padding-bottom:12px}
+.at-home-spec .at-home-wood-options strong{font-size:12px}
+.at-home-spec .at-home-wood-swatch{height:54px}
+.at-home-spec .at-home-finish small{line-height:1.65;color:#acbec0}
+.at-home-wood-options button:disabled{opacity:.6;cursor:wait}
+.at-customer-order>.at-kicker{font-size:11px;letter-spacing:.13em}
+@media(max-width:450px){.at-home-spec .at-home-wood-options{gap:8px}
+ .at-home-spec .at-home-wood-options strong{font-size:11px}}
+/* Explicit stage-based motion while the immutable maker packet is generated. */
+.at-order-preparing{display:grid;grid-template-columns:43px minmax(0,1fr);gap:13px;
+  align-items:center;padding:14px;border:1px solid #58777d;border-radius:12px;
+  background:linear-gradient(110deg,#122b3b,#1a3742)}
+.at-order-preparing-orbit{display:grid;place-items:center;width:41px;height:41px;
+  border:1px dashed #d9bd8a;border-radius:50%;font-size:22px;color:#f6dba6;
+  box-shadow:0 0 16px #abbeaf30;animation:at-order-orbit 2.1s linear infinite}
+.at-order-preparing>div{display:grid;gap:7px;min-width:0}
+.at-order-preparing strong{color:#f6e7c5;font-size:12px;line-height:1.35}
+.at-order-preparing small{color:#bfd2d4;font-size:11px;line-height:1.5}
+.at-order-preparing-track{height:5px;border-radius:99px;background:#365661;
+  overflow:hidden;position:relative}
+.at-order-preparing-track>span{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,#aabdb3,#eacf99);transition:width .4s ease}
+.at-order-button-spinner{display:inline-block;width:15px;height:15px;flex:none;
+  border:2px solid #18384055;border-top-color:#244951;border-radius:50%;
+  animation:at-order-orbit .8s linear infinite}
+@keyframes at-order-orbit{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.at-order-preparing-orbit,
+ .at-order-button-spinner{animation:none}
+ .at-order-preparing-track>span{transition:none}}

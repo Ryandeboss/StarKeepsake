@@ -76,3 +76,6 @@
 
 .production-purchased .production-table{min-width:770px}
 .production-purchased .production-table strong{color:#f0d49d}
+
+/* A fixed demo module follows verified live counts, without affecting them. */
+.production-purchased .production-design-count{white-space:nowrap}

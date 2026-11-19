@@ -13,11 +13,12 @@ test('local draft, sky editing and guided chapter navigation survive M3 merge', 
   assert.match(studio, /SkyMaskEditor/)
   assert.match(studio, /chapterDestination/)
 })
-test('M3 customer finish quotes and price revision exist alongside UX', () => {
+test('Chapter 05 keeps frame finishes and quote metadata but displays no price or extra sales heading', () => {
   assert.match(studio, /frameQuoteFor\(frameQuotes,finish\)/)
-  assert.match(studio, /Refresh estimate/)
-  assert.match(studio, /Two-tone walnut/)
-  assert.match(studio, /Matte black/)
+  const chapter5=studio.split('CHAPTER 05 / BRING YOUR NIGHT HOME')[1]
+  assert.match(chapter5,/Two-tone walnut/)
+  assert.match(chapter5,/Matte black/)
+  assert.doesNotMatch(chapter5,/Make it|at-frame-quote|at-frame-option-price|Refresh estimate|Price on request|PRICE ESTIMATE|moneyUsd/)
 })
 test('Production dashboard keeps saved-design section and M3 materials panel', () => {
   assert.match(dashboard, /Recently saved designs/)
@@ -203,4 +204,43 @@ test('owner has a paid-only purchased Design ID table with matching maker files'
   assert.match(dashboard,/x\.match_state==='matched'&&x\.quantity===1&&x\.design_id===job\.design_id/)
   assert.match(dashboard,/Open order &amp; maker files/)
   assert.match(dashboard,/No matched paid designs yet/)
+})
+
+test('Chapter 05 moves both physical frame finish choices into the Your night framed card',()=>{
+  const chapter5=studio.split('CHAPTER 05 / BRING YOUR NIGHT HOME')[1]
+  const left=chapter5.split('<aside className="at-home-right">')[0]
+  const right=chapter5.split('<aside className="at-home-right">')[1]
+  const spec=right.split('<div className="at-customer-order">')[0]
+  assert.doesNotMatch(left,/Find your frame finish|at-home-wood-options/)
+  assert.match(spec,/Your night, <em>framed\.<\/em>/)
+  assert.match(spec,/Choose your room/)
+  assert.match(spec,/Choose your frame finish/)
+  assert.match(spec,/WOOD_OPTIONS\.filter/)
+  assert.match(spec,/setFinish\(choice.id\);setRoom\(choice.scene\)/)
+  assert.doesNotMatch(right,/Make it <em>yours|at-frame-quote|at-frame-option-price|Refresh estimate/)
+})
+test('preparing Etsy order animates stages without offering checkout before private archive',()=>{
+  const orderFunction=studio.split('async function buildOrderPacket()')[1].split('if(!draftReady)')[0]
+  assert.match(orderFunction,/setOrderPreparingStep\('save'\)/)
+  assert.match(orderFunction,/setOrderPreparingStep\('render'\)/)
+  assert.match(orderFunction,/setOrderPreparingStep\('archive'\)/)
+  assert.match(orderFunction,/await freezeManufacturingPacket\(receipt,packet\)/)
+  assert.match(orderFunction,/setPreparedOrder\(\{key,packet\}\)/)
+  assert.match(studio,/at-order-preparing-orbit/)
+  assert.match(studio,/at-order-preparing-track/)
+  assert.match(landingCss,/@media\(prefers-reduced-motion:reduce\)/)
+})
+const sample=file('../src/pages/SampleProductionOrder.tsx')
+test('owner preview is clearly fictional, read-only, and separate from paid data',()=>{
+  assert.match(dashboard,/<SampleProductionOrder \/>/)
+  assert.match(sample,/SIMULATION ONLY · NO PAYMENT · NO DATABASE RECORD/)
+  assert.match(sample,/SAMPLE_DESIGN_ID='SK-DEMO-NOT-REAL'/)
+  assert.match(sample,/PHYSICAL_STARS=18/)
+  assert.match(sample,/Math\.ceil\(PHYSICAL_STARS\/24\)/)
+  assert.match(sample,/Math\.ceil\(PHYSICAL_STARS\/12\)/)
+  assert.match(sample,/MAKER_STEPS\.length/)
+  assert.match(sample,/PRINT_VARIANTS\.map/)
+  assert.match(sample,/No Etsy API request, database write/)
+  assert.doesNotMatch(sample,/fetch\(|api\(|createCustomerPacket\(|saveCustomerDesign\(/)
+  assert.doesNotMatch(dashboard.split('const purchasedDesigns=useMemo')[1].split('},\[data\]')[0],/SAMPLE_DESIGN_ID|SampleProductionOrder/)
 })
