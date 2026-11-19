@@ -5,6 +5,7 @@ import type { LocationCandidate } from '../api'
 import { SkyMaskEditor } from '../components/SkyMaskEditor'
 import { SkyWorkshopPreview, SkyWorkshopOrientation } from '../components/SkyWorkshopPreview'
 import { HomeShowroom } from '../components/HomeShowroom'
+import { PhotoQualityPanel } from '../components/PhotoQualityPanel'
 import { ROOM_OPTIONS, WOOD_OPTIONS } from '../components/HomeShowroomOptions'
 import type { RoomScene } from '../components/HomeShowroomOptions'
 import { detectWorkshopSky } from '../skyBlend'
@@ -824,7 +825,7 @@ export function ExperiencePage() {
       return
     }
     if(photoQuality?.needsOwnerReview&&qualityAcceptedKey!==qualityKey){
-      setOrderError('Review the print-quality warning and acknowledge it before preparing the Etsy order.')
+      setOrderError('Review and acknowledge the photo-quality warning in Chapter 02 before preparing your Etsy order.')
       return
     }
     const key=orderKey
@@ -987,6 +988,12 @@ export function ExperiencePage() {
             <p className="at-tiny-note">Sky detection runs on your device. If you choose to weave stars into the image, you’ll get a chance to tidy the edges with free editing tools.</p>
           </div>
         </div>
+        {photoQuality&&<div className="at-horizon-quality">
+          <PhotoQualityPanel report={photoQuality} photoUrl={photoUrl}
+            approved={qualityAcceptedKey===qualityKey}
+            onApprovedChange={approved=>setQualityAcceptedKey(approved?qualityKey:'')}
+            onReplacePhoto={openPhotoReplacement}/>
+        </div>}
       </section>}
 
       {stage==='refine'&&<section className="at-quiet-stage at-appear">
@@ -1463,43 +1470,6 @@ export function ExperiencePage() {
                 <small>Etsy sets the actual checkout price. This estimate is not a charge,
                   and does not automatically update an Etsy listing.</small>
               </div>
-              {photoQuality&&<section className={'at-photo-preflight at-quality-'+photoQuality.status}
-                aria-label="Print quality check">
-                <div className="at-photo-preflight-heading">
-                  <div><span>PRINT QUALITY CHECK · SOURCE PHOTO</span>
-                    <strong>{photoQuality.status==='excellent'?'Excellent source resolution':
-                      photoQuality.status==='good'?'Good source resolution':
-                      photoQuality.status==='caution'?'Check print sharpness':
-                      'Owner review required'}</strong></div>
-                  <b>{Math.round(photoQuality.effectivePpi)} PPI</b>
-                </div>
-                <p>Your {photoQuality.sourcePixels.width.toLocaleString()} ×
-                  {' '}{photoQuality.sourcePixels.height.toLocaleString()} px original
-                  will occupy approximately {photoQuality.printedPhotoIn.width} ×
-                  {' '}{photoQuality.printedPhotoIn.height} inches in the physical print.
-                  The effective resolution is calculated after your fit/crop choice.</p>
-                {photoQuality.warnings.length>0&&<ul>
-                  {photoQuality.warnings.map((warning,index)=><li key={index}>{warning}</li>)}
-                </ul>}
-                <details className="at-quality-inspect">
-                  <summary>Inspect the source photograph at 100% detail</summary>
-                  <div className="at-quality-pixel-window" aria-label="Original photograph central pixel detail">
-                    {dimensions&&photoUrl&&<img src={photoUrl} alt="Actual source pixels near the center of the selected photograph"
-                      style={{width:dimensions.width,height:dimensions.height,left:'50%',top:'50%',
-                        transform:'translate(-50%, -50%)'}}/>}
-                  </div>
-                  <small>Unscaled source pixels near image center. Check faces, edges and compression.
-                    This browser preview is not a substitute for the lab's printed proof.</small>
-                </details>
-                {photoQuality.needsOwnerReview&&<label className="at-quality-confirm">
-                  <input type="checkbox" checked={qualityAcceptedKey===qualityKey}
-                    onChange={e=>setQualityAcceptedKey(e.target.checked?qualityKey:'')}/>
-                  I understand that this design needs manual owner print approval.
-                  I can save it, but it must not be printed until it passes a physical proof.
-                </label>}
-                <small>We never secretly enhance your photograph. A 300-DPI exported
-                  file cannot restore missing source detail. Print-shop approval is still required.</small>
-              </section>}
               <label htmlFor="at-order-inscription">A short inscription (optional)</label>
               <input id="at-order-inscription" type="text" maxLength={65}
                 value={inscription} placeholder="e.g. The night our story began"
@@ -1590,6 +1560,10 @@ export function ExperiencePage() {
     <footer className="at-footer"><span>✳ STARKEEPSAKE</span><span>THE BEAUTY OF A NIGHT, HELD FOREVER.</span><span>PERSONAL SKY ATELIER · PREVIEW</span></footer>
     {stage==='refine'&&photo&&<SkyMaskEditor key={photoUrl} file={photo}
       initialMask={savedAlpha} detectedMask={detected}
+      photoQuality={photoQuality} photoUrl={photoUrl}
+      qualityApproved={qualityAcceptedKey===qualityKey}
+      onQualityApprovedChange={approved=>setQualityAcceptedKey(approved?qualityKey:'')}
+      onReplacePhoto={openPhotoReplacement}
       showPolishGuide={showPolishGuide} onDismissPolishGuide={()=>setShowPolishGuide(false)}
       onChapterNavigate={goToChapter} chapterNotice={chapterNotice}
       onApply={saveMask} onClose={()=>setStage('choice')}/>}

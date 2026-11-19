@@ -87,7 +87,7 @@ const qualityOwner=file('../src/pages/OwnerProductionFiles.tsx')
 test('source-photo quality preflight follows the actual customer and admin packet',()=>{
   assert.match(studio,/getFrameLayout\('11x14'\)/)
   assert.match(studio,/framePresetId:'11x14'/)
-  assert.match(studio,/PRINT QUALITY CHECK · SOURCE PHOTO/)
+  assert.match(file('../src/components/PhotoQualityPanel.tsx'),/PRINT QUALITY CHECK · SOURCE PHOTO/)
   assert.match(studio,/qualityAcceptedKey/)
   assert.match(studio,/assessPhotoPrintQuality/)
   assert.match(qualityModule,/needsOwnerReview/)
@@ -174,4 +174,22 @@ test('Chapter 05 only shows the full light picker for more than 24 print-safe st
   assert.match(chapter5,/Restore automatic star selection/)
   assert.match(chapter5,/at-home-star-edit-preview/)
   assert.match(chapter5,/onTogglePhysicalStar=\{togglePhysicalLight\}/)
+})
+
+const horizonPolish=file('../src/components/SkyMaskEditor.tsx')
+const photoQualityControls=file('../src/components/PhotoQualityPanel.tsx')
+test('photo quality review is in Chapter 02 and horizon polish, not the final purchase screen',()=>{
+  const chapter2=studio.split("stage==='choice'&&")[1].split("stage==='refine'&&")[0]
+  const chapter5=studio.split("stage==='home'&&")[1].split('</main>')[0]
+  assert.match(chapter2,/<PhotoQualityPanel report=\{photoQuality\}/)
+  assert.match(horizonPolish,/<PhotoQualityPanel report=\{photoQuality\}/)
+  assert.match(studio,/qualityApproved=\{qualityAcceptedKey===qualityKey\}/)
+  assert.match(photoQualityControls,/Inspect original photo detail at 100% pixels/)
+  assert.match(photoQualityControls,/Upper detail/)
+  assert.match(photoQualityControls,/Lower detail/)
+  assert.match(photoQualityControls,/approve it for my StarKeepsake design/)
+  assert.match(photoQualityControls,/owner print approval/)
+  assert.doesNotMatch(chapter5,/at-photo-preflight|PRINT QUALITY CHECK/)
+  assert.match(studio,/photoQuality\?\.needsOwnerReview&&qualityAcceptedKey!==qualityKey/)
+  assert.match(studio,/warning in Chapter 02 before preparing your Etsy order/)
 })
