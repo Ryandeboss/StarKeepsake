@@ -834,3 +834,129 @@
     min-width:0;order:unset;flex-basis:auto;
   }
 }
+
+/* Chapter 04 / compact observatory dashboard. The image is the primary work
+   surface; perspective remains immediate, with secondary options by disclosure. */
+.at-observatory-stage{padding:20px 0 38px}
+.at-observatory-heading{display:flex;align-items:end;justify-content:space-between;
+  gap:24px;margin-bottom:22px}
+.at-observatory-heading>.at-observatory-context{flex:0 0 auto}
+.at-observatory-heading .at-kicker{margin-bottom:9px}
+.at-observatory-heading h1{font-size:clamp(31px,3.1vw,48px);line-height:1.12;
+  margin:0 0 8px;letter-spacing:-.035em}
+.at-observatory-heading p{max-width:650px;margin:0;color:#adc6cb;font-size:13px;
+  line-height:1.55}
+.at-observatory-context{display:grid;gap:4px;min-width:190px;text-align:right;
+  padding:0 0 3px}
+.at-observatory-context span,.at-observatory-context small{
+  font:10px ui-monospace,monospace;letter-spacing:.07em;color:#94b5bd}
+.at-observatory-context strong{font:17px Georgia,serif;color:#f0d4a1;
+  overflow-wrap:anywhere}
+.at-observatory-stage .at-preview-grid{
+  grid-template-columns:minmax(0,1fr) minmax(300px,338px);
+  gap:clamp(16px,2vw,26px);align-items:start}
+.at-observatory-stage .at-preview-main{min-width:0}
+.at-observatory-stage .at-preview-main .skw-workshop{
+  border-radius:15px;box-shadow:0 14px 36px #0003}
+.at-observatory-stage .at-preview-main .skw-frame-rail{
+  min-height:clamp(290px,36vw,485px)}
+.at-observatory-stage .at-preview-caption{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+  margin:0;padding:16px 6px 18px;border-bottom:1px solid #2a4350}
+.at-observatory-stage .at-preview-caption div{gap:4px}
+.at-observatory-stage .at-preview-caption span{font-size:9px;color:#86a9b1}
+.at-observatory-stage .at-preview-caption strong{
+  font:500 17px Georgia,serif;color:#f0d6a8}
+.at-observatory-stage .at-preview-caption small{
+  font-size:11px;color:#9db9c2;line-height:1.45}
+.at-observatory-quick-controls{display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:16px}
+.at-observatory-disclosure{min-width:0;border:1px solid #344f5d;
+  background:rgba(16,39,54,.8);border-radius:12px;overflow:hidden}
+.at-observatory-disclosure>summary{
+  display:flex;flex-direction:column;gap:4px;position:relative;
+  cursor:pointer;list-style:none;padding:15px 38px 15px 16px;
+  color:#efe3cc;font-size:13px;font-weight:650}
+.at-observatory-disclosure>summary::-webkit-details-marker{display:none}
+.at-observatory-disclosure>summary:after{
+  content:"⌄";position:absolute;right:16px;top:50%;
+  transform:translateY(-50%);font-size:20px;line-height:1;color:#d5b77e}
+.at-observatory-disclosure[open]>summary:after{content:"⌃"}
+.at-observatory-disclosure>summary:focus-visible{
+  outline:2px solid #eaca95;outline-offset:-3px}
+.at-observatory-disclosure>summary small{font-size:11px;font-weight:400;
+  color:#93b6bf;line-height:1.45}
+.at-observatory-disclosure[open]>summary{border-bottom:1px solid #344e5d}
+.at-observatory-stage .at-balance-box{
+  margin:0;background:transparent;border:0;border-radius:0;padding:15px;gap:13px}
+.at-observatory-stage .at-sky-atmosphere-controls{
+  margin:0;padding:15px;border:0;border-radius:0;background:transparent;gap:12px}
+.at-observatory-stage .at-tone-choice button{padding:8px 9px}
+.at-observatory-stage .at-preview-sidebar{
+  display:grid;align-content:start;gap:12px;width:100%;max-width:none;margin:0}
+.at-observatory-perspective{padding:17px;border:1px solid #3c5969;
+  border-radius:15px;background:linear-gradient(160deg,#0e293a,#0a1e2f)}
+.at-observatory-perspective .at-side-heading{padding:0 0 13px}
+.at-observatory-perspective .at-side-heading .at-kicker{margin:0 0 6px;
+  color:#d3b884}
+.at-observatory-perspective .at-side-heading h2{
+  font:500 23px Georgia,serif;line-height:1.15;letter-spacing:-.025em;
+  margin:0 0 5px}
+.at-observatory-perspective .at-side-heading p{
+  color:#9ebbc4;font-size:11px;margin:0;line-height:1.45}
+.at-observatory-perspective .skw-orientation-controls{
+  border:0;border-radius:0;background:transparent;padding:0;gap:12px}
+.at-observatory-perspective .skw-dome-holder{min-height:0}
+.at-observatory-perspective .skw-orientation-copy{
+  font-size:11px;line-height:1.45;color:#a8c3c9}
+.at-observatory-perspective .skw-compass-buttons{gap:5px}
+.at-observatory-perspective .skw-compass-buttons button{
+  padding:9px 4px;font-size:12px}
+.at-observatory-perspective .skw-slider{font-size:11px;gap:5px}
+.at-observatory-perspective .skw-reset{font-size:11px;padding:10px}
+.at-observatory-edit .at-workshop-actions{
+  margin:0;padding:11px;display:grid;gap:7px}
+.at-observatory-edit .at-workshop-actions button{
+  padding:10px 12px;font-size:11px;background:#112d3b;
+  border-color:#3f5d69;border-radius:8px}
+.at-observatory-next{display:grid;gap:7px;padding:18px;
+  background:#132e3e;border:1px solid #4e6a6f;border-radius:14px}
+.at-observatory-next .at-kicker{margin:0;color:#d8bb8b}
+.at-observatory-next>strong{font:500 22px Georgia,serif;color:#f2d7a5}
+.at-observatory-next p{font-size:11px;color:#adc5c9;margin:0 0 8px;
+  line-height:1.5}
+.at-observatory-next .at-primary{width:100%;justify-content:space-between;
+  gap:12px;padding:13px 15px;font-size:12px}
+.at-observatory-stage .at-science-caveat{
+  max-width:100%;margin:24px 0 0;padding-top:14px;border-top:1px solid #233c48;
+  font-size:10px;line-height:1.6;color:#829fa8}
+@media(max-width:980px){
+  .at-observatory-stage .at-preview-grid{grid-template-columns:minmax(0,1fr)}
+  .at-observatory-stage .at-preview-sidebar{display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .at-observatory-stage .at-observatory-perspective{grid-column:1/-1}
+  .at-observatory-perspective .skw-orientation-controls{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 20px}
+  .at-observatory-perspective .skw-dome-holder{grid-row:1/span 4}
+  .at-observatory-perspective .skw-orientation-copy{grid-column:2}
+  .at-observatory-perspective .skw-compass-buttons{grid-column:2}
+  .at-observatory-perspective .skw-slider{grid-column:2}
+  .at-observatory-perspective .skw-reset{grid-column:2}
+}
+@media(max-width:620px){
+  .at-observatory-stage{padding:12px 0 24px}
+  .at-observatory-heading{display:block;margin-bottom:15px}
+  .at-observatory-heading h1{font-size:clamp(29px,8vw,37px)}
+  .at-observatory-heading p{font-size:12px}
+  .at-observatory-context{display:none}
+  .at-observatory-stage .at-preview-caption{grid-template-columns:1fr;gap:12px}
+  .at-observatory-quick-controls{grid-template-columns:minmax(0,1fr)}
+  .at-observatory-stage .at-preview-sidebar{grid-template-columns:1fr}
+  .at-observatory-perspective .skw-orientation-controls{
+    display:grid;grid-template-columns:minmax(0,1fr)}
+  .at-observatory-perspective .skw-dome-holder,
+  .at-observatory-perspective .skw-orientation-copy,
+  .at-observatory-perspective .skw-compass-buttons,
+  .at-observatory-perspective .skw-slider,
+  .at-observatory-perspective .skw-reset{grid-column:1;grid-row:auto}
+}

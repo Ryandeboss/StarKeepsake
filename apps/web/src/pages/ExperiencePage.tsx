@@ -1098,14 +1098,22 @@ export function ExperiencePage() {
         </div>
       </section>}
 
-      {stage==='preview'&&<section className="at-preview-stage at-appear">
-        <div className="at-stage-intro at-stage-intro--center">
-          <span className="at-kicker">CHAPTER 04 / THE OBSERVATORY WORKSHOP</span>
-          <h1>See the night<br/><em>from where you stood.</em></h1>
-          <p>Turn toward north, east, south or west. Tilt your gaze. Your stars move with the perspective, just as they would above that place. Choose the illuminated stars in Chapter 05.</p>
-        </div>
+      {stage==='preview'&&<section className="at-preview-stage at-observatory-stage at-appear">
+        <header className="at-observatory-heading">
+          <div>
+            <span className="at-kicker">CHAPTER 04 / THE OBSERVATORY WORKSHOP</span>
+            <h1>Explore <em>your night sky.</em></h1>
+            <p>Move the sky to match your memory. Drag the frame or use the
+              direction controls to explore the stars above that place.</p>
+          </div>
+          <div className="at-observatory-context" aria-label="Your selected sky moment">
+            <span>YOUR OBSERVATION</span>
+            <strong>{chosenName}</strong>
+            <small>{date}</small>
+          </div>
+        </header>
         <div className="at-preview-grid">
-          <div className="at-preview-main">
+          <section className="at-preview-main" aria-label="Interactive sky and photograph">
             <SkyWorkshopPreview
               showroom={false} lightsOn={lightsOn} finish={finish}
               stars={design.stars}
@@ -1121,66 +1129,91 @@ export function ExperiencePage() {
               onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
               onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}/>
             <div className="at-preview-caption">
-              <div><span>THE NIGHT OF {date}</span><strong>{chosenName}</strong></div>
-              <div><span>REAL HIPPARCOS STARS</span><strong>{design.stars.length} plotted in the calculated sky</strong></div>
+              <div><span>LOCATION & DATE</span><strong>{chosenName}</strong>
+                <small>{date}</small></div>
+              <div><span>CALCULATED SKY</span>
+                <strong>{design.stars.length} Hipparcos stars</strong>
+                <small>The illuminated stars are selected in Chapter 05.</small></div>
             </div>
-            {placement==='above'&&<div className="at-balance-box">
-              <label>How much sky should frame your photograph? <strong>{skyPercent}%</strong>
-                <input type="range" min="20" max="70" value={skyPercent}
-                  onChange={e=>setSkyPercent(Number(e.target.value))}/></label>
-              <div className="at-fit-list">{photoFits.map(item=><button
-                key={item.id} type="button" className={photoFit===item.id?'is-selected':''}
-                onClick={()=>setPhotoFit(item.id)}>{item.label}</button>)}</div>
-            </div>}
-          </div>
-          <div className="at-preview-sidebar">
-            <div className="at-side-heading"><span className="at-kicker">THE PERSPECTIVE</span><h2>Which way<br/><em>were you facing?</em></h2></div>
-            <SkyWorkshopOrientation heading={heading} pitch={pitch} fov={fov}
-              onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
-              onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}
-              onFov={v=>{setShowPerspectiveGuide(false);setFov(v)}}
-              onReset={()=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(suggestedObserverHeading(design.stars)));setPitch(18);setFov(105)}}/>
-            <div className="at-sky-atmosphere-controls">
-              <span className="at-kicker">LIGHT & ATMOSPHERE</span>
-              <label className="at-glow-choice"><input type="checkbox" checked={atmosphericGlow}
-                onChange={event=>setAtmosphericGlow(event.target.checked)}/>
-                Horizon glow (optional)</label>
-              <fieldset className="at-tone-choice"><legend>Night sky tone</legend>
-                {([['natural','Natural darkness'],['indigo','Midnight indigo'],['teal','Deep teal']] as const).map(([value,label])=>
-                  <button key={value} type="button" aria-pressed={skyTone===value}
-                    onClick={()=>setSkyTone(value)}>{label}</button>)}
-              </fieldset>
-              <small>The warm horizon glow follows your viewing angle and disappears when disabled. Stars remain calculated from the same place and moment.</small>
+            <div className="at-observatory-quick-controls">
+              {placement==='above'&&<details className="at-observatory-disclosure">
+                <summary><span>Photo framing</span>
+                  <small>{skyPercent}% sky · Fit and crop</small></summary>
+                <div className="at-balance-box">
+                  <label>Sky portion <strong>{skyPercent}%</strong>
+                    <input type="range" min="20" max="70" value={skyPercent}
+                      onChange={e=>setSkyPercent(Number(e.target.value))}/></label>
+                  <div className="at-fit-list">{photoFits.map(item=><button
+                    key={item.id} type="button" className={photoFit===item.id?'is-selected':''}
+                    onClick={()=>setPhotoFit(item.id)}>{item.label}</button>)}</div>
+                </div>
+              </details>}
+              <details className="at-observatory-disclosure">
+                <summary><span>Light & atmosphere</span>
+                  <small>{skyTone==='natural'?'Natural darkness':skyTone==='indigo'?
+                    'Midnight indigo':'Deep teal'} · {atmosphericGlow?'Glow on':'Glow off'}</small>
+                </summary>
+                <div className="at-sky-atmosphere-controls">
+                  <label className="at-glow-choice"><input type="checkbox"
+                    checked={atmosphericGlow}
+                    onChange={event=>setAtmosphericGlow(event.target.checked)}/>
+                    Horizon glow</label>
+                  <fieldset className="at-tone-choice"><legend>Night sky tone</legend>
+                    {([['natural','Natural darkness'],['indigo','Midnight indigo'],
+                      ['teal','Deep teal']] as const).map(([value,label])=>
+                      <button key={value} type="button" aria-pressed={skyTone===value}
+                        onClick={()=>setSkyTone(value)}>{label}</button>)}
+                  </fieldset>
+                  <small>Atmosphere changes the preview, not the calculated star positions.</small>
+                </div>
+              </details>
             </div>
-            <div className="at-workshop-actions">
-              <button type="button" onClick={editMoment}>✎ Change date or location</button>
-              <button type="button" onClick={()=>setStage('choice')}>✎ Change photo composition</button>
-              {placement==='within'&&<button type="button" onClick={()=>setStage('refine')}>✎ Refine the horizon again</button>}
-              <button type="button" onClick={openPhotoReplacement}>＋ Choose another photograph</button>
+          </section>
+          <aside className="at-preview-sidebar" aria-label="Perspective and workshop controls">
+            <section className="at-observatory-perspective" aria-label="Camera perspective controls">
+              <div className="at-side-heading">
+                <span className="at-kicker">01 / VIEW CONTROLS</span>
+                <h2>Find your viewpoint</h2>
+                <p>Face a direction, then fine-tune your view.</p>
+              </div>
+              <SkyWorkshopOrientation heading={heading} pitch={pitch} fov={fov}
+                onHeading={v=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(v))}}
+                onPitch={v=>{setShowPerspectiveGuide(false);setPitch(clampWorkshopPitch(v))}}
+                onFov={v=>{setShowPerspectiveGuide(false);setFov(v)}}
+                onReset={()=>{setShowPerspectiveGuide(false);setHeading(wrapWorkshopHeading(suggestedObserverHeading(design.stars)));setPitch(18);setFov(105)}}/>
+            </section>
+            <details className="at-observatory-disclosure at-observatory-edit">
+              <summary><span>Change the original details</span>
+                <small>Date, location or photograph</small></summary>
+              <div className="at-workshop-actions">
+                <button type="button" onClick={editMoment}>Change date or location</button>
+                <button type="button" onClick={()=>setStage('choice')}>Change photo composition</button>
+                {placement==='within'&&<button type="button"
+                  onClick={()=>setStage('refine')}>Refine the horizon again</button>}
+                <button type="button" onClick={openPhotoReplacement}>Choose another photograph</button>
+              </div>
+            </details>
+            <div className="at-observatory-next">
+              <span className="at-kicker">NEXT / YOUR KEEPSAKE</span>
+              <strong>See it in your space.</strong>
+              <p>Choose a frame finish and the stars that will illuminate.</p>
+              <button type="button" className="at-primary"
+                onClick={()=>{
+                  if(dimensions&&dimensions.width/dimensions.height<.82&&room==='warm'){
+                    setRoom('portrait')
+                  }
+                  setStage('home')
+                  window.scrollTo({top:0,behavior:'smooth'})
+                }}>
+                See my keepsake in a room <span>↗</span>
+              </button>
             </div>
-          </div>
+          </aside>
         </div>
-        <div className="at-finish-chapter">
-          <div>
-            <span className="at-kicker">ONE LAST STEP</span>
-            <strong>Picture your creation at home.</strong>
-            <p>Your sky is ready. Step into the showroom, explore the frame
-              finishes and see how your stars could illuminate a room.</p>
-          </div>
-          <button type="button" className="at-primary"
-            onClick={()=>{
-              if(dimensions&&dimensions.width/dimensions.height<.82&&room==='warm'){
-                setRoom('portrait')
-              }
-              setStage('home')
-              window.scrollTo({top:0,behavior:'smooth'})
-            }}>
-            See my keepsake in a room <span>↗</span>
-          </button>
-        </div>
-        <p className="at-science-caveat">The star positions are calculated from your location, date and local time. The
-          perspective is adjustable but not automatically calibrated to your photograph’s camera direction or lens.
-          This is a digital artistic preview, not a manufacturing-ready file. StarKeepsake is not affiliated with NASA.</p>
+        <p className="at-science-caveat">Star positions are calculated for your location, date
+          and local time. Perspective is adjustable, but not automatically calibrated
+          to the camera direction or lens of the photograph. This artistic preview
+          is not a manufacturing-ready file. StarKeepsake is not affiliated with NASA.</p>
       </section>}
 
       {stage==='home'&&<section className="at-home-stage at-appear">
