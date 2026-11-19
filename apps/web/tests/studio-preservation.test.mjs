@@ -153,3 +153,25 @@ test('Chapter 04 observatory is a streamlined dashboard, without removing sky co
   assert.match(observatoryCss,/grid-template-columns:minmax\(0,1fr\) minmax\(300px,338px\)/)
   assert.match(observatoryCss,/@media\(max-width:620px\)/)
 })
+
+test('Chapter 05 places room choices in the right-hand card instead of facts', () => {
+  const chapter5=studio.split('CHAPTER 05 / BRING YOUR NIGHT HOME')[1]
+  const left=chapter5.split('<aside className="at-home-right">')[0]
+  const right=chapter5.split('<aside className="at-home-right">')[1]
+  assert.doesNotMatch(left,/Choose your room/)
+  assert.match(right,/className="at-home-choice at-home-room"/)
+  assert.match(right,/Choose your room/)
+  assert.match(right,/ROOM_OPTIONS\.map\(choice=>/)
+  assert.doesNotMatch(right,/className="at-home-facts"/)
+  assert.match(landingCss,/\.at-home-spec \.at-home-choice-list\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
+})
+
+test('Chapter 05 only shows the full light picker for more than 24 print-safe stars', () => {
+  const chapter5=studio.split('CHAPTER 05 / BRING YOUR NIGHT HOME')[1]
+  assert.match(chapter5,/physicalView&&physicalView\.physicalSelection\.eligibleStars>24&&\s*<section className="at-physical-choices"/)
+  assert.match(chapter5,/physicalView\.physicalSelection\.eligibleStars===0/)
+  assert.match(chapter5,/physicalView\.physicalSelection\.eligibleStars<=24&&\s*design\.physicalStarOverrides\?\.mode==='manual'/)
+  assert.match(chapter5,/Restore automatic star selection/)
+  assert.match(chapter5,/at-home-star-edit-preview/)
+  assert.match(chapter5,/onTogglePhysicalStar=\{togglePhysicalLight\}/)
+})

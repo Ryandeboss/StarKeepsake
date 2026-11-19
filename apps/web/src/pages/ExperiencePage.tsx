@@ -1242,7 +1242,8 @@ export function ExperiencePage() {
                 onPerspectiveInteract={()=>{}}
                 onHeading={()=>{}} onPitch={()=>{}}/>
             </HomeShowroom>
-            {physicalView&&<section className="at-physical-choices"
+            {physicalView&&physicalView.physicalSelection.eligibleStars>24&&
+              <section className="at-physical-choices"
                 aria-label="Choose which stars have real LED lights">
               <div className="at-physical-choices-heading">
                 <div><span className="at-kicker">YOUR ILLUMINATED STARS</span>
@@ -1347,6 +1348,19 @@ export function ExperiencePage() {
                 review your selection before saving. Physical registration still
                 requires a production proof.</small>
             </section>}
+            {physicalView&&physicalView.physicalSelection.eligibleStars===0&&
+              <p className="at-home-star-notice" role="status">
+                No stars qualify for physical lights in this view. Adjust the sky
+                direction or photo composition in Chapter 04.
+              </p>}
+            {physicalView&&physicalView.physicalSelection.eligibleStars<=24&&
+              design.physicalStarOverrides?.mode==='manual'&&
+              <div className="at-home-star-notice" role="status">
+                <span>This saved design uses manually chosen lights.</span>
+                <button type="button" onClick={resetPhysicalLights}>
+                  ↺ Restore automatic star selection
+                </button>
+              </div>}
             {physicalInspector&&<section className="at-physical-inspector"
               aria-label="Development physical LED star inspector">
               <div className="at-inspector-header">
@@ -1383,15 +1397,6 @@ export function ExperiencePage() {
             </section>}
             <div className="at-home-customize">
               <fieldset className="at-home-choice">
-                <legend><span>01</span> Choose your room</legend>
-                <div className="at-home-choice-list">{ROOM_OPTIONS.map(choice=>
-                  <button type="button" key={choice.id} aria-pressed={room===choice.id}
-                    onClick={()=>setRoom(choice.id)}>
-                    <span aria-hidden="true">{choice.symbol}</span>
-                    {choice.label}
-                  </button>)}</div>
-              </fieldset>
-              <fieldset className="at-home-choice">
                 <legend><span>02</span> Find your frame finish</legend>
                 <div className="at-home-wood-options">{WOOD_OPTIONS.filter(choice=>choice.id!=='oak'||finish==='oak').map(choice=>
                   <button type="button" key={choice.id} aria-pressed={finish===choice.id}
@@ -1426,14 +1431,15 @@ export function ExperiencePage() {
             <div className="at-home-spec">
               <span className="at-kicker">MADE FROM YOUR MOMENT</span>
               <h2>Your night, <em>framed.</em></h2>
-              <div className="at-home-facts">
-                <div><span>THE MOMENT</span><strong>{date}{unknownTime?' · Time unknown':` · ${time}`}</strong></div>
-                <div><span>THE PLACE</span><strong>{chosenName}</strong></div>
-                <div><span>YOUR VIEW</span><strong>{Math.round(heading)}° direction · {Math.round(pitch)}° upward</strong></div>
-                <div><span>FRAME CONCEPT</span>
-                  <strong>{finish==='walnut'?'Two-tone walnut':finish==='ebony'?'Matte black':WOOD_OPTIONS.find(choice=>choice.id===finish)?.label}
-                    {' · '}{design.framePresetId==='auto'?'Custom proportions':design.framePresetId+' in'}</strong></div>
-              </div>
+              <fieldset className="at-home-choice at-home-room">
+                <legend><span>01</span> Choose your room</legend>
+                <div className="at-home-choice-list">{ROOM_OPTIONS.map(choice=>
+                  <button type="button" key={choice.id} aria-pressed={room===choice.id}
+                    onClick={()=>setRoom(choice.id)}>
+                    <span aria-hidden="true">{choice.symbol}</span>
+                    {choice.label}
+                  </button>)}</div>
+              </fieldset>
               <button type="button" className="at-home-back"
                 onClick={()=>{setStage('preview');window.scrollTo({top:0,behavior:'smooth'})}}>
                 ← Adjust my sky and perspective

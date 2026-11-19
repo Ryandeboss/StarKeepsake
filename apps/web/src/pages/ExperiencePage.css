@@ -420,12 +420,13 @@
 .at-home-spec h2{font:normal 31px Georgia,serif;letter-spacing:-.03em;margin:0 0 22px;
   color:#f3e6c9;}
 .at-home-spec h2 em{color:#e6c591;font-weight:400;}
-.at-home-facts{display:grid;gap:0;border-top:1px solid #53697566;
-  border-bottom:1px solid #53697566;margin-bottom:17px;}
-.at-home-facts>div{display:grid;gap:6px;padding:14px 0;border-bottom:1px solid #5369755a;}
-.at-home-facts>div:last-child{border-bottom:none;}
-.at-home-facts span{font:10px ui-monospace,monospace;color:#9eb8bd;letter-spacing:.11em;}
-.at-home-facts strong{font-size:12px;color:#f1e3cb;font-weight:520;overflow-wrap:anywhere;}
+.at-home-room{padding:17px 0 19px;margin-bottom:15px;
+  border-top:1px solid #53697566;border-bottom:1px solid #53697566;}
+.at-home-room legend{font-size:12px;color:#efdbb8;font-weight:650;margin-bottom:13px;}
+.at-home-spec .at-home-choice-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+.at-home-spec .at-home-choice-list button{padding:10px;min-height:48px;
+  font-size:11px;line-height:1.3;text-wrap:pretty;}
+.at-home-spec .at-home-choice-list button:focus-visible{outline:2px solid #efcf98;outline-offset:2px;}
 .at-home-back{border:none;background:none;color:#efc98f;padding:8px 0;
   font-size:12px;text-decoration:underline;text-underline-offset:5px;cursor:pointer;}
 .at-home-right .at-customer-order{margin:0;}
@@ -960,3 +961,12 @@
   .at-observatory-perspective .skw-slider,
   .at-observatory-perspective .skw-reset{grid-column:1;grid-row:auto}
 }
+
+/* Chapter 05: keep safety/recovery notices compact for skies with <=24 eligible lights. */
+.at-home-star-notice{display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:9px;margin:0;padding:11px 14px;
+  border:1px solid #536c75;border-radius:10px;background:#102a36;
+  color:#d6e2e4;font-size:11px;line-height:1.5;}
+.at-home-star-notice button{padding:7px 10px;border:1px solid #aa8d63;
+  border-radius:8px;background:#193846;color:#f0d6a3;cursor:pointer;}
+.at-home-star-notice button:focus-visible{outline:2px solid #fff;outline-offset:2px;}
