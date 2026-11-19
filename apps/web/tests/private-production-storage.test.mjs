@@ -26,7 +26,9 @@ test('original ZIP must be frozen before Etsy-ready state is displayed',()=>{
   const freeze=app.indexOf('await freezeManufacturingPacket(receipt,packet)')
   const ready=app.indexOf('setPreparedOrder({key,packet})')
   assert.ok(freeze>0 && ready>freeze)
-  assert.match(app,/maker packet are securely archived for Etsy/)
+  assert.match(app,/Your original photo, star map and all print\/maker files/)
+  assert.match(app,/Download complete maker packet \(ZIP\)/)
+  assert.match(app,/etsyDesignCardFilename\(receipt\.designId\)/)
 })
 
 test('checklist is 23 paid-job-scoped durable records, not browser localStorage',()=>{
