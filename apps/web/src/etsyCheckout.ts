@@ -50,8 +50,3 @@ export function canContinueToEtsy(input:{
     Boolean(listing.url) && manifest.status==='UNPAID_PREVIEW'
 }
 
-/** Etsy accepts PNG buyer uploads; the private design access key never appears here. */
-export function etsyDesignCardFilename(designId:string):string {
-  if(!isSavedDesignId(designId))throw Error('Save your design before downloading an Etsy card.')
-  return designId+'-starkeepsake-design.png'
-}

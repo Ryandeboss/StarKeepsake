@@ -964,3 +964,19 @@
 .at-saved-design-private>*:not(summary){margin-top:9px;}
 @media(max-width:480px){.at-etsy-handoff-step{grid-template-columns:26px minmax(0,1fr);gap:8px;}
  .at-etsy-handoff-step button{width:100%;justify-self:stretch;}}
+
+/* Clear buyer handoff: copy the one Design ID, then open Etsy. */
+.at-etsy-simple .at-order-ready-heading strong{font-size:23px;color:#f4e8c6;}
+.at-etsy-simple .at-order-ready-heading small{font-size:12px;line-height:1.65;}
+.at-etsy-simple .at-etsy-handoff-step{padding:18px 0;}
+.at-etsy-simple .at-etsy-handoff-step strong{font-size:14px;}
+.at-etsy-simple .at-etsy-handoff-step small{font-size:12px;line-height:1.6;}
+.at-etsy-simple .at-order-reference{display:block;width:fit-content;max-width:100%;
+  font-size:clamp(14px,3.5vw,19px);letter-spacing:.05em;
+  border:1px solid #567980;background:#0b2330;border-radius:8px;padding:11px 12px;}
+.at-etsy-simple .at-etsy-copy-id{border-color:#c7ac7e;background:#e8d0a0;
+  color:#172d34;font-weight:700;text-align:center;justify-self:stretch;font-size:13px;}
+.at-etsy-simple .at-etsy-checkout{font-size:14px;line-height:1.45;
+  font-weight:750;box-shadow:0 7px 24px #0004;}
+.at-etsy-simple .at-etsy-unpaid-note{color:#b5cecc;line-height:1.7;padding-top:3px;}
+.at-etsy-simple .at-maker-backup{margin-top:4px;opacity:.92;}

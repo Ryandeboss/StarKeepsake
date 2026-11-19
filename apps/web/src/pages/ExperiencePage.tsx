@@ -33,7 +33,7 @@ import type { OrderPreferences } from '../customerOrder'
 import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
 import type { SavedDesignReceipt } from '../savedDesign'
 import { PREVIEW_FRAME_QUOTES, frameQuoteFor, loadFramePrices, moneyUsd } from '../storefrontPricing'
-import { etsyListingForFinish, canContinueToEtsy, etsyDesignCardFilename } from '../etsyCheckout'
+import { etsyListingForFinish, canContinueToEtsy } from '../etsyCheckout'
 import type { FrameQuote } from '../storefrontPricing'
 import './ExperiencePage.css'
 
@@ -785,15 +785,12 @@ export function ExperiencePage() {
       copiedTimeout.current=window.setTimeout(()=>setCopied(null),3400)
     }catch{
       if(kind==='link')setSaveError('Copy failed. Try copying this page address from your browser.')
-      else setOrderError('Copy failed. Download the order sheet instead.')
+      else setOrderError('Could not copy automatically. Select the Design ID shown below and copy it, then paste it into Etsy.')
     }
   }
 
   async function buildOrderPacket(){
-    if(currentOrder){
-      downloadFile(currentOrder.sheet,etsyDesignCardFilename(currentOrder.manifest.reference))
-      return
-    }
+    if(currentOrder)return
     if(!photo)return
     if(!activeDesign.physicalStars?.length){
       setOrderError('Choose a view with at least one physical star light before preparing your Etsy order.')
@@ -815,10 +812,6 @@ export function ExperiencePage() {
       // Privately freeze exact maker ZIP before enabling Etsy checkout.
       await freezeManufacturingPacket(receipt,packet)
       setPreparedOrder({key,packet})
-      // Only after the full maker ZIP is privately archived, start the Etsy PNG download.
-      // The download button below is a fallback if the browser blocks auto-download.
-      try{downloadFile(packet.sheet,etsyDesignCardFilename(receipt.designId))}
-      catch{/* Frozen packet remains ready; manual download is still available. */}
     }catch(cause){
       setOrderError(cause instanceof Error?cause.message:'Could not prepare your order files.')
     }finally{setOrderBusy(false)}
@@ -1448,83 +1441,71 @@ export function ExperiencePage() {
                 {saveBusy?'Saving draft…':savedCurrent?'✓ Draft saved':'Save draft for later'}
               </button>
               {saveError&&<p role="alert" className="at-error">{saveError}</p>}
-              <button type="button" className="at-primary at-wide"
+              {!currentOrder&&<button type="button" className="at-primary at-wide"
                 disabled={orderBusy||saveBusy||restoreBusy} onClick={()=>void buildOrderPacket()}>
-                {orderBusy?'Saving and preparing your keepsake…':
-                  currentOrder?'✓ Prepared · Download design card again':
-                  'Save design & prepare Etsy order'} <span>✦</span>
-              </button>
-              <small className="at-order-intro-note">This saves your exact photograph, sky,
-                selected illuminated stars and frame finish, then prepares a PNG design card
-                to take to Etsy. No payment is made here.</small>
+                {orderBusy?'Saving your keepsake…':'Save design & prepare Etsy order'} <span>✦</span>
+              </button>}
+              {!currentOrder&&<small className="at-order-intro-note">
+                We'll securely save your design, including your photograph, stars and frame
+                selection. You'll only need your Design ID to finish ordering on Etsy.
+              </small>}
               {orderError&&<p role="alert" className="at-error">{orderError}</p>}
-              {currentOrder&&<div className="at-ready-packet" role="status">
+              {currentOrder&&<div className="at-ready-packet at-etsy-simple" role="status">
                 <div className="at-order-ready-heading">
-                  <strong>✓ Your design is saved and ready for Etsy</strong>
-                  <small>Your original photo, star map and all print/maker files
-                    are stored privately under this Design ID.</small>
+                  <strong>✓ Your design is saved!</strong>
+                  <small>Everything you customized is safely stored. Just two steps
+                    left to order your keepsake on Etsy — no file upload needed.</small>
                 </div>
                 <div className="at-etsy-handoff-step">
                   <span className="at-etsy-handoff-number">01</span>
                   <div>
                     <strong>Copy your Design ID</strong>
-                    <span className="at-order-reference">{currentOrder.manifest.reference}</span>
-                    <small>Paste this exact code into the “StarKeepsake Design ID” text field
-                      on Etsy. This is how your payment is matched to the design.</small>
-                    <button type="button" onClick={()=>
+                    <small>This code tells us exactly which photograph, sky and frame
+                      you designed.</small>
+                    <span className="at-order-reference" aria-label="Your unique Design ID">
+                      {currentOrder.manifest.reference}
+                    </span>
+                    <button type="button" className="at-etsy-copy-id" onClick={()=>
                       void copyWithFeedback(currentOrder.manifest.reference,'order')}>
-                      {copied==='order'?'✓ Design ID copied!':'1 · Copy exact Design ID for Etsy'}
+                      {copied==='order'?'✓ Copied! Ready to paste on Etsy':'Copy my Design ID'}
                     </button>
                   </div>
                 </div>
                 <div className="at-etsy-handoff-step">
                   <span className="at-etsy-handoff-number">02</span>
                   <div>
-                    <strong>Your Etsy design card (PNG)</strong>
-                    <small>The download should start automatically when your files are ready.
-                      It shows your photo, selected stars, frame details and Design ID.</small>
-                    <button type="button" onClick={()=>downloadFile(currentOrder.sheet,
-                      etsyDesignCardFilename(currentOrder.manifest.reference))}>
-                      ↓ Download design card again (PNG)
-                    </button>
-                    <small>You may also upload this PNG into Etsy's file-upload field,
-                      if present. It is optional reference artwork; the text Design ID
-                      is still required for automatic matching. Do not upload maker ZIPs.</small>
-                  </div>
-                </div>
-                <div className="at-etsy-handoff-step">
-                  <span className="at-etsy-handoff-number">03</span>
-                  <div>
-                    <strong>Purchase your frame on Etsy</strong>
-                    <small>Choose the matching {finish==='walnut'?'Two-tone walnut':'Matte black'}
-                      {' '}finish and check Etsy's actual price, shipping and order details.</small>
+                    <strong>Open Etsy and complete your order</strong>
+                    <small>On Etsy, paste the code into the box labeled
+                      {' '}<b>“StarKeepsake Design ID”</b>, select the matching
+                      {' '}<b>{finish==='walnut'?'Two-tone walnut':'Matte black'}</b>
+                      {' '}frame finish, then check out. You don't need to upload
+                      your photo again.</small>
                     {etsyCheckoutReady&&selectedEtsyListing
                       ?<a className="at-etsy-checkout" href={selectedEtsyListing.url}
                         target="_blank" rel="noopener noreferrer"
                         onClick={()=>{void navigator.clipboard?.writeText(currentOrder.manifest.reference)
                           .then(()=>setCopied('order')).catch(()=>{})}}>
-                        3 · Continue to Etsy to buy your frame ↗</a>
+                        Continue to Etsy ↗</a>
                       :<p className="at-checkout-pending">
                         {selectedEtsyListing
-                          ?'Prepare your latest design to unlock checkout.'
-                          :'Etsy checkout is not configured for this frame finish yet. Your design is saved.'}
+                          ?'Your design has changed. Prepare the latest version before ordering.'
+                          :'Your design is saved. Etsy checkout is not available for this frame finish yet.'}
                       </p>}
+                    <small>Etsy opens in a new tab. Payment and shipping are handled
+                      securely by Etsy.</small>
                   </div>
                 </div>
-                <small>Saving or uploading a file is not a purchase. Your design
-                  appears as purchased in our workshop only after Etsy confirms a paid
-                  order containing the matching Design ID.</small>
+                <small className="at-etsy-unpaid-note">This design is saved, not purchased.
+                  We'll connect your Etsy order to it once payment is confirmed using
+                  the same Design ID.</small>
                 <details className="at-maker-backup">
-                  <summary>Optional · complete maker file backup</summary>
-                  <p>The full ZIP contains your original photo, chosen real star coordinates,
-                    print variants and assembly reference files. It is archived privately
-                    for production and is not an Etsy upload.</p>
+                  <summary>Optional · Keep a copy of your complete design files</summary>
+                  <p>Your files are already saved securely for our workshop.
+                    This download is just an optional personal backup, not something
+                    you need to send to Etsy.</p>
                   <button type="button" onClick={()=>downloadFile(currentOrder.zip,
                     currentOrder.manifest.reference+'-maker-packet.zip')}>
-                    ↓ Download complete maker packet (ZIP)</button>
-                  <button type="button" onClick={()=>
-                    void copyWithFeedback(orderPersonalization(currentOrder.manifest),'details')}>
-                    {copied==='details'?'✓ Summary copied!':'Copy full design summary'}</button>
+                    Download complete design backup (ZIP)</button>
                 </details>
               </div>}
               {savedCurrent&&savedDesign&&<details className="at-saved-design at-saved-design-private">

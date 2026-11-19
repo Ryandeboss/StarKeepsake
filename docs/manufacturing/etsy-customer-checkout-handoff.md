@@ -13,8 +13,9 @@ This feature does not create Etsy listings, process payments, or change existing
    polished foreground where required, and design preferences are saved privately.
    Only the **server-assigned** `SK-[0-9A-F]{16}` ID can proceed. A temporary
    local packet checksum can **never** be used for a paid Etsy match.
-3. Customer sees exact saved Design ID, private link, optional maker packet and
-   optional order-sheet PNG. The public SK ID is not an asset access key.
+3. Customer sees a simple 2-step checkout guide: **Copy my Design ID** and
+   **Continue to Etsy**. No downloads or uploads required. The public SK ID is
+   a lookup key, never a private asset access key.
 4. Copy **only the SK code** into Etsy's required text Custom option named
    "StarKeepsake Design ID". Any extra photo upload/inscription options are
    separate. The buyer checks that Etsy's frame finish matches their saved choice.
@@ -47,8 +48,9 @@ Each listing must contain a **required text Custom option**, exact name
 "StarKeepsake Design ID", max 40 characters, instructions:
 "After customizing at StarKeepsake, paste only your saved SK-... Design ID.
 Do not paste your private design link. Your photo is already saved securely."
-Optional upload of order-sheet.png if desired: file uploads and inscription
-options must be separate questions. Etsy's newer Custom options can return
+File upload is deliberately **not** part of the customer handoff. If Etsy has
+a file-upload custom option on the listing, buyers may ignore it if optional;
+the required text Design ID is sufficient. Etsy's newer Custom options can return
 multiple `property_id:54` records; the parser now accepts **exactly one**
 standalone SK ID and ignores other notes/file URL fields. Multiple possible
 IDs remain ambiguous and must be reviewed.
@@ -107,3 +109,27 @@ The Production Studio has an at-a-glance Purchased Design IDs list, filtered
 to actual Etsy-paid, noncancelled, nonrefunded, single-unit matched jobs; click
 through for receipt details and owner-only files. All items remain subject to
 physical print/electrical/procurement proof before fabrication.
+
+## November 19, 2026 — current buyer experience (supersedes earlier PNG steps)
+
+Owner decided buyer PNG downloads and file-upload instructions add friction.
+Chapter 05 **Save design & prepare Etsy order** now preserves the existing
+private saved photo, selected astronomical/physical stars, frame choice, and
+server-frozen full manufacturing ZIP. After preparation the customer sees only:
+1. **Copy my Design ID** (the actual server-issued SK code displayed prominently).
+2. **Continue to Etsy**: paste the SK code into Etsy's **"StarKeepsake Design ID"**
+   text field, select the same finish, and check out with Etsy. No file or
+   photo needs to be uploaded. The button is no longer an automatic PNG download.
+
+A small closed disclosure allows an *optional* ZIP backup, not needed for
+checkout. The private reopening link remains separately tucked away.
+Customer's payment can only be confirmed by Etsy verified webhook/manual sync;
+a saved design alone is not a purchase. Maker's order-sheet PNG continues to
+exist inside the **private** packet for shop use and is not provided or
+requested in the Etsy buying instructions.
+
+**Important Etsy listing prerequisite:** Make sure the actual listing has the
+required **text** personalization named `StarKeepsake Design ID`; a file-only
+Etsy listing cannot be automatically matched. Check finish variation and
+actual listing price before accepting orders. Neither the payment flow nor
+an intentional paid transaction has been acceptance-tested end-to-end.
