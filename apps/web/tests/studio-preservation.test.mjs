@@ -109,7 +109,11 @@ test('paid Etsy jobs load design-specific N-star procurement and engineering pre
   assert.match(qualityPacket,/manufacturing-job-plan\.json/)
   assert.match(qualityPacket,/candidate-parts\.csv/)
   assert.match(qualityPacket,/drill-template-1to1-DRAFT\.svg/)
-  assert.match(studio,/DEVELOPMENT CAPACITY · UNVERIFIED FOR MANUFACTURING/)
+  assert.doesNotMatch(studio,/DEVELOPMENT CAPACITY · UNVERIFIED FOR MANUFACTURING/)
+  assert.doesNotMatch(studio,/<option value={48}>|<option value={72}>/)
+  assert.match(studio,/Up to 24 illuminated stars per keepsake/)
+  assert.match(file('../src/physicalStarView.ts'),
+    /Math\.min\(DEFAULT_MAX_PHYSICAL_STARS,backendMax\)/)
 })
 
 // The customer landing page should stay clean even for /?trial=1.

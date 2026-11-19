@@ -34,14 +34,22 @@ test('a real paid job with N=12 yields 12 LEDs and one driver, one harness group
  assert.equal(row(x,'pico').quantity,1)
  assert.equal(x.status,'HOLD_FOR_MANUFACTURING_APPROVAL')
 })
-test('N is not capped by a single TLC5947 board',()=>{
- for(const [n,drivers,groups] of [[24,1,2],[36,2,3],[49,3,5],[72,3,6]]){
+test('current designs stay within 24 while legacy large designs remain on manufacturing hold',()=>{
+ for(const [n,drivers,groups] of [[12,1,1],[24,1,2],[36,2,3],[49,3,5],[72,3,6]]){
    const x=fixture(n)
    assert.equal(x.physicalCount,n)
    assert.equal(x.driverCount,drivers)
    assert.equal(x.connectorGroupCount,groups)
    assert.equal(row(x,'star_led').quantity,n)
    assert.equal(row(x,'starpods').quantity,n)
+   if(n>24){
+     assert.equal(x.geometryValidated,false)
+     assert.ok(x.holds.some(hold=>hold.includes('finalized 24-light product limit')))
+     assert.throws(()=>makerDrillTemplateSvg(x),/held/)
+   }else{
+     assert.equal(x.geometryValidated,true)
+     assert.doesNotThrow(()=>makerDrillTemplateSvg(x))
+   }
  }
 })
 test('all four owner parts sections appear with quantities or explicit TBD',()=>{
@@ -57,14 +65,14 @@ test('all four owner parts sections appear with quantities or explicit TBD',()=>
  assert.match(makerChecklistJson(x),/No durable server-side completion/)
 })
 test('frozen distinct LED coordinates produce a scale-labeled front-facing SVG',()=>{
- const x=fixture(36)
+ const x=fixture(24)
  const svg=makerDrillTemplateSvg(x)
  assert.match(svg,/TOP ↑ FRONT VIEW/)
  assert.match(svg,/PRINT 100%/)
  assert.match(svg,/width="303.4mm"/)
  assert.match(svg,/NOT AUTHORIZED/)
  assert.match(makerStarMapCsv(x),/LED INDEX,HIP ID/)
- assert.equal(x.stars.length,36)
+ assert.equal(x.stars.length,24)
 })
 test('missing physical star set or unregistered coordinates BLOCK drilling',()=>{
  const absent=fixture(0)

@@ -76,6 +76,7 @@ export function buildManufacturingJobPlan(design:DesignSpec,prefs:OrderPreferenc
   const holds:string[]=[]
   if(!n)holds.push('No frozen physicalStars list; do not infer stars from the digital sky.')
   if(n>128)holds.push('Physical-star count exceeds the current planning safety bound.')
+  if(n>24)holds.push('LEGACY DEVELOPMENT DESIGN: more than the finalized 24-light product limit. Reconfigure the saved star choices before any manufacturing or drilling.')
   if(max!==null&&n>max)holds.push('Saved physical star count exceeds its configured maximum.')
   if(Math.abs(w-279.4)>.2||Math.abs(h-355.6)>.2)
     holds.push('Saved artboard is not the required 11 × 14-inch trim; revalidate legacy artwork.')
@@ -95,7 +96,7 @@ export function buildManufacturingJobPlan(design:DesignSpec,prefs:OrderPreferenc
     pwmValue:null,apertureCategory:null,
   })).sort((a,b)=>a.ledIndex-b.ledIndex)
   const seenIds=new Set<number>()
-  let geometryValidated=n>0&&n<=128&&Math.abs(w-279.4)<=.2&&Math.abs(h-355.6)<=.2
+  let geometryValidated=n>0&&n<=24&&Math.abs(w-279.4)<=.2&&Math.abs(h-355.6)<=.2
   for(let i=0;i<stars.length;i++){
     const s=stars[i]
     const valid=clampInt(s.ledIndex)&&s.ledIndex===i &&

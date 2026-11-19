@@ -199,3 +199,24 @@ selection and physical 1:1 star drilling registration; approve actual
 supplier SKU, wiring, power and thermal testing. The initial server freeze
 authenticates the Design ID but does not cryptographically prove the client
 ZIP pixel bytes equal server-saved original/photo fields.
+
+## 2026-11-18 — Final retail star-light configuration: maximum 24
+
+The owner selected **24 illuminated physical stars as the only retail product
+capacity**. Removed the 24/48/72 development capacity dropdown and accompanying
+development warning from customer Chapter 05. New customer drafts still auto-
+select all eligible safely separated physical stars up to 24, prioritizing
+brightness plus spatial coverage when more are eligible; users can adjust
+individual star choices, and non-illuminated catalog stars remain visible in
+the digital preview. The physical projection code clamps any historical saved
+48/72 development setting to <=24 for current customer preview/checkout.
+For legacy saved jobs with physically frozen N>24, the owner engineering
+preview retains the historical N for audit and materials visibility but
+shows an explicit manufacturing HOLD and refuses generation of a drilling
+SVG until reconfigured; no silently fabricated/purchased legacy design.
+
+Finalizing a 24-channel product is a *capacity decision*, not physical
+qualification of driver current, PSU, fuse, wiring, thermal safety, printed
+registration, physical print or StarPod manufacturing. Owner production holds
+remain until the prototype/QA passes. No data migration, no backfill of paid
+orders, no SKU/inventory or payment changes.
