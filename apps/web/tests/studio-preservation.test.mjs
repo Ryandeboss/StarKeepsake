@@ -244,3 +244,26 @@ test('owner preview is clearly fictional, read-only, and separate from paid data
   assert.doesNotMatch(sample,/fetch\(|api\(|createCustomerPacket\(|saveCustomerDesign\(/)
   assert.doesNotMatch(dashboard.split('const purchasedDesigns=useMemo')[1].split('},\[data\]')[0],/SAMPLE_DESIGN_ID|SampleProductionOrder/)
 })
+
+test('sample work order leads with actionable hold, then concise product / files / parts / build',()=>{
+  const example=sample.split('export function SampleProductionOrder()')[1]
+  const seq=['spo-status','What the customer bought','Files you','Parts needed',
+    'Build it and track','Quality check','Shipping','Advanced manufacturing details']
+  const at=seq.map(x=>example.indexOf(x))
+  assert.ok(at.every(x=>x>=0), 'All main work order sections must exist')
+  assert.ok(at.every((x,i)=>i===0||x>at[i-1]),'Show next action first and advanced last')
+  assert.match(example,/Next action:/)
+  assert.match(example,/printMaster\.artwork/)
+  assert.match(example,/PRINT_VARIANTS\.map/)
+  assert.match(example,/groups\.map/)
+  assert.match(example,/MAKER_STEPS\.slice\(0,4\)/)
+  assert.match(example,/No Etsy API request, database write/)
+})
+test('demo cannot fake stock, star geometry, persisted QA or shipping readiness',()=>{
+  assert.match(sample,/SIMULATION ONLY · NO PAYMENT · NO DATABASE RECORD/)
+  assert.match(sample,/Stock: unknown/)
+  assert.match(sample,/No QA pass, notes or QC photos are/)
+  assert.match(sample,/no real shipping/)
+  assert.match(sample,/not a customer's actual photo or calculated sky/)
+  assert.doesNotMatch(sample,/fetch\(|api\(|createCustomerPacket\(|saveCustomerDesign\(/)
+})

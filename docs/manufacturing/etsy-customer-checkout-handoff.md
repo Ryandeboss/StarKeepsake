@@ -176,3 +176,50 @@ Changes:
 load, open owner sample after logging in, then deliberately purchase and match
 a real Etsy order when ready. The example alone does **not** verify live Etsy
 webhook/payment flow, printed star registration, hardware or supplier readiness.
+
+## November 20, 2026 — focused workbench-UX upgrade for the *sample* admin order
+
+Owner attached a production-work-order UX guide and explicitly asked to **improve
+the existing example without rebuilding the dashboard**. Inspected current live
+`ProductionDashboardPage`, `SampleProductionOrder`, `OwnerProductionFiles`,
+`OwnerManufacturingPlan`, Etsy paid design matching, per-design maker plan,
+M3 inventory/purchasing and the 23-step server-saved checklist before changing code.
+
+Changes are intentionally limited to the **read-only simulated order**, styling
+and regression checks; no backend, Etsy, real jobs or stock model is changed.
+
+- First screen shows clear **PRODUCTION HOLD**, immediate next action and three
+  real-world validation blockers — never a false “Ready to Build”.
+- Customer summary shows example frame, 18 physical lights, moment, finish,
+  inscription and paid/ID fields beside an **explicitly illustrative** frame
+  placeholder. No fake personal photo or fabricated HIP coordinates.
+- Main **Files** section identifies the **¼-inch-bleed master** from the existing
+  `PRINT_VARIANTS` data (11.5×14.5 in, 300 DPI), *subject to print-lab
+  acceptance*. Other print variants, source image, JSON, star CSV and draft
+  drill template are accessible in a collapsed technical file list, not
+  counterfeit working Download buttons.
+- Parts summary derives `N=18`, 18 LEDs/StarPods, `ceil(N/24)=1` driver and
+  `ceil(N/12)=2` connector groups, followed by expandable **Buy**, **Pack**,
+  **Bulk**, **Make** examples. All on-hand/supplier statuses are clearly
+  **unknown/unverified**, never inferred stock quantities or invented orders.
+  Full genuine job BOM remains computed by `buildManufacturingJobPlan`.
+- Build section defaults to the first four steps and `0/23` simulated progress;
+  complete original `MAKER_STEPS` list is expandable. Genuine checklist
+  remains server-persisted; the sample cannot check off anything. QA and
+  shipping have separate simple **not started/not ready** sections. Advanced
+  engineering data is collapsed last.
+- Demo remains only inside existing admin-key-protected Production Studio with
+  invalid `SK-DEMO-NOT-REAL` ID and visible **SIMULATION ONLY** warning. No
+  synthetic receipt or saved-design record, no API call, no inventory
+  write, no Etsy/payment/shipping mutation. Actual paid jobs are unchanged.
+- Deferred real-job gaps from the user's broader guideline: embedded
+  verified customer preview, per-job allocated-vs-available inventory
+  aggregation and statuses, dedicated QA failure notes/photo upload, verified
+  shipping state transitions and conditional print/geometry approval gates.
+  These require separate model/UX design and testing, not cosmetic demo data.
+
+No physical build approval is implied by this sample. Real orders continue to
+require payment matching, correct saved finish, print/LED geometry verification,
+approved electrical/power/thermal parts, calibrated drill placement and
+supplier review. One GitHub feature push / one Vercel production deployment
+target; update issue #58 with tested commit and final CI/deployment status.
