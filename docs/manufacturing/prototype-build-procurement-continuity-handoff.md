@@ -1109,3 +1109,27 @@ Advertising can begin once this loop is genuinely usable and the physical recipe
 
 The immediate request in this turn was to produce a prompt for the separate website-development chat that reiterates the exact data/assets/BOM that must flow from a finalized builder design into the admin production interface and Etsy linkage.
 
+
+
+---
+
+# 23. Master context document created
+
+On 2026-11-20 the user asked for a **new actual GitHub document, not an issue**, that acts as a large self-contained context prompt covering the entire physical-build/procurement/manufacturing/admin/Etsy thread.
+
+Created:
+
+- `docs/manufacturing/MASTER-CONTEXT-physical-build-procurement-and-production.md`
+
+Purpose:
+
+- paste into a brand-new ChatGPT conversation;
+- restore the full physical product/manufacturing context;
+- preserve the variable-N correction;
+- preserve the current product architecture and prototype caveats;
+- preserve the Google Sheet procurement structure;
+- preserve the website bleed/physical-star requirements;
+- preserve the builder -> immutable production packet -> Etsy paid order -> admin manufacturing job requirements;
+- prevent a future chat from forcing the user to re-explain this thread.
+
+This rolling continuity file should continue to be updated after substantive turns, while the MASTER CONTEXT file is the larger restart/paste-in document.
