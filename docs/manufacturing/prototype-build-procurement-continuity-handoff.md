@@ -1133,3 +1133,245 @@ Purpose:
 - prevent a future chat from forcing the user to re-explain this thread.
 
 This rolling continuity file should continue to be updated after substantive turns, while the MASTER CONTEXT file is the larger restart/paste-in document.
+
+
+---
+
+# Latest turn — Admin production view must make a paid Etsy draft physically buildable
+
+The user clarified the current real-order flow:
+
+- customer uses the StarKeepsake website workshop to build a draft;
+- drafts are saved and visible to the owner/admin;
+- if the customer wants to buy, the website gives them the draft/design ID;
+- customer enters that ID in Etsy and completes payment;
+- admin sees which saved draft was purchased;
+- admin then physically builds that exact StarKeepsake.
+
+The admin view therefore needs to function as a **single production workstation**, not just an order viewer.
+
+The user wants to be able to open one paid order and immediately:
+
+1. see exactly what the customer bought;
+2. download the exact print/manufacturing files;
+3. know exactly which parts/materials are required;
+4. know which parts must be purchased now vs pulled from stock vs fabricated;
+5. track whether all required parts have arrived;
+6. follow a straightforward assembly sequence;
+7. verify the finished product before shipping.
+
+## Minimum admin order page requirements
+
+### Order identity / purchase confirmation
+
+Show:
+
+- Etsy order/receipt ID;
+- paid status;
+- StarKeepsake Design ID / draft ID;
+- immutable design version;
+- customer-selected frame finish;
+- Etsy variation;
+- saved website variation;
+- obvious mismatch warning if Etsy selection and saved design do not match;
+- order date;
+- current production status.
+
+### Exact visual reference
+
+Show:
+
+- large final customer-approved preview;
+- original customer image, privately accessible;
+- final processed image/cutout;
+- exact customer-visible composition;
+- date/time/location;
+- inscription/text;
+- sky mode/layout;
+- orientation;
+- physical star count N.
+
+The owner should be able to visually confirm what is being built without reopening the customer-facing workshop.
+
+### Production files
+
+Provide direct download/open buttons for:
+
+- exact visible/trim artwork;
+- print-ready artwork with bleed;
+- any approved alternate bleed export;
+- 1:1 drilling template;
+- manufacturing packet/PDF;
+- manufacturing JSON/data;
+- star coordinate table;
+- source/processed assets for recovery.
+
+The admin view should explicitly label which file is the one to send to the print lab.
+
+### Physical-star manufacturing table
+
+For every physical star, show:
+
+- LED index;
+- HIP/catalog identifier where available;
+- magnitude;
+- X coordinate;
+- Y coordinate;
+- aperture size/category once calibrated;
+- PWM/brightness value once calibrated;
+- whether auto-selected or manually chosen.
+
+The table must contain exactly N rows and preserve the finalized star set from the purchased design.
+
+### Per-order BOM
+
+The admin page must generate the actual material requirements for that exact order.
+
+Separate clearly into:
+
+- BUY FOR THIS ORDER;
+- PULL FROM PACK STOCK;
+- CONSUME FROM BULK STOCK;
+- MAKE FOR THIS ORDER.
+
+For each line show:
+
+- item;
+- required quantity;
+- quantity on hand where tracked;
+- quantity still needed;
+- supplier/product;
+- purchase link;
+- pack size;
+- current known price;
+- order status;
+- delivery status;
+- allocated/used status;
+- notes.
+
+Star-dependent parts must scale with N:
+
+- LEDs = N;
+- StarPods = N;
+- star-channel wire scales with N;
+- TLC5947 boards = ceil(N/24) for current prototype architecture;
+- star-harness connector groups scale with N/current connector recipe.
+
+### Parts-readiness / receiving
+
+The order page should make it obvious whether the build can start.
+
+Each required part/material should have a status such as:
+
+- Need to buy;
+- Ordered;
+- Shipped;
+- Delivered;
+- In stock;
+- Allocated to this job;
+- Fabricated;
+- Ready.
+
+The admin should have one clear overall indicator such as:
+
+- Waiting on parts;
+- Ready to build.
+
+Do not make the owner mentally compare several tabs to decide whether all components are available.
+
+### Build sequence / checklist
+
+Once materials are ready, the same order page should provide a saved step-by-step manufacturing checklist, approximately:
+
+1. verify paid order/design/version;
+2. verify correct frame finish;
+3. obtain/order professional print;
+4. prepare SINTRA panel;
+5. mount print;
+6. inspect mounted artwork;
+7. transfer/drill N star locations;
+8. inspect apertures;
+9. install N StarPods;
+10. install N LEDs;
+11. build/connect star harness;
+12. build/install accent-light assembly if approved;
+13. assemble electronics carrier;
+14. install Pico W + TLC5947 board(s) + MOSFET/power hardware;
+15. connect power/protection;
+16. flash/load the exact customer configuration;
+17. run channel-walk test;
+18. dark-room optical test;
+19. perform burn-in;
+20. final astronomical/design QA;
+21. clean glazing/frame;
+22. install/close rear cover;
+23. verify hanging hardware;
+24. take final QC photos;
+25. package;
+26. mark ready to ship / shipped.
+
+Checklist state must persist.
+
+### Build-specific instructions
+
+Do not only show a generic tutorial. The order page should also surface job-specific values:
+
+- N;
+- number of driver boards;
+- number of harness connector groups;
+- exact star coordinates;
+- exact frame finish;
+- exact print file;
+- exact customer text;
+- exact orientation;
+- exact firmware/config payload;
+- any conditional spacer/hardware requirement for that frame.
+
+### QA / traceability
+
+The job should retain:
+
+- who/when marked major build stages complete where practical;
+- burn-in completed;
+- test notes;
+- defects/rework notes;
+- final QC photos;
+- final firmware/config version;
+- final star count;
+- finished weight where used for hanging/shipping validation.
+
+### Shipping readiness
+
+Before marking ready to ship, admin should be able to confirm:
+
+- correct customer/order;
+- correct frame finish;
+- clean glazing;
+- no loose hardware;
+- rear cover secure;
+- power adapter included;
+- instruction/care insert included;
+- protective packaging complete;
+- QC photos saved.
+
+## UX principle
+
+The ideal admin experience is:
+
+```text
+open paid order
+-> confirm what customer bought
+-> download/send print file
+-> see exact parts needed
+-> buy missing items / allocate stock
+-> wait until Ready to Build
+-> follow one persistent build checklist
+-> use order-specific drilling/star/electronics data
+-> complete QA
+-> package
+-> ship
+```
+
+The admin should not need to reconstruct anything from memory, jump back into the customer builder, or manually derive the BOM from a generic parts spreadsheet.
+
+The production page should become the owner’s **single source of truth for physically fulfilling that Etsy order**.
