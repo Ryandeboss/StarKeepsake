@@ -1447,3 +1447,59 @@ open paid order
 The admin should not need to reconstruct anything from memory, jump back into the customer builder, or manually derive the BOM from a generic parts spreadsheet.
 
 The production page should become the owner’s **single source of truth for physically fulfilling that Etsy order**.
+
+
+---
+
+# Latest turn — Admin production UI must be owner-friendly, not merely data-complete
+
+The user asked for a prompt to give the coding agent that has already built the admin view.
+
+The goal is now explicitly UX-focused:
+
+- preserve the existing admin implementation where possible;
+- audit it against the production requirements rather than rebuilding blindly;
+- make a paid order feel like a clear digital work order;
+- avoid clutter, giant walls of metadata, or forcing the owner to jump between multiple pages;
+- put the most important action/status information first;
+- progressively reveal technical detail when needed;
+- make the next action obvious at every stage.
+
+Desired top-level order-page hierarchy:
+
+1. Production status / next action.
+2. Customer-approved final design preview + core order facts.
+3. Files needed right now (especially the print-lab file and drilling/manufacturing packet).
+4. Parts readiness grouped as Buy for this order / Pack Stock / Bulk Stock / Make.
+5. Persistent build checklist.
+6. Physical-star/manufacturing details.
+7. QA/burn-in/shipping readiness.
+8. Advanced/raw metadata collapsed by default.
+
+The page should answer, at a glance:
+
+- What exactly did the customer buy?
+- What do I need to do next?
+- What am I waiting on?
+- Which file should I send to the print lab?
+- Which parts do I need to order?
+- Which parts do I already have?
+- Is the job ready to build?
+- What assembly step am I currently on?
+- Has QA passed?
+- Is it ready to ship?
+
+UX principles:
+
+- one production job = one primary workspace;
+- no requirement to reopen the customer builder to reconstruct the design;
+- no requirement to mentally compare Etsy, spreadsheet, and admin data;
+- use clear section grouping, concise labels, status chips, progress indicators, and prominent primary actions;
+- avoid showing every technical field at the same visual priority;
+- use expandable/collapsible advanced sections for raw astronomy/manufacturing metadata;
+- make destructive or irreversible actions deliberate;
+- preserve checklist and part statuses across refreshes;
+- surface blocking mismatches/errors near the top;
+- optimize for desktop workbench use, while remaining responsive.
+
+The coding-agent prompt for this turn should ask it to inspect the existing admin implementation first, identify which requirements are already met, then make the smallest cohesive set of UI/data-flow changes needed to satisfy the production-workstation experience.
