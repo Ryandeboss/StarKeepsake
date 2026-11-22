@@ -1503,3 +1503,19 @@ UX principles:
 - optimize for desktop workbench use, while remaining responsive.
 
 The coding-agent prompt for this turn should ask it to inspect the existing admin implementation first, identify which requirements are already met, then make the smallest cohesive set of UI/data-flow changes needed to satisfy the production-workstation experience.
+
+
+---
+
+# Latest turn — Amazon sourcing capability
+
+The user asked whether ChatGPT can find Amazon product links or whether ChatGPT Work can do it.
+
+Current guidance:
+
+- In ordinary Chat, ChatGPT can search the public web for Amazon product pages and return direct links, compare candidate products, prices, pack sizes, and specs where accessible.
+- For Amazon specifically, normal product-search tooling may be limited, so standard web search/browser access is often the better route.
+- ChatGPT Work is better suited for a longer sourcing workflow because it can use a cloud browser on supported websites, interact with webpages, and carry out multi-step research. Website compatibility varies and a site may block automated access.
+- Work can pause for sign-in or confirmation when necessary.
+- Consequential actions such as purchases should still require user review/confirmation.
+- For StarKeepsake, the preferred workflow is: research exact BOM items -> compare Amazon/DigiKey/Adafruit/etc. -> capture direct links, pack sizes, current prices, shipping/availability -> update the sourcing sheet/admin BOM. Do not auto-purchase or mark items production-approved merely because a listing was found.
