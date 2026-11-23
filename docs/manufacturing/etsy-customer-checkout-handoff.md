@@ -283,3 +283,85 @@ confirm it vanishes while real Etsy counts stay unchanged. This is a true
 end-to-end *simulation*, **not** a live Etsy payment verification. The physical
 product still needs prototyping and safety/print proofs. Only one batched
 GitHub push / Vercel production deploy planned.
+
+## 2026-11-23 — Full per-design manufacturing rehearsal expansion
+
+This extends the existing owner-only `/api/production/simulate` test-order
+system; it does **not** create synthetic Etsy receipts, transactions, refunds,
+paid metrics, orders to suppliers or real shipping events.
+
+- **Frozen version, not regenerated guesswork:** The immutable private
+  `frozen-v1.zip` is read on the owner dashboard using
+  `src/frozenMakerReader.ts`, which validates the Design ID, manufacturing
+  plan version, selected physical star count, all three exact artwork/spec/guide
+  file variants, and the original preview. Actual frozen files are downloadable
+  individually; any *regenerated* reference is separately labeled. The original
+  customer image stays private. Existing legacy packets with wrong Design IDs
+  cannot masquerade as validated frozen packets.
+- **Production ID alignment repair:** `customerOrder.ts` now supplies the
+  server-issued SK Design ID to the frozen manufacturing-job-plan.json, rather
+  than retaining the client-side `design-placeholder` draft ID. New frozen
+  packets match their full order manifests and private asset keys.
+- **14-phase rehearsal:** `src/rehearsalPhases.json` defines **103 detailed
+  test-only checks**, spanning preflight, files, procurement, print/panel,
+  apertures, StarPods, harness, electronics, current-limited power-up,
+  dark-room optical, burn-in, final assembly, QA and packaging. These records
+  are stored individually and independently under the matching test Design ID
+  by the same owner-authorized Vercel API namespace. Reloads resume progress.
+  The legacy 23-step paid-job checklist remains unchanged and is not used as
+  the simulation's sole evidence log.
+- **Per-job parts:** Exact N-dependent maker parts from the saved/frozen plan
+  are snapshotted on simulation creation. Each part independently tracks
+  Needed, In stock, Need to buy, Ordered, Shipped, Delivered, Inspected,
+  Allocated, Ready or Not applicable (with justification), plus physical
+  validation level and written notes. **M3 on-hand stock is global**, never
+  automatically reserved by a test job. Missing stock and uncertain quantities
+  stay unknown/TO MEASURE, never invented.
+- **Supplier confidence vs build testing:** Manufacturer Direct,
+  Reputable Distributor / Specialty Vendor, Marketplace Seller Verification,
+  etc. are shown separately from Research Candidate/Datasheet/Bench/Fit/
+  Optical/Electrical/Thermal testing. Research links include Adafruit product
+  1429 (TLC5947), 5648 (MOSFET); Curbell genuine 3 mm SINTRA;
+  Lumimax LED3FWAW on DigiKey Marketplace; Drytac MultiTac documentation.
+  None is automatically build-approved. PSU and fuse remain **not selected**
+  until current/rating measurements. Never laser SINTRA/PVC.
+- **Print lab selection:** Owner chooses exact, 1/8-in or 1/4-in bleed only
+  after recording supplier/format acceptance and proof; each original variant
+  includes a human-readable summary and original JSON guide. The 1/4-in
+  master is not automatically the print lab file.
+- **Engineering HOLD:** The test work order explains Pico W → TLC5947
+  individual constant-current sink channels, conceptual common-anode and
+  indexed cathode routing, and that old `firmware/pico2w/main.py` remains
+  WS2812 bench firmware — not approved for direct LED driver hardware.
+  No fabricated GPIO pin mapping, PSU/fuse ratings, wiring gauges or
+  safe-current claim. First power-up is current-limited, requires a reviewed
+  schematic and recorded channel, current and thermal checks.
+- **Evidence and closeout:** The owner can privately record each job's
+  selected print-lab file, physical part status, pin-map/PSU reference,
+  current, burn-in start/end/duration, temperatures, optical results,
+  QA/rework notes and nonpublic inspection-photo references. TEST build
+  completion requires all 14 phases, required parts ready, proof approval,
+  physical star geometry validation, and key measured/evidence fields; this
+  records only owner-reported **TEST_BUILD_COMPLETE**, never a paid order,
+  safety certification, shipping label or supplier purchase.
+- **Existing saved designs:** Owner can also paste their PRIVATE reopening
+  link in the admin Test Orders section. A bare SK ID is intentionally not
+  sufficient for existing Azure private photo access. A non-frozen saved
+  design must first be opened and prepared in the customer builder.
+- **Old BOM deprecation:** `docs/manufacturing/candidate-bom.json` now explicitly
+  states it is LEGACY WS2812/Pico WH material and is prohibited as current
+  production sourcing truth. Real order-specific frozen maker files
+  take precedence.
+- **Open validation:** The first real physical prototype, print-to-drill
+  registration, calibrated StarPod bore, verified firmware pin map and
+  reviewed schematic, power/current/temperature burn-in and supplier SKU
+  selection remain physical engineering holds. Never claim that checking
+  all UI boxes legally or electrically certifies the product.
+
+Acceptance sequence: customer builder SK saved + private frozen packet → click
+Simulate Etsy Purchase OR use private reopening link in owner admin → see
+real order preview/variants/star plan → choose approved lab file → log each
+part's fulfillment and validation → resume 103-check log after refresh →
+record electrical/optical burn-in and QA evidence → owner marks internal
+TEST BUILD COMPLETE (no Etsy action) → optionally delete the simulation
+without destroying the saved design or original immutable ZIP.

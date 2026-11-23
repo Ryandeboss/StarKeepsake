@@ -103,7 +103,9 @@ test('supplier candidates have real HTTPS listing URLs and explicitly unapproved
     await import('../src/supplierCandidates.ts')
   assert.ok(SUPPLIER_CANDIDATES.length>=8)
   assert.ok(SUPPLIER_CANDIDATES.every(x=>x.status==='LISTED_NOT_BUILD_VALIDATED'&&
-    new URL(x.url).protocol==='https:'&&x.checked==='2026-11-18'))
+    new URL(x.url).protocol==='https:'&&
+    /^2026-11-(18|23)$/.test(x.checked)&&
+    x.buildValidation==='Research Candidate'&&Boolean(x.sourceConfidence)))
   assert.match(supplierCandidateFor('star_led').product,/LED3FWAW/)
   assert.equal(supplierCandidateFor('wall_power'),null)
 })

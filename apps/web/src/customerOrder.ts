@@ -230,7 +230,7 @@ export async function createCustomerPacket(input:{
   })
   manifest.manufacturing.photoQuality=quality
   manifest.expectedFiles.push('photo-quality-report.json')
-  const maker=buildManufacturingJobPlan(input.design,input.prefs)
+  const maker=buildManufacturingJobPlan({...input.design,designId:reference},input.prefs)
   manifest.manufacturing.candidatePlan={
     version:maker.version,physicalCount:maker.physicalCount,
     geometryValidated:maker.geometryValidated,

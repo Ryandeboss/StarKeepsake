@@ -29,6 +29,7 @@ import { physicalToggleError } from '../physicalStarSelection'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { createCustomerPacket, downloadFile } from '../customerOrder'
 import {freezeManufacturingPacket} from '../frozenPacket'
+import {buildManufacturingJobPlan} from '../manufacturingJobPlan'
 import type { OrderPreferences } from '../customerOrder'
 import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
 import type { SavedDesignReceipt } from '../savedDesign'
@@ -836,7 +837,17 @@ export function ExperiencePage() {
         method:'POST',cache:'no-store',
         headers:{'Content-Type':'application/json',
           'X-Starkeepsake-Admin-Key':adminKey},
-        body:JSON.stringify({designId:receipt.designId,accessKey:receipt.accessKey}),
+        body:JSON.stringify({designId:receipt.designId,accessKey:receipt.accessKey,
+          plan:(()=>{
+            const built=buildManufacturingJobPlan({...activeDesign,designId:receipt.designId},
+              {...orderPreferences})
+            if(built.designId!==receipt.designId)
+              throw Error('The current design and saved maker plan are not the same snapshot.')
+            return {designId:built.designId,version:built.version,
+              physicalCount:built.physicalCount,geometryValidated:built.geometryValidated,
+              parts:built.parts.map(p=>({key:p.key,name:p.name,group:p.group,
+                quantity:p.quantity,unit:p.unit,required:p.required}))}
+          })()}),
       })
       if(!response.ok){
         let message='Could not create a test order (HTTP '+response.status+').'

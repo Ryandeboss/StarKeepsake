@@ -6,6 +6,9 @@ import { ManualAmazonPurchasingPanel } from './ManualAmazonPurchasingPanel'
 import type { MaterialSnapshot } from '../manualAmazonQueue'
 import { materialsForProductionJob } from '../orderFulfillment'
 import { OwnerProductionFiles } from './OwnerProductionFiles'
+import {parseDesignLink} from '../savedDesign'
+import type {LoadedDesign} from '../savedDesign'
+import {buildManufacturingJobPlan} from '../manufacturingJobPlan'
 import { SampleProductionOrder } from './SampleProductionOrder'
 
 type Receipt = {
@@ -117,6 +120,8 @@ export function ProductionDashboardPage() {
   const [testError,setTestError]=useState('')
   const [testSelected,setTestSelected]=useState<string|null>(null)
   const [testDeleting,setTestDeleting]=useState<string|null>(null)
+  const [testLink,setTestLink]=useState('')
+  const [testCreating,setTestCreating]=useState(false)
   const [filter, setFilter] = useState<Filter>('all')
   const [selected, setSelected] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
@@ -227,6 +232,47 @@ export function ProductionDashboardPage() {
       setFailure(text)
     } finally { setBusy(false) }
   }
+  async function createTestFromSavedLink(event:FormEvent){
+    event.preventDefault()
+    if(!key||testCreating)return
+    setTestCreating(true);setTestError('')
+    try{
+      const link=new URL(testLink.trim())
+      const privateRef=parseDesignLink(link.hash)
+      if(!privateRef)throw Error('Paste the private reopening link from Chapter 05, including its hidden edit key.')
+      const response=await fetch(BASE+'/api/designs/'+encodeURIComponent(privateRef.designId),{
+        cache:'no-store',headers:{'X-Design-Access-Key':privateRef.accessKey}})
+      if(!response.ok)throw Error('That private saved design could not be opened.')
+      const saved=await response.json() as LoadedDesign
+      if(saved.designId!==privateRef.designId)
+        throw Error('Saved design and private link reference disagree.')
+      const prepared=buildManufacturingJobPlan(
+        {...saved.design,designId:saved.designId},saved.preferences)
+      const submit=await fetch('/api/production/simulate',{
+        method:'POST',cache:'no-store',
+        headers:{'Content-Type':'application/json','X-Starkeepsake-Admin-Key':key},
+        body:JSON.stringify({
+          ...privateRef,plan:{
+            designId:prepared.designId,physicalCount:prepared.physicalCount,
+            version:prepared.version,geometryValidated:prepared.geometryValidated,
+            parts:prepared.parts.map(p=>({key:p.key,name:p.name,
+              group:p.group,quantity:p.quantity,unit:p.unit,required:p.required}))
+          },
+        }),
+      })
+      if(!submit.ok){
+        const failure=await submit.json().catch(()=>null) as {error?:string}|null
+        throw Error(failure?.error||'Test creation failed (HTTP '+submit.status+').')
+      }
+      const created=await submit.json() as {order:{designId:string}}
+      setTestLink('')
+      await load(key)
+      setTestSelected(created.order.designId)
+      setSelected(null)
+      setMessage('Internal test created from the exact saved design. No Etsy payment occurred.')
+    }catch(error){setTestError(error instanceof Error?error.message:'Could not create this test.')}
+    finally{setTestCreating(false)}
+  }
   async function deleteTestOrder(designId:string){
     if(!key||testDeleting||!window.confirm(
       'Delete the simulated purchase and its TEST checklist for '+designId+
@@ -311,6 +357,24 @@ export function ProductionDashboardPage() {
             </div>
             <span className="production-test-badge">{testOrders.length} test orders</span>
           </div>
+          <details className="production-test-new">
+            <summary>Create a test from an existing saved design</summary>
+            <p>Paste the private reopening link copied from the original customer
+              workshop. The link proves access to this saved photograph and its
+              frozen manufacturing packet. A bare SK Design ID cannot open private files.</p>
+            <form onSubmit={event=>void createTestFromSavedLink(event)}>
+              <label htmlFor="test-saved-design-link">Private saved-design reopening link</label>
+              <input id="test-saved-design-link" type="password"
+                autoComplete="off" value={testLink}
+                onChange={e=>setTestLink(e.target.value)}
+                placeholder="https://starkeepsake.vercel.app/#design=SK-…&key=…"
+                required/>
+              <button type="submit" className="production-primary" disabled={testCreating}>
+                {testCreating?'Verifying frozen design…':'Create internal TEST order'}</button>
+            </form>
+            <small>Owner only. This link is cleared after use; it is not added
+              to the browser URL or exported to the order register.</small>
+          </details>
           {testError&&<p className="production-error" role="alert">{testError}</p>}
           {testOrders.length>0?<div className="production-table-scroll">
             <table className="production-table production-test-table">

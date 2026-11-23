@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react'
 import {downloadFile} from '../customerOrder'
 import {supplierCandidateFor} from '../supplierCandidates'
+import {RehearsalWorkbench} from './RehearsalWorkbench'
 import type {MaterialSnapshot} from '../manualAmazonQueue'
 import type {MakerGroup,MakerPart,MakerPlan} from '../manufacturingJobPlan'
 import {makerPartsCsv,makerStarMapCsv,makerDrillTemplateSvg,makerChecklistJson}
@@ -105,6 +106,8 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,a
     <p className="omp-alert">This is an automatically calculated <b>candidate</b>
       component list, not a verified supplier order or approval to manufacture.
       Etsy frame variation, safety, parts, print alignment and actual stock must be reviewed.</p>
+    {simulated&&<RehearsalWorkbench plan={plan} adminKey={adminKey}
+      materials={materials}/>}
     <div className="omp-summary">
       <article><small>Saved illuminated stars</small><b>{plan.physicalCount}</b></article>
       <article><small>TLC5947 boards · 24 channels</small><b>{plan.driverCount}</b></article>
@@ -190,7 +193,7 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,a
         </tr>
       })}</tbody></table></div>
     </details>)}
-    <details className="omp-details">
+    {!simulated&&<details className="omp-details">
       <summary>Build and QA checklist — {complete} / {plan.steps.length} steps saved</summary>
       <p>{serverReady?(simulated?
         'Your test-only checklist is saved privately and will reload on another device.':
@@ -207,6 +210,6 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,a
       <button type="button" disabled={!serverReady}
         onClick={()=>getDownload('build-checklist-SERVER.json',
         savedChecklist(),'application/json')}>↓ Export saved checklist JSON</button>
-    </details>
+    </details>}
   </section>
 }

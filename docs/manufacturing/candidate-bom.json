@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "CANDIDATE_NOT_APPROVED",
+  "status": "LEGACY_RETIRED_NOT_FOR_PURCHASING",
   "product": "11x14 illuminated personalized shadow-box",
   "currency": "USD",
   "notes": "Verify actual fit, power budget, safe assembly, shipping and per-unit pricing on a physical prototype. No ASINs or prices have been approved.",
@@ -125,5 +125,8 @@
       "approved": false,
       "stockStatus": "not_checked"
     }
-  ]
+  ],
+  "deprecated": true,
+  "deprecatedReason": "OBSOLETE legacy WS2812B/Pico WH prototype only. DO NOT use for current StarKeepsake direct Lumimax LED3FWAW + Raspberry Pi Pico W + TLC5947 retail or test work orders. Current per-order frozen manufacturing-job-plan.json and saved physicalStars are authoritative.",
+  "currentSourceOfTruth": "Exact per-design frozen-v1.zip/manufacturing-job-plan.json; apps/web/src/manufacturingJobPlan.ts"
 }

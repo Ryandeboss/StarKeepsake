@@ -1,0 +1,501 @@
+{
+  "version": "starkeepsake-rehearsal-2026-11-v1",
+  "phases": [
+    {
+      "id": "preflight",
+      "label": "Order preflight",
+      "steps": [
+        {
+          "id": "preflight-01",
+          "title": "Confirm TEST ID and immutable SK Design ID"
+        },
+        {
+          "id": "preflight-02",
+          "title": "Verify frozen packet exists and version matches"
+        },
+        {
+          "id": "preflight-03",
+          "title": "Verify 11×14 trim and selected frame finish"
+        },
+        {
+          "id": "preflight-04",
+          "title": "Verify 1–24 physical LEDs and unique index mapping"
+        },
+        {
+          "id": "preflight-05",
+          "title": "Check frozen geometry for validation holds"
+        },
+        {
+          "id": "preflight-06",
+          "title": "Read and record all unresolved safety/manufacturing holds"
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "label": "Build files",
+      "steps": [
+        {
+          "id": "files-01",
+          "title": "Review exact frozen customer preview"
+        },
+        {
+          "id": "files-02",
+          "title": "Verify original customer photograph exists"
+        },
+        {
+          "id": "files-03",
+          "title": "Verify processed foreground when sky removal was used"
+        },
+        {
+          "id": "files-04",
+          "title": "Confirm exact 11×14 artwork and 300 DPI"
+        },
+        {
+          "id": "files-05",
+          "title": "Confirm 1/8-inch bleed version and spec"
+        },
+        {
+          "id": "files-06",
+          "title": "Confirm 1/4-inch bleed master and spec"
+        },
+        {
+          "id": "files-07",
+          "title": "Check print trim/safe guide separately from artwork"
+        },
+        {
+          "id": "files-08",
+          "title": "Verify star map contains all N indexed LEDs"
+        },
+        {
+          "id": "files-09",
+          "title": "Verify 1:1 drilling guide if geometry-valid"
+        },
+        {
+          "id": "files-10",
+          "title": "Choose print variant after lab accepts dimensions"
+        }
+      ]
+    },
+    {
+      "id": "procurement",
+      "label": "Parts and procurement",
+      "steps": [
+        {
+          "id": "procurement-01",
+          "title": "Verify frame SKU and actual interior dimensions"
+        },
+        {
+          "id": "procurement-02",
+          "title": "Confirm print lab, finish and submitted file"
+        },
+        {
+          "id": "procurement-03",
+          "title": "Inspect all N physical LEDs and N StarPods"
+        },
+        {
+          "id": "procurement-04",
+          "title": "Verify Pico W and TLC5947 driver"
+        },
+        {
+          "id": "procurement-05",
+          "title": "Verify MOSFET if accent lighting is enabled"
+        },
+        {
+          "id": "procurement-06",
+          "title": "Verify PSU and fuse only after power budget is measured"
+        },
+        {
+          "id": "procurement-07",
+          "title": "Verify service connectors and 12-channel group count"
+        },
+        {
+          "id": "procurement-08",
+          "title": "Inspect SINTRA and mounting film"
+        },
+        {
+          "id": "procurement-09",
+          "title": "Measure PETG and wire quantities rather than guessing"
+        },
+        {
+          "id": "procurement-10",
+          "title": "Confirm all necessary parts are allocated to this test job"
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "label": "Print and panel",
+      "steps": [
+        {
+          "id": "print-01",
+          "title": "Submit explicitly approved print file"
+        },
+        {
+          "id": "print-02",
+          "title": "Receive/pick up and inspect print"
+        },
+        {
+          "id": "print-03",
+          "title": "Verify trim dimensions and TOP orientation"
+        },
+        {
+          "id": "print-04",
+          "title": "Prepare mechanically cut black SINTRA panel"
+        },
+        {
+          "id": "print-05",
+          "title": "Check dry mounting film and flatness"
+        },
+        {
+          "id": "print-06",
+          "title": "Mount print without bubbles/debris"
+        },
+        {
+          "id": "print-07",
+          "title": "Inspect no exposed white edges or misalignment"
+        }
+      ]
+    },
+    {
+      "id": "apertures",
+      "label": "Star apertures",
+      "steps": [
+        {
+          "id": "apertures-01",
+          "title": "Print drilling template at 100% with no fit-to-page"
+        },
+        {
+          "id": "apertures-02",
+          "title": "Measure 50 mm verification ruler on printed template"
+        },
+        {
+          "id": "apertures-03",
+          "title": "Verify template TOP and registration to artwork"
+        },
+        {
+          "id": "apertures-04",
+          "title": "Verify N centers and calibrated hole sizes"
+        },
+        {
+          "id": "apertures-05",
+          "title": "Support panel on sacrificial backing"
+        },
+        {
+          "id": "apertures-06",
+          "title": "Drill mechanically; never laser SINTRA/PVC"
+        },
+        {
+          "id": "apertures-07",
+          "title": "Inspect front surface for tearing and delamination"
+        },
+        {
+          "id": "apertures-08",
+          "title": "Remove rear burrs and inspect every aperture"
+        }
+      ]
+    },
+    {
+      "id": "starpods",
+      "label": "StarPods and LEDs",
+      "steps": [
+        {
+          "id": "starpods-01",
+          "title": "Choose calibrated StarPod fit from physical coupon"
+        },
+        {
+          "id": "starpods-02",
+          "title": "Print N StarPods and inspect fit"
+        },
+        {
+          "id": "starpods-03",
+          "title": "Inspect N LEDs and confirm polarity by datasheet/diode test"
+        },
+        {
+          "id": "starpods-04",
+          "title": "Register numbered StarPods at all N apertures"
+        },
+        {
+          "id": "starpods-05",
+          "title": "Secure StarPods after compatible adhesive proof"
+        },
+        {
+          "id": "starpods-06",
+          "title": "Install LEDs and label 0 through N–1"
+        },
+        {
+          "id": "starpods-07",
+          "title": "Verify one-to-one star index to physical aperture map"
+        }
+      ]
+    },
+    {
+      "id": "harness",
+      "label": "Star harness",
+      "steps": [
+        {
+          "id": "harness-01",
+          "title": "Make common star positive bus after schematic review"
+        },
+        {
+          "id": "harness-02",
+          "title": "Make N numbered individual LED cathode branches"
+        },
+        {
+          "id": "harness-03",
+          "title": "Fit appropriate heat-shrink and insulated joints"
+        },
+        {
+          "id": "harness-04",
+          "title": "Install service connectors and labels"
+        },
+        {
+          "id": "harness-05",
+          "title": "Check star harness continuity"
+        },
+        {
+          "id": "harness-06",
+          "title": "Verify no shorts and no incorrectly reversed LED"
+        },
+        {
+          "id": "harness-07",
+          "title": "Compare branch order against frozen star CSV"
+        }
+      ]
+    },
+    {
+      "id": "electronics",
+      "label": "Electronics",
+      "steps": [
+        {
+          "id": "electronics-01",
+          "title": "Prepare serviceable electronics carrier"
+        },
+        {
+          "id": "electronics-02",
+          "title": "Install Pico W and TLC5947 driver"
+        },
+        {
+          "id": "electronics-03",
+          "title": "Install accent MOSFET when accent lights are used"
+        },
+        {
+          "id": "electronics-04",
+          "title": "Fit reviewed distribution/fuse/strain relief"
+        },
+        {
+          "id": "electronics-05",
+          "title": "Verify common ground and supply routing against approved schematic"
+        },
+        {
+          "id": "electronics-06",
+          "title": "Verify DIN/CLK/LAT mapping to tested TLC5947 firmware"
+        },
+        {
+          "id": "electronics-07",
+          "title": "Block use of legacy WS2812 demonstration firmware"
+        },
+        {
+          "id": "electronics-08",
+          "title": "Document final pin map in firmware, manufacturing guide and test plan"
+        }
+      ]
+    },
+    {
+      "id": "powerup",
+      "label": "First electrical power-up",
+      "steps": [
+        {
+          "id": "powerup-01",
+          "title": "Verify all power disconnected before inspection"
+        },
+        {
+          "id": "powerup-02",
+          "title": "Inspect polarities and +5 V to ground shorts"
+        },
+        {
+          "id": "powerup-03",
+          "title": "Check LED channel continuity and connections"
+        },
+        {
+          "id": "powerup-04",
+          "title": "Inspect fuse and strain relief"
+        },
+        {
+          "id": "powerup-05",
+          "title": "Use reviewed current-limited bench supply"
+        },
+        {
+          "id": "powerup-06",
+          "title": "Power on conservatively and inspect for excess current/heat"
+        },
+        {
+          "id": "powerup-07",
+          "title": "Confirm Pico and TLC5947 startup"
+        },
+        {
+          "id": "powerup-08",
+          "title": "Walk channels 0 through N–1 against saved LED map"
+        },
+        {
+          "id": "powerup-09",
+          "title": "Measure and record full-system current"
+        }
+      ]
+    },
+    {
+      "id": "optics",
+      "label": "Optical tests",
+      "steps": [
+        {
+          "id": "optics-01",
+          "title": "Perform dark-room viewing test"
+        },
+        {
+          "id": "optics-02",
+          "title": "Confirm LED bodies are hidden and aperture edges clean"
+        },
+        {
+          "id": "optics-03",
+          "title": "Check no side leakage, halo or exposed dots"
+        },
+        {
+          "id": "optics-04",
+          "title": "Verify relative star brightness and physical alignment"
+        },
+        {
+          "id": "optics-05",
+          "title": "Run individual channel walk and controlled twinkle after firmware approval"
+        },
+        {
+          "id": "optics-06",
+          "title": "Check diffused warm accent without exposed LED dots"
+        }
+      ]
+    },
+    {
+      "id": "burnin",
+      "label": "Electrical burn-in",
+      "steps": [
+        {
+          "id": "burnin-01",
+          "title": "Record start and end times and burn-in duration"
+        },
+        {
+          "id": "burnin-02",
+          "title": "Record supply current at representative operation"
+        },
+        {
+          "id": "burnin-03",
+          "title": "Record Pico, driver and frame temperatures where measured"
+        },
+        {
+          "id": "burnin-04",
+          "title": "Record anomalies, faults and retest results"
+        },
+        {
+          "id": "burnin-05",
+          "title": "Confirm no unsafe heating and pass reviewed burn-in procedure"
+        },
+        {
+          "id": "burnin-06",
+          "title": "Use measurements to approve or revise PSU/fuse/wire requirements"
+        }
+      ]
+    },
+    {
+      "id": "assembly",
+      "label": "Final assembly",
+      "steps": [
+        {
+          "id": "assembly-01",
+          "title": "Clean glazing and remove dust"
+        },
+        {
+          "id": "assembly-02",
+          "title": "Verify exact frozen sky and photo composition"
+        },
+        {
+          "id": "assembly-03",
+          "title": "Secure serviceable electronics and cable routing"
+        },
+        {
+          "id": "assembly-04",
+          "title": "Install removable rear cover and fasteners"
+        },
+        {
+          "id": "assembly-05",
+          "title": "Inspect strain relief and power inlet"
+        },
+        {
+          "id": "assembly-06",
+          "title": "Check hanging hardware and frame stability"
+        }
+      ]
+    },
+    {
+      "id": "qa",
+      "label": "Final quality assurance",
+      "steps": [
+        {
+          "id": "qa-01",
+          "title": "Compare physical frame to final frozen preview"
+        },
+        {
+          "id": "qa-02",
+          "title": "Verify finish, inscription and photo placement"
+        },
+        {
+          "id": "qa-03",
+          "title": "Verify date, time, location, orientation and N stars"
+        },
+        {
+          "id": "qa-04",
+          "title": "Confirm every LED functions and power cycling succeeds"
+        },
+        {
+          "id": "qa-05",
+          "title": "Confirm optical and burn-in records pass"
+        },
+        {
+          "id": "qa-06",
+          "title": "Check for loose parts, rattles, dust and damage"
+        },
+        {
+          "id": "qa-07",
+          "title": "Record final inspection notes/photos privately"
+        }
+      ]
+    },
+    {
+      "id": "packaging",
+      "label": "Packaging and test closeout",
+      "steps": [
+        {
+          "id": "packaging-01",
+          "title": "Include verified wall adapter, cable and care instructions"
+        },
+        {
+          "id": "packaging-02",
+          "title": "Protect glazing, corners and printed face"
+        },
+        {
+          "id": "packaging-03",
+          "title": "Immobilize frame and isolate adapter in carton"
+        },
+        {
+          "id": "packaging-04",
+          "title": "Verify packaging and safe handling"
+        },
+        {
+          "id": "packaging-05",
+          "title": "Review all holds and missing evidence"
+        },
+        {
+          "id": "packaging-06",
+          "title": "Mark TEST BUILD COMPLETE without invoking Etsy shipping"
+        }
+      ]
+    }
+  ]
+}

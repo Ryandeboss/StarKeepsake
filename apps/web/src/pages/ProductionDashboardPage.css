@@ -103,3 +103,14 @@
  line-height:1.6;margin:7px 0 0;display:block}
 @media(max-width:560px){.production-test-workorder{padding:0 8px 16px}
  .production-test-actions{flex-direction:column;align-items:flex-start}}
+
+/* Reuse the existing owner access for creating a rehearsal from a private link. */
+.production-test-new{margin:0 24px 18px;padding:13px 16px;
+ border:1px solid #455d6d;border-radius:10px;background:#102637}
+.production-test-new summary{cursor:pointer;color:#f1d7ae;font-size:13px;font-weight:650}
+.production-test-new p,.production-test-new small{font-size:11px;line-height:1.7;color:#a9c0ca}
+.production-test-new form{display:grid;gap:9px;margin:13px 0}
+.production-test-new label{font-size:12px;color:#e6d5b7}
+.production-test-new input{width:100%;box-sizing:border-box;background:#091827;
+ border:1px solid #577080;border-radius:8px;padding:10px;color:#f2e5cc}
+.production-test-new .production-primary{justify-self:start}

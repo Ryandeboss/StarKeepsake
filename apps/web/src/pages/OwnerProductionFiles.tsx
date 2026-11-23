@@ -4,6 +4,7 @@ import {PRINT_VARIANTS,trimSafeGuideSvg} from '../manufacturingPrint'
 import type {PrintVariantId} from '../manufacturingPrint'
 import type {LoadedDesign} from '../savedDesign'
 import {buildManufacturingJobPlan} from '../manufacturingJobPlan'
+import {readFrozenMakerPacket} from '../frozenMakerReader'
 import {OwnerManufacturingPlan} from './OwnerManufacturingPlan'
 import type {MaterialSnapshot} from '../manualAmazonQueue'
 import './OwnerProductionFiles.css'
@@ -26,7 +27,12 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
   const [archiveError,setArchiveError]=useState('')
   const [photoPreview,setPhotoPreview]=useState('')
   const [proofPreview,setProofPreview]=useState('')
+  const [frozenBusy,setFrozenBusy]=useState(simulated)
+  const [frozenError,setFrozenError]=useState('')
+  const [frozenLoaded,setFrozenLoaded]=useState<Awaited<ReturnType<typeof readFrozenMakerPacket>>|null>(null)
+  const [frozenPreview,setFrozenPreview]=useState('')
   const proofObject=useRef('')
+  const frozenObject=useRef('')
   const simulationUrl='/api/production/simulate?designId='+encodeURIComponent(designId)
   const archiveUrl=simulated?simulationUrl+'&view=archive':
     '/api/production/archive?receiptId='+receiptId+'&transactionId='+transactionId
@@ -69,10 +75,11 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
     return ()=>{active=false}
   },[adminKey,designUrl,designId,archiveUrl,simulated])
   const plan=useMemo(()=>{
+    if(simulated)return frozenLoaded?.plan??null
     if(!savedMeta)return null
     try{return buildManufacturingJobPlan(savedMeta.design,savedMeta.preferences)}
     catch{return null}
-  },[savedMeta])
+  },[savedMeta,simulated,frozenLoaded])
   async function get(path:string):Promise<Response>{
     const location=path==='/design'?designUrl:
       path==='/assets/original'?assetUrl('original'):
@@ -149,6 +156,31 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
     return()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl)}
   },[simulated,adminKey,simulationUrl])
   useEffect(()=>()=>{if(proofObject.current)URL.revokeObjectURL(proofObject.current)},[])
+  useEffect(()=>{
+    if(!simulated||!adminKey)return
+    let active=true,previewUrl=''
+    void (async()=>{
+      try{
+        const response=await fetch(archiveUrl+'&download=1',{
+          cache:'no-store',headers:{'X-Starkeepsake-Admin-Key':adminKey}})
+        if(!response.ok)throw Error('Frozen test packet unavailable (HTTP '+response.status+').')
+        const parsed=await readFrozenMakerPacket(await response.blob(),designId)
+        previewUrl=URL.createObjectURL(parsed.preview)
+        if(!active){URL.revokeObjectURL(previewUrl);return}
+        frozenObject.current=previewUrl
+        setFrozenPreview(previewUrl);setFrozenLoaded(parsed)
+      }catch(e){
+        if(active)setFrozenError(e instanceof Error?e.message:'Could not read original maker ZIP.')
+      }finally{if(active)setFrozenBusy(false)}
+    })()
+    return()=>{active=false;if(previewUrl)URL.revokeObjectURL(previewUrl)
+      if(frozenObject.current===previewUrl)frozenObject.current=''}
+  },[simulated,adminKey,archiveUrl,designId])
+  function downloadFrozen(name:string){
+    const file=frozenLoaded?.files[name]
+    if(!file)return
+    downloadFile(file,designId+'-'+name)
+  }
   const specs=packet?.manifest.manufacturing?.printVariants
   function downloadSupplement(id:PrintVariantId,kind:'spec'|'guide'){
     const variant=PRINT_VARIANTS.find(v=>v.id===id)
@@ -164,6 +196,67 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
       <strong>TEST WORK ORDER · NO ETSY PAYMENT</strong>
       <span>This is your exact saved design. Test checklist progress is separate
         from genuine orders. All physical, stock and safety holds still apply.</span>
+    </div>}
+    {simulated&&frozenBusy&&<div className="opf-archive-warning" role="status">
+      Loading the original frozen work order, print masters and exact N-star plan…
+    </div>}
+    {simulated&&frozenError&&<p className="production-error" role="alert">
+      Frozen packet could not be verified: {frozenError}.
+      Hold this build; do not replace the snapshot with regenerated files.</p>}
+    {simulated&&frozenLoaded&&<div className="opf-frozen-master">
+      <div className="opf-frozen-heading">
+        <span>FILES FOR THIS BUILD · ORIGINAL SNAPSHOT</span>
+        <strong>{designId} · {frozenLoaded.plan.version}</strong>
+        <small>Every download below comes directly from the immutable ZIP made
+          when this design was saved. Later application changes cannot alter these files.</small>
+      </div>
+      <div className="opf-frozen-preview">
+        <img src={frozenPreview} alt="Original frozen final customer preview with the selected sky and photo"/>
+        <div>
+          <h4>Final customer preview</h4>
+          <p>Compare this original checkout preview with the physical frame.
+            It is NOT the 300 DPI print master.</p>
+          <button type="button" onClick={()=>downloadFrozen('order-sheet.png')}>
+            ↓ Final customer preview</button>
+          <button type="button" onClick={()=>downloadFrozen('order.json')}>
+            ↓ Frozen order manifest</button>
+          <button type="button" onClick={()=>downloadFrozen('manufacturing-job-plan.json')}>
+            ↓ Frozen manufacturing plan</button>
+          <button type="button" onClick={()=>downloadFrozen('physical-star-map.csv')}>
+            ↓ Exact frozen star CSV</button>
+          {frozenLoaded.files['drill-template-1to1-DRAFT.svg']&&
+            <button type="button" onClick={()=>downloadFrozen('drill-template-1to1-DRAFT.svg')}>
+              ↓ Draft 1:1 drill SVG (CALIBRATION REQUIRED)</button>}
+        </div>
+      </div>
+      <div className="opf-frozen-files">
+        {PRINT_VARIANTS.map(variant=>{
+          const spec=frozenLoaded.manifest.manufacturing?.printVariants?.find(v=>v.id===variant.id)?.spec
+          return <article key={variant.id}>
+            <strong>{variant.label}</strong>
+            <small>{spec?.documentSizeIn.width} × {spec?.documentSizeIn.height} in ·
+              {spec?.documentPixels.width} × {spec?.documentPixels.height} px ·
+              {spec?.dpi} DPI · {spec?.colorSpace}</small>
+            <small>Bleed {spec?.bleedIn} in · safe inset {spec?.safeInsetIn} in ·
+              {spec?.reviewStatus} — supplier acceptance required</small>
+            <button type="button" onClick={()=>downloadFrozen(variant.artwork)}>
+              ↓ Exact frozen {variant.artwork}</button>
+            <button type="button" onClick={()=>downloadFrozen(variant.spec)}>
+              ↓ Print spec JSON</button>
+            <button type="button" onClick={()=>downloadFrozen(variant.guide)}>
+              ↓ Trim/safe PROOF guide (never over customer artwork)</button>
+          </article>
+        })}</div>
+      <details><summary>Original images and build-source references</summary>
+        <div className="opf-frozen-controls">
+          {Object.keys(frozenLoaded.files).filter(name=>
+            name.startsWith('original-photo.')||name==='prepared-foreground.png'||
+            name==='photo-quality-report.json'||name==='candidate-parts.csv'||
+            name==='assembly-checklist.json').map(name=>
+            <button key={name} type="button" onClick={()=>downloadFrozen(name)}>
+              ↓ {name}</button>)}
+        </div>
+      </details>
     </div>}
     {simulated&&photoPreview&&<div className="opf-test-photo">
       <img src={photoPreview} alt="Original photograph uploaded for the exact saved test design"/>
@@ -200,6 +293,7 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
     {plan&&<OwnerManufacturingPlan key={plan.designId} plan={plan}
       materials={materials} receiptId={receiptId} transactionId={transactionId}
       adminKey={adminKey} simulated={simulated}/>}
+
 
     {error&&<p role="alert" className="production-error">{error}</p>}
     {packet&&<div className="opf-results" role="status">
