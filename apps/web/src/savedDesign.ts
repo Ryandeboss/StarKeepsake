@@ -93,7 +93,8 @@ export async function saveCustomerDesign(input: {
     })
   } catch (error) {
     if (controller.signal.aborted) throw new Error(
-      'Saving your private design timed out. Check Production Studio drafts before retrying.')
+      'Saving your private design timed out. Check Production Studio drafts before retrying.',
+      {cause:error})
     throw error
   } finally {
     clearTimeout(timeout)
