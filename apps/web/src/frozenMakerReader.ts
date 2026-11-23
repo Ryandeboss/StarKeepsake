@@ -1,6 +1,6 @@
 import type {MakerPlan} from './manufacturingJobPlan'
 import type {OrderManifest} from './orderManifest'
-import {PRINT_VARIANTS} from './manufacturingPrint'
+import {PRINT_VARIANTS} from './manufacturingPrint.ts'
 
 /** Read the original checkout's UNCOMPRESSED V1 ZIP; never regenerate a
  * frozen manufacturing snapshot from today's astronomy or print algorithms. */
