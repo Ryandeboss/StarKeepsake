@@ -129,7 +129,7 @@ test('real Etsy authorization and simulated checklist use distinct validated pat
   assert.match(original,/simulated=false/)
   assert.match(original,/simulationUrl\+'\&view=design'/)
   assert.match(original,/simulationUrl\+'\&view=archive'/)
-  assert.match(original,/URL\.createObjectURL\(packet\.sheet\)/)
+  assert.match(original,/URL\.createObjectURL\(prepared\.sheet\)/)
   assert.match(plan,/simulated=false/)
   assert.match(plan,/view=checklist/)
   assert.match(plan,/await fetch\(endpoint/)
