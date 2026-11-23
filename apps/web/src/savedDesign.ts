@@ -78,11 +78,26 @@ export async function saveCustomerDesign(input: {
   form.append('preferences', JSON.stringify(input.preferences))
   form.append('photo', input.photo, 'original-photo')
   if (input.foreground) form.append('foreground', input.foreground, 'prepared-foreground.png')
-  const response = await fetch(apiBaseUrl() + '/api/designs', {
-    method: 'POST',
-    body: form,
-    // Do not set Content-Type: browser must add multipart boundary.
-  })
+  // A stalled Azure upload must not leave Chapter 05's save or simulate
+  // controls disabled forever. Aborting closes the browser request; if the
+  // server already completed, the private design may still be in drafts.
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 45_000)
+  let response: Response
+  try {
+    response = await fetch(apiBaseUrl() + '/api/designs', {
+      method: 'POST',
+      body: form,
+      signal: controller.signal,
+      // Do not set Content-Type: browser must add multipart boundary.
+    })
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error(
+      'Saving your private design timed out. Check Production Studio drafts before retrying.')
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
   if (!response.ok) return fail(response, 'Unable to save your design.')
   const receipt = await response.json() as SavedDesignReceipt
   if (!DESIGN_ID.test(receipt.designId) || !ACCESS_KEY.test(receipt.accessKey))

@@ -6,7 +6,7 @@ type Packet=Awaited<ReturnType<typeof createCustomerPacket>>
 type FrozenStatus={archived:boolean;frozenAt:string|null;bytes:number|null}
 
 /** Never make the Etsy link actionable before the original ZIP is privately stored. */
-async function getFrozenStatus(receipt:SavedDesignReceipt):Promise<FrozenStatus>{
+export async function getFrozenStatus(receipt:SavedDesignReceipt):Promise<FrozenStatus>{
   const response=await fetch('/api/production/freeze?designId='+
     encodeURIComponent(receipt.designId),{
       cache:'no-store',headers:{'X-Design-Access-Key':receipt.accessKey}

@@ -28,7 +28,7 @@ import { maskWorkingDimensions } from '../skyMaskMath'
 import { physicalToggleError } from '../physicalStarSelection'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { createCustomerPacket, downloadFile } from '../customerOrder'
-import {freezeManufacturingPacket} from '../frozenPacket'
+import {freezeManufacturingPacket,getFrozenStatus} from '../frozenPacket'
 import {buildManufacturingJobPlan} from '../manufacturingJobPlan'
 import type { OrderPreferences } from '../customerOrder'
 import { designSnapshotSignature, parseDesignLink, privateDesignLink, reopenCustomerDesign, saveCustomerDesign } from '../savedDesign'
@@ -39,6 +39,19 @@ import type { FrameQuote } from '../storefrontPricing'
 import './ExperiencePage.css'
 
 type Stage = 'welcome'|'detecting'|'choice'|'refine'|'moment'|'calculating'|'preview'|'home'
+
+// The large 300-DPI maker packet and remote private-Blob upload must never leave
+// a customer staring at an endless spinner. An expired generation can finish
+// computing, but it cannot advance the order after this promise rejects.
+function withDeadline<T>(promise:Promise<T>,milliseconds:number,message:string):Promise<T>{
+  let timer:ReturnType<typeof setTimeout>|null=null
+  const timeout=new Promise<T>((_,reject)=>{
+    timer=setTimeout(()=>reject(new Error(message)),milliseconds)
+  })
+  return Promise.race([promise,timeout]).finally(()=>{
+    if(timer!==null)clearTimeout(timer)
+  })
+}
 
 // Reopening a saved within-photo design must retain its cutout's true open sky,
 // otherwise invisible foreground stars could be mistakenly offered as LEDs.
@@ -152,6 +165,7 @@ export function ExperiencePage() {
   const [simulationOpen,setSimulationOpen]=useState(false)
   const [simulationKey,setSimulationKey]=useState('')
   const [simulationBusy,setSimulationBusy]=useState(false)
+  const [simulationStage,setSimulationStage]=useState<'authorize'|'prepare'|'register'|null>(null)
   const [simulationError,setSimulationError]=useState('')
   const [simulationDone,setSimulationDone]=useState<string|null>(null)
   const [saveBusy,setSaveBusy]=useState(false)
@@ -802,15 +816,19 @@ export function ExperiencePage() {
       // The server-created SK-ID is the only Etsy personalization ID our
       // paid-order importer will accept. A local checksum must never reach Etsy.
       const receipt=savedCurrent&&savedDesign
-        ?savedDesign.receipt:await saveDesignNow()
+        ?savedDesign.receipt:await withDeadline(saveDesignNow(),30_000,
+          'Saving the photo took too long. Your draft may still be saved; retry this action.')
       if(!receipt)throw Error('Your design could not be securely saved. Please save it before ordering.')
       setOrderPreparingStep('render')
-      const packet=await createCustomerPacket({design:activeDesign,prefs:preferences,
+      const packet=await withDeadline(createCustomerPacket({
+        design:activeDesign,prefs:preferences,
         photo,photoUrl,cutoutUrl,quote:frameQuote,
-        savedDesignId:receipt.designId})
+        savedDesignId:receipt.designId
+      }),90_000,'Preparing the full-resolution artwork timed out. Your Design ID was saved. Retry this action; no Etsy payment was taken.')
       // Privately freeze exact maker ZIP before enabling Etsy checkout.
       setOrderPreparingStep('archive')
-      await freezeManufacturingPacket(receipt,packet)
+      await withDeadline(freezeManufacturingPacket(receipt,packet),90_000,
+        'Archiving the maker ZIP timed out. The Design ID is safely saved; retry to check whether its private archive completed.')
       setPreparedOrder({key,packet})
       return receipt
     }catch(cause){
@@ -827,45 +845,92 @@ export function ExperiencePage() {
       setSimulationError('Enter your existing owner admin access key to create a test order.')
       return
     }
-    setSimulationBusy(true);setSimulationError('')
+    setSimulationBusy(true);setSimulationError('');setSimulationDone(null)
+    setSimulationStage('authorize')
+    let receipt:SavedDesignReceipt|null=null
+    const finish=(id:string)=>{
+      setSimulationDone(id)
+      setSimulationKey('')
+      setSimulationOpen(false)
+    }
     try{
-      // Always save this exact current design and finish its private maker archive
-      // before the owner-only server can create a simulated purchase.
-      const receipt=await buildOrderPacket()
-      if(!receipt)throw Error('Preparing the exact design failed. Review the save error above.')
-      const response=await fetch('/api/production/simulate',{
+      // Check owner authorization BEFORE generating high-resolution print assets.
+      // Incorrect keys must fail quickly without creating another saved draft.
+      const authorized=await withDeadline(fetch('/api/production/simulate?view=auth',{
+        cache:'no-store',headers:{'X-Starkeepsake-Admin-Key':adminKey}
+      }),15_000,'Owner authorization is taking too long. Please retry.')
+      if(!authorized.ok)throw Error(authorized.status===401?
+        'Owner key not accepted. Use the same key as Production Studio.':
+        'Cannot verify owner access right now (HTTP '+authorized.status+').')
+
+      // The maker ZIP is immutable. A design already prepared for Etsy MUST
+      // reuse it; a second render/CRC pass just makes tests slow and costly.
+      if(currentOrder&&savedCurrent&&savedDesign)receipt=savedDesign.receipt
+      else if(savedCurrent&&savedDesign){
+        setSimulationStage('prepare')
+        const status=await withDeadline(getFrozenStatus(savedDesign.receipt),15_000,
+          'Checking your existing frozen design timed out. Please retry.')
+        if(status.archived)receipt=savedDesign.receipt
+      }
+      if(!receipt){
+        setSimulationStage('prepare')
+        // Only a new/unfrozen design needs the expensive maker-packet pipeline.
+        const prepared=await buildOrderPacket()
+        if(!prepared)throw Error('The original design or maker ZIP could not be prepared. See the message above, then retry. Your Design ID is not lost.')
+        receipt=prepared
+      }
+      setSimulationStage('register')
+      const preparedPlan=buildManufacturingJobPlan({
+        ...activeDesign,designId:receipt.designId
+      },{...orderPreferences})
+      if(preparedPlan.designId!==receipt.designId)
+        throw Error('The saved Design ID and test manufacturing plan disagree.')
+      const response=await withDeadline(fetch('/api/production/simulate',{
         method:'POST',cache:'no-store',
         headers:{'Content-Type':'application/json',
           'X-Starkeepsake-Admin-Key':adminKey},
         body:JSON.stringify({designId:receipt.designId,accessKey:receipt.accessKey,
-          plan:(()=>{
-            const built=buildManufacturingJobPlan({...activeDesign,designId:receipt.designId},
-              {...orderPreferences})
-            if(built.designId!==receipt.designId)
-              throw Error('The current design and saved maker plan are not the same snapshot.')
-            return {designId:built.designId,version:built.version,
-              physicalCount:built.physicalCount,geometryValidated:built.geometryValidated,
-              parts:built.parts.map(p=>({key:p.key,name:p.name,group:p.group,
-                quantity:p.quantity,unit:p.unit,required:p.required}))}
-          })()}),
-      })
+          plan:{designId:preparedPlan.designId,version:preparedPlan.version,
+            physicalCount:preparedPlan.physicalCount,
+            geometryValidated:preparedPlan.geometryValidated,
+            parts:preparedPlan.parts.map(p=>({key:p.key,name:p.name,
+              group:p.group,quantity:p.quantity,unit:p.unit,required:p.required}))}
+        }),
+      }),30_000,'The test-order registration timed out. Checking whether it was saved…')
       if(!response.ok){
-        let message='Could not create a test order (HTTP '+response.status+').'
+        let reason='Could not register your TEST order (HTTP '+response.status+').'
         try{
           const body=await response.json() as {error?:string}
-          if(body.error)message=body.error
-        }catch{/* Keep the generic error from a proxy. */}
-        throw Error(message)
+          if(body.error)reason=body.error
+        }catch{/* Keep a useful status when a proxy returns HTML. */}
+        throw Error(reason)
       }
       const result=await response.json() as {order:{designId:string}}
       if(result.order.designId!==receipt.designId)
-        throw Error('Test order and saved Design ID do not match.')
-      setSimulationDone(receipt.designId)
-      setSimulationKey('')
-      setSimulationOpen(false)
+        throw Error('Test work order and Design ID did not match.')
+      finish(receipt.designId)
     }catch(error){
-      setSimulationError(error instanceof Error?error.message:'Could not create the test order.')
-    }finally{setSimulationBusy(false)}
+      // A request can finish on the server just as the browser times out.
+      // Reconcile by owner-authorized Design ID before reporting failure,
+      // avoiding duplicate tests or a false "payment not matched" conclusion.
+      let recovered=false
+      if(receipt){
+        try{
+          const check=await withDeadline(fetch('/api/production/simulate?designId='+
+            encodeURIComponent(receipt.designId),{
+              cache:'no-store',headers:{'X-Starkeepsake-Admin-Key':adminKey}
+            }),10_000,'Could not verify test registration.')
+          if(check.ok){
+            const result=await check.json() as {order:{designId:string}}
+            if(result.order?.designId===receipt.designId){
+              finish(receipt.designId);recovered=true
+            }
+          }
+        }catch{/* Retain original error and provide a safe retry. */}
+      }
+      if(!recovered)setSimulationError(error instanceof Error?error.message:
+        'Test purchase could not be completed. Retry; no Etsy payment was taken.')
+    }finally{setSimulationBusy(false);setSimulationStage(null)}
   }
 
   if(!draftReady)return <div className="at-shell at-draft-loading" role="status">
@@ -1581,9 +1646,16 @@ export function ExperiencePage() {
                     onChange={event=>setSimulationKey(event.target.value)}
                     placeholder="Your existing Production Studio access key"/>
                   <button type="submit" disabled={simulationBusy||orderBusy}>
-                    {simulationBusy?'Saving exact test order…':
+                    {simulationBusy?'Preparing test purchase…':
                       'Create simulated purchase in admin'}
                   </button>
+                  {simulationBusy&&<div className="at-owner-simulate-progress"
+                    role="status" aria-live="polite">
+                    <span className="at-order-button-spinner" aria-hidden="true"/>
+                    <span>{simulationStage==='authorize'?'Checking owner access…':
+                      simulationStage==='prepare'?'Preparing or reusing your private maker archive…':
+                      'Registering your TEST work order in Production Studio…'}</span>
+                  </div>}
                   <small>The key is used once to authorize this test and is not
                     stored in your browser. Test orders can be deleted in Production Studio.</small>
                 </form>}

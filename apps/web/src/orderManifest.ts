@@ -55,10 +55,24 @@ export function orderPersonalization(manifest:OrderManifest):string{
     'Inscription: '+(manifest.preferences.inscription||'None'),
     'Please see uploaded order sheet and photo.'].join('\n')
 }
+// The maker ZIP contains multiple full-resolution 300-DPI PNGs. A per-bit
+// CRC32 loop does eight branch/shift iterations *per image byte* and can keep
+// Chapter 05 in a loading state for a very long time. Use a standard 256-entry
+// table instead: same ZIP CRC32, roughly one table lookup per byte.
+const CRC32_TABLE=(()=>{
+  const table=new Uint32Array(256)
+  for(let n=0;n<256;n++){
+    let value=n
+    for(let bit=0;bit<8;bit++)value=(value>>>1)^(0xedb88320&-(value&1))
+    table[n]=value>>>0
+  }
+  return table
+})()
 function crc(bytes:Uint8Array):number{
-  let v=0xffffffff
-  for(const b of bytes){v^=b;for(let i=0;i<8;i++)v=(v>>>1)^(0xedb88320&-(v&1))}
-  return (v^0xffffffff)>>>0
+  let value=0xffffffff
+  for(let i=0;i<bytes.length;i++)
+    value=CRC32_TABLE[(value^bytes[i])&0xff]^(value>>>8)
+  return (value^0xffffffff)>>>0
 }
 /** Uncompressed ZIP (no dependencies): complete data and raw photo retained. */
 export function zipFiles(files:{name:string;data:Uint8Array}[]):Uint8Array{

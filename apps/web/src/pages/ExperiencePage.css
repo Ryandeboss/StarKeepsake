@@ -1040,3 +1040,8 @@
 .at-owner-simulate-success strong{color:#e5efdd;font-size:12px}
 .at-owner-simulate-success small{color:#c1d8cc;font-size:11px;line-height:1.6}
 .at-owner-simulate-success a{color:#f1d5a4;font-size:12px;font-weight:650}
+
+.at-owner-simulate-progress{display:flex;align-items:center;gap:9px;padding:11px 12px;
+ background:#173240;border:1px solid #607580;border-radius:8px;
+ color:#ecdbc1;font-size:11px;line-height:1.5}
+.at-owner-simulate-progress .at-order-button-spinner{flex:none}

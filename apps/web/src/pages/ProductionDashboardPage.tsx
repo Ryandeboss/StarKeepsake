@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import './ProductionDashboardPage.css'
 import { MaterialsPanel } from './MaterialsPanel'
 import { ProcurementPanel } from './ProcurementPanel'
@@ -160,6 +160,8 @@ export function ProductionDashboardPage() {
   },[data])
   const paidDesignIds=useMemo(()=>new Set(purchasedDesigns.map(x=>x.job.design_id)),
     [purchasedDesigns])
+  const testDesignIds=useMemo(()=>new Set(testOrders.map(x=>x.designId)),
+    [testOrders])
   const paidCount = data?.receipts.filter(r => receiptStatus(r) === 'Paid').length ?? 0
   const reviewCount = data?.receipts.filter(r =>
     ['Review design','Refund review','Not paid','On hold'].includes(
@@ -213,6 +215,15 @@ export function ProductionDashboardPage() {
     } catch (error) { setFailure(error instanceof Error ? error.message : 'Could not sign in.') }
     finally { setBusy(false) }
   }
+  // An owner opening the link from Chapter 05 should land ON the test work
+  // order, not on an unrelated Etsy "no matched payment" table below.
+  useEffect(()=>{
+    if(!key||!testSelected)return
+    document.getElementById('test-work-order')?.scrollIntoView({
+      behavior:'smooth',block:'start'
+    })
+  },[key,testSelected,testOrders])
+
   async function refresh(sync: boolean) {
     if (!key) return
     setBusy(true); setFailure(''); setMessage('')
@@ -465,7 +476,9 @@ export function ProductionDashboardPage() {
         <section className="production-data production-designs" aria-label="Recent saved designs">
           <div className="production-actions">
             <div><h2>Recently saved designs</h2>
-              <p>Latest 100 private design records. Saving is not a purchase and does not create an Etsy production job.</p></div>
+              <p>Latest 100 saved designs. A saved Design ID alone is not a purchase.
+                Completed owner simulations appear as TEST orders; only verified Etsy
+                receipts can be marked paid.</p></div>
             <span className="production-design-count">{savedDesigns.length} saved</span>
           </div>
           {savedDesignsError&&<p className="production-error" role="alert">{savedDesignsError}</p>}
@@ -477,9 +490,20 @@ export function ProductionDashboardPage() {
                 <td>{dateLabel(item.createdAtUtc)}</td>
                 <td>{item.layout==='within'?'Stars woven into photo':item.layout==='above'?'Sky above photo':'Unknown'}</td>
                 <td>{item.finish}</td>
-                <td><span className="production-status">
-                  {paidDesignIds.has(item.designId)?'Paid Etsy order matched':'Saved · no matched payment'}
-                </span></td>
+                <td>{paidDesignIds.has(item.designId)
+                  ?<span className="production-status">Paid Etsy order matched</span>
+                  :testDesignIds.has(item.designId)
+                    ?<span className="production-saved-test-state">
+                      <span className="production-status production-test-label">
+                        TEST ORDER · No Etsy payment required</span>
+                      <button type="button" className="production-row-link"
+                        onClick={()=>{setTestSelected(item.designId);setSelected(null)}}>
+                        Open simulated work order</button>
+                    </span>
+                    :<span className="production-status">
+                      Saved draft · Test purchase not yet registered
+                    </span>}
+                </td>
               </tr>)}</tbody>
             </table>
           </div>

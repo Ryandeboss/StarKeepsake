@@ -23,7 +23,7 @@ test('immutable archived ZIP path is tied to server SK-ID and has no public acce
 
 test('original ZIP must be frozen before Etsy-ready state is displayed',()=>{
   const app=read('../src/pages/ExperiencePage.tsx')
-  const freeze=app.indexOf('await freezeManufacturingPacket(receipt,packet)')
+  const freeze=app.indexOf('withDeadline(freezeManufacturingPacket(receipt,packet)')
   const ready=app.indexOf('setPreparedOrder({key,packet})')
   assert.ok(freeze>0 && ready>freeze)
   assert.match(app,/Everything you customized is safely stored/)
@@ -138,4 +138,17 @@ test('real Etsy authorization and simulated checklist use distinct validated pat
   assert.match(dash,/simulated materials=\{materials\}/)
   assert.match(dash,/setTestOrders\(orders=>orders\.filter/)
   assert.match(dash,/purchasedDesigns=useMemo/)
+})
+
+test('simulated order supports fast owner authentication and per-ID reconciliation',()=>{
+  const server=read('../api/production/simulate.js')
+  const ui=read('../src/pages/ExperiencePage.tsx')
+  assert.match(server,/view==='auth'/)
+  assert.match(server,/authorized:true/)
+  assert.match(server,/request.method==='GET'&&!view/)
+  assert.match(server,/order:publicOrder\(record\)/)
+  assert.match(ui,/Checking owner access/)
+  assert.match(ui,/withDeadline\(getFrozenStatus/)
+  assert.match(ui,/encodeURIComponent\(receipt\.designId\)/)
+  assert.doesNotMatch(server,/\/api\/admin\/production\/sync/)
 })

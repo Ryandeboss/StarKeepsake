@@ -114,3 +114,8 @@
 .production-test-new input{width:100%;box-sizing:border-box;background:#091827;
  border:1px solid #577080;border-radius:8px;padding:10px;color:#f2e5cc}
 .production-test-new .production-primary{justify-self:start}
+
+/* An owner simulation is NOT an Etsy payment mismatch. */
+.production-saved-test-state{display:flex;align-items:center;gap:9px;
+ flex-wrap:wrap}
+.production-saved-test-state .production-row-link{font-size:11px}

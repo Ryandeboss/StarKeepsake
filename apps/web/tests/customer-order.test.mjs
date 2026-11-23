@@ -46,3 +46,11 @@ test('ZIP includes local and central headers, files and rejects path traversal',
   assert.ok(new TextDecoder().decode(bytes).includes('photo.jpg'))
   assert.throws(()=>zipFiles([{name:'../path',data:new Uint8Array()}]),/filename/)
 })
+
+test('CRC32 lookup-table ZIP matches the standard 123456789 checksum',()=>{
+  const result=zipFiles([{name:'test.txt',
+    data:new TextEncoder().encode('123456789')}])
+  const dv=new DataView(result.buffer,result.byteOffset,result.byteLength)
+  assert.equal(dv.getUint32(14,true),0xcbf43926)
+  assert.equal(dv.getUint32(result.length-22,true),0x06054b50)
+})

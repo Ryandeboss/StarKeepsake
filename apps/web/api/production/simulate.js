@@ -204,6 +204,8 @@ async function handler(request){
       });
       return responseJson({order:publicOrder(record),existing:false},201);
     }
+    if(request.method==='GET'&&view==='auth'&&!id)
+      return responseJson({authorized:true});
     if(request.method==='GET'&&!id&&!view)return responseJson({orders:await listOrders()});
     if(!validId(id))return responseJson({error:'Saved Design ID required.'},400);
     if(request.method==='DELETE'&&!view){
@@ -215,6 +217,8 @@ async function handler(request){
       return responseJson({deleted:true,designId:id});
     }
     const record=await orderFor(id);
+    if(request.method==='GET'&&!view)
+      return responseJson({order:publicOrder(record)});
     if(request.method==='GET'&&view==='design'){
       const saved=await authorizeDesign(id,record.accessKey);
       return responseJson(saved);
