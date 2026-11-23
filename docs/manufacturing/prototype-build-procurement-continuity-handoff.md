@@ -1375,3 +1375,174 @@ open paid order
 The admin should not need to reconstruct anything from memory, jump back into the customer builder, or manually derive the BOM from a generic parts spreadsheet.
 
 The production page should become the owner’s **single source of truth for physically fulfilling that Etsy order**.
+
+
+---
+
+# Latest turn — This week's fake paid order / admin build rehearsal
+
+The user wants a practical end-to-end rehearsal this week:
+
+1. create/save a fake customer design on the live/current StarKeepsake builder;
+2. make it appear in the owner admin Production view **as though paid**, without weakening or impersonating the real Etsy-paid verification path;
+3. open that test production job;
+4. see the exact item-specific files needed for the build;
+5. see the exact item-specific parts/materials required;
+6. track whether each required item/file/part is ready;
+7. use a persistent per-order assembly/QA checklist so this one prototype build has its own independent progress record.
+
+## Important current repo state discovered during this turn
+
+- `/trial-order` already creates a synthetic local trial, but deliberately does NOT insert a fake Etsy receipt or paid production job.
+- Paid owner production jobs already support frozen maker ZIP retrieval and a persisted per-order checklist via private Vercel Blob storage.
+- Current retail product policy in the repo is **maximum 24 physical illuminated stars**. Each job still has its own actual `N`, where `1 <= N <= 24`.
+- `manufacturingJobPlan.ts` already derives N LEDs, N StarPods, `ceil(N/24)` TLC5947 boards and `ceil(N/12)` connector groups, but current retail N<=24 means one TLC5947 board at most.
+- Current print packet contains three 300-DPI variants:
+  - exact 11x14: 3300x4200;
+  - 1/8-in bleed: 3375x4275;
+  - 1/4-in bleed master: 3450x4350.
+- The current source still labels most supplier items SOURCE_AND_VERIFY / HOLD because supplier trust and physical build validation are intentionally separate concerns.
+- Current `firmware/pico2w/main.py` is an old WS2812/NeoPixel bench demo. It is NOT TLC5947 production firmware and must not be presented as the final electronics configuration.
+
+## Required fake-paid-order architecture
+
+Do NOT bypass or weaken the actual Etsy-paid authorization check.
+
+Create a clearly separate internal/test-order path, owner-authenticated and visibly labeled, for example:
+
+- source: INTERNAL_TEST;
+- payment state: TEST_PAID;
+- receipt/order ID prefixed TEST-;
+- obvious banner: TEST ORDER — NO REAL ETSY PAYMENT;
+- excluded from real revenue/analytics, Etsy shipping, refunds and purchase automation;
+- may use a real saved StarKeepsake Design ID so the owner can physically build the prototype.
+
+The test order should render through the same production-job UI and manufacturing-plan logic as a real paid job as much as practical so the rehearsal actually proves the admin workflow.
+
+## Item-specific files the admin job must expose
+
+At minimum:
+
+- final customer-approved preview;
+- original private source photo;
+- final processed/foreground image if applicable;
+- `print-artwork-exact-11x14.png`;
+- `print-artwork-bleed-1-8.png`;
+- `print-artwork-bleed-1-4.png` (current preferred internal master, but still requires selected lab acceptance);
+- matching print-spec JSONs;
+- proof-only print trim/safe guides;
+- frozen maker ZIP;
+- star-coordinate CSV;
+- star/manufacturing JSON;
+- 1:1 drilling SVG/template ONLY when geometry passes validation, clearly marked proof/calibration until physically registered;
+- order-specific candidate parts CSV/BOM;
+- persistent build/QA checklist.
+
+Admin UI should clearly label which print file is recommended for the chosen print lab rather than forcing the owner to guess.
+
+## Item-specific physical parts for the current prototype
+
+Current physical recipe is still prototype/candidate, not production-qualified.
+
+Order-specific quantities should include:
+
+- selected 11x14 deep shadow-box frame;
+- one professional luster/satin print;
+- one 3 mm black SINTRA artwork panel;
+- mounting film;
+- N Lumimax LED3FWAW 3 mm flat-top warm-white LEDs;
+- N calibrated black PETG StarPods;
+- one Raspberry Pi Pico W;
+- one Adafruit TLC5947 24-channel constant-current LED driver for current retail N<=24;
+- accent-light MOSFET module only if accent lighting remains enabled in the build;
+- warm-white COB strip/channel/diffuser only if enabled and validated;
+- regulated wall power supply after actual current-budget validation;
+- fuse/protection;
+- power distribution;
+- service connectors;
+- harness wire and heat-shrink;
+- electronics carrier/standoffs;
+- removable rear cover hardware;
+- cable-management hardware;
+- hanging hardware if required;
+- care/setup insert;
+- tested shipping packaging.
+
+## Supplier trust vs part/build validation
+
+The admin should stop using one vague "supplier unverified" concept.
+
+Display at least two independent states:
+
+1. **Supplier/source confidence**
+   - manufacturer direct;
+   - authorized/approved reseller;
+   - major reputable electronics/material distributor;
+   - reputable specialty retailer;
+   - unknown/marketplace seller.
+
+2. **Build validation**
+   - researched candidate;
+   - bench tested;
+   - fit/optical tested;
+   - electrically validated;
+   - production approved.
+
+A trustworthy supplier does NOT make a part automatically build-validated.
+
+Current reasonably trustworthy source examples verified this turn:
+- Adafruit direct for TLC5947 Product 1429 and MOSFET Product 5648;
+- Raspberry Pi direct documentation + Raspberry Pi Approved Reseller network for Pico W;
+- DigiKey Marketplace listing fulfilled by Lumimax for LED3FWAW, with Lumimax manufacturer datasheet; source is credible but marketplace/fit still needs physical validation;
+- Curbell Plastics for genuine 3 mm black SINTRA;
+- Drytac technical documentation for MultiTac mounting film.
+
+Avoid generic Amazon marketplace sellers for safety-critical electrical parts unless manufacturer identity/listing/certification can be verified. Amazon may still be suitable for commodity tools/consumables when brand/source is clear.
+
+## Electrical correctness guardrails
+
+Current intended star topology is:
+- TLC5947 is a 24-channel constant-current sink;
+- Adafruit's TLC5947 breakout is configured around 15 mA/channel;
+- LED anodes connect to V+;
+- individual LED cathodes connect to TLC5947 OUT0...OUT(N-1);
+- Pico W and TLC5947 must share ground;
+- TLC5947 control is DIN/CLK/LAT from Pico GPIO;
+- 5 V LED supply is appropriate for the ~3.1 V warm-white LED when used through the constant-current driver;
+- Pico W VSYS accepts 1.8–5.5 V according to Raspberry Pi documentation, but final shared-supply/USB-programming/backfeed/protection arrangement must be reviewed and tested before production;
+- accent COB must be switched through the MOSFET driver, not directly from a Pico GPIO;
+- Adafruit MOSFET 5648 switches the load low-side and is rated up to 1.5 A continuous; final accent current must be measured below the validated limit;
+- power supply rating, fuse value, wire gauge, connector ratings, thermal behavior and burn-in are still physical test items.
+
+The coding agent must not invent pin numbers or claim an electrical certification. If it adds a wiring diagram/checklist, it must match the actual firmware pin mapping and official board documentation.
+
+The current WS2812 MicroPython demo in `firmware/pico2w/main.py` is obsolete for the TLC5947 architecture and should be shown as a development mismatch/blocker until replaced or reconciled.
+
+## Per-order independent build progress
+
+Every fake/real production job should maintain its own durable checklist keyed to its order/transaction/design ID.
+
+The fake test build should be able to progress independently through:
+- order/design verification;
+- files ready;
+- frame acquired/inspected;
+- print ordered/received;
+- panel prepared;
+- print mounted/inspected;
+- star registration/drilling;
+- StarPods installed;
+- LEDs installed/labeled;
+- harness assembled;
+- electronics carrier assembled;
+- electrical wiring verified;
+- firmware/config loaded;
+- channel walk;
+- dark-room optical QA;
+- burn-in;
+- final visual/astronomy QA;
+- glazing/rear closure;
+- QC photos;
+- packaging;
+- ready to ship TEST state.
+
+This week's goal is to make one synthetic paid-like job usable as a complete physical prototype rehearsal without contaminating the real Etsy payment path.
