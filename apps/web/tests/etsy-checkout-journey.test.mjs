@@ -85,7 +85,7 @@ test('customer builder and owner dashboard keep the linked journey',()=>{
   const source=readFileSync(new URL('../src/pages/ExperiencePage.tsx',import.meta.url),'utf8')
   const owner=readFileSync(new URL('../src/pages/ProductionDashboardPage.tsx',import.meta.url),'utf8')
   assert.match(source,/savedDesignId:receipt\.designId/)
-  assert.match(source,/await saveDesignNow\(\)/)
+  assert.match(source,/await withDeadline\(saveDesignNow\(\)/)
   assert.match(source,/canContinueToEtsy/)
   assert.match(source,/Copy my Design ID/)
   assert.match(source,/currentOrder\.manifest\.reference/)
@@ -100,7 +100,7 @@ test('buyer handoff uses Design ID only; PNG and uploads are not required',()=>{
   const maker=readFileSync(new URL('../src/customerOrder.ts',import.meta.url),'utf8')
   const flow=source.split('async function buildOrderPacket()')[1].split('if(!draftReady)')[0]
   const checkout=source.split('className="at-ready-packet at-etsy-simple"')[1]
-  assert.match(flow,/await freezeManufacturingPacket\(receipt,packet\)/)
+  assert.match(flow,/await withDeadline\(freezeManufacturingPacket\(receipt,packet\)/)
   assert.match(flow,/setPreparedOrder\(\{key,packet\}\)/)
   assert.doesNotMatch(flow,/downloadFile|etsyDesignCardFilename/)
   assert.match(checkout,/Copy my Design ID/)
