@@ -223,3 +223,63 @@ require payment matching, correct saved finish, print/LED geometry verification,
 approved electrical/power/thermal parts, calibrated drill placement and
 supplier review. One GitHub feature push / one Vercel production deployment
 target; update issue #58 with tested commit and final CI/deployment status.
+
+## November 23, 2026 — owner-authorized real-design simulated purchases
+
+Owner requested **replacing the hard-coded sample as the only test path with a
+repeatable real-design exercise**: finish any Chapter 05 keepsake, press
+**Simulate Etsy Purchase**, see the exact saved design as a persistent TEST work
+order in the admin dashboard, use the actual maker ZIP, print files, selected
+physical stars and BOM, persist test-only checklist progress, and delete
+simulations later. Must NEVER falsify an Etsy payment or increment actual paid
+receipt/production/supplier demand totals.
+
+Architecture:
+- New Vercel function `/api/production/simulate` stores private owner-only
+  `production/simulations/orders/SK-...json` records containing an authenticated
+  saved design reference (separate from Etsy and M3 sources of truth).
+- Every request validates the same owner admin key with Azure's existing
+  `/api/admin/designs` authority. POST additionally proves the private saved
+  design edit key works via Azure `/api/designs/{id}` and that the exact
+  `frozen-v1.zip` was privately archived. Cannot simulate with only an SK ID,
+  no key, bad key, an unprepared design or a partially uploaded file.
+- Owner GET returns only safe summaries (ID/time/finish/layout/N), never design
+  edit keys or private blobs. GET view=design/photo/archive is owner-authenticated
+  and proxies private saved assets or frozen maker ZIP. GET/POST view=checklist
+  reads/writes the **same 23 step IDs but under a SEPARATE simulation namespace**.
+  No test writes touch Etsy paid jobs, the actual Azure order register, or
+  real production progress. DELETE removes only the simulation record and
+  its test step records, not the source saved design or frozen ZIP, which could
+  later support a genuine Etsy order.
+- Chapter 05 shows a visually secondary **Simulate Etsy Purchase** owner-test
+  button with owner key field. Submit calls the existing exact save/print/freeze
+  path then creates the private simulation; clears key after success; shows a
+  link to `/admin/production?testDesign=SK-...` without including any private
+  key in the URL. No Etsy calls, charges, or purchases.
+- Admin `Your simulated purchases` table is separate from genuine paid Etsy
+  receipts and metrics and the old read-only hard-coded sample. Clicking a
+  test opens `OwnerProductionFiles` in simulation mode and reused
+  `OwnerManufacturingPlan`, which loads the ACTUAL saved design, displays the
+  original photo, generates a combined photo+star proof and all three print
+  variants, retrieves the immutable ZIP and exact N-dependent candidate BOM,
+  1:1 draft drill reference, supplier links/stock snapshot, validation holds
+  and independent persistent test checklist. A confirmed **Delete test** action
+  removes its work-order record and isolated checklist only.
+- Entire project still remains at *manufacturing proof / electrical verification
+  HOLD*. A test checklist tick or simulation is not payment, allocated stock,
+  certification, real order status, or shipping permission.
+- Security warning: owner key entered for simulation is only sent to the
+  owner-validated function, never logged, persisted in client storage, included
+  in Etsy checkout, or appended to URLs. Private design access keys are never
+  returned by the simulations listing or client read endpoints. Client/private
+  test preview is owner-only. A saved design's original private editing URL
+  remains separate.
+
+Acceptance still needed manually: save a genuinely new real design in Chapter 05,
+enter owner key and simulate, click the resulting admin link, confirm same ID,
+photo, moment, finish, exact LED count/coordinates, original ZIP and print
+variants, reload and verify test checklist progress, then delete the test and
+confirm it vanishes while real Etsy counts stay unchanged. This is a true
+end-to-end *simulation*, **not** a live Etsy payment verification. The physical
+product still needs prototyping and safety/print proofs. Only one batched
+GitHub push / Vercel production deploy planned.

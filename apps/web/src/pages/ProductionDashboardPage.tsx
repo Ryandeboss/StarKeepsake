@@ -49,6 +49,10 @@ type SavedDesignSummary = {
   hasPreparedForeground: boolean
 }
 type Filter = 'all' | 'review' | 'ready' | 'canceled'
+type SimulatedOrder={
+  designId:string;createdAt:string;status:'SIMULATED_NOT_PAID';
+  finish:string;layout:string;stars:number
+}
 const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 
 function money(receipt: Receipt) {
@@ -109,6 +113,10 @@ export function ProductionDashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null)
   const [savedDesigns, setSavedDesigns] = useState<SavedDesignSummary[]>([])
   const [savedDesignsError, setSavedDesignsError] = useState('')
+  const [testOrders,setTestOrders]=useState<SimulatedOrder[]>([])
+  const [testError,setTestError]=useState('')
+  const [testSelected,setTestSelected]=useState<string|null>(null)
+  const [testDeleting,setTestDeleting]=useState<string|null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [selected, setSelected] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
@@ -164,6 +172,22 @@ export function ProductionDashboardPage() {
       setSavedDesigns([])
       setSavedDesignsError('Saved designs could not be loaded right now.')
     }
+    // Owner-authenticated test orders live only in private Vercel Blob storage,
+    // never as fake Etsy receipts, M3 demand, or real production jobs.
+    try{
+      const response=await fetch('/api/production/simulate',{cache:'no-store',
+        headers:{'X-Starkeepsake-Admin-Key':adminKey}})
+      if(!response.ok)throw Error('Private test-order storage returned HTTP '+response.status)
+      const json=await response.json() as {orders:SimulatedOrder[]}
+      setTestOrders(json.orders)
+      setTestError('')
+      const requested=new URLSearchParams(window.location.search).get('testDesign')
+      if(requested&&json.orders.some(row=>row.designId===requested))
+        setTestSelected(requested)
+    }catch{
+      setTestOrders([])
+      setTestError('Test-order list unavailable right now. Real Etsy receipts remain separate.')
+    }
     // Keep the order register available even when the inventory service is down.
     try {
       setMaterials(await api<MaterialSnapshot>('/api/admin/materials', adminKey))
@@ -203,6 +227,21 @@ export function ProductionDashboardPage() {
       setFailure(text)
     } finally { setBusy(false) }
   }
+  async function deleteTestOrder(designId:string){
+    if(!key||testDeleting||!window.confirm(
+      'Delete the simulated purchase and its TEST checklist for '+designId+
+      '? The actual saved design and frozen manufacturing files will be preserved.'))return
+    setTestDeleting(designId);setTestError('')
+    try{
+      const response=await fetch('/api/production/simulate?designId='+
+        encodeURIComponent(designId),{method:'DELETE',cache:'no-store',
+          headers:{'X-Starkeepsake-Admin-Key':key}})
+      if(!response.ok)throw Error('Could not delete this test order (HTTP '+response.status+').')
+      setTestOrders(orders=>orders.filter(row=>row.designId!==designId))
+      setTestSelected(selected=>selected===designId?null:selected)
+    }catch(e){setTestError(e instanceof Error?e.message:'Test deletion failed.')}
+    finally{setTestDeleting(null)}
+  }
   function downloadCsv() {
     if (!data) return
     const lines = [
@@ -236,6 +275,7 @@ export function ProductionDashboardPage() {
         </div>
         {key && <button type="button" className="production-ghost" onClick={() => {
           setKey(''); setData(null); setSavedDesigns([]); setMaterials(null); setSelected(null);
+          setTestOrders([]);setTestSelected(null);setTestError('');
           setFailure(''); setSavedDesignsError(''); setMessage('')
         }}>Lock studio</button>}
       </header>
@@ -260,6 +300,70 @@ export function ProductionDashboardPage() {
           <article><span>Paid receipts</span><strong>{paidCount}</strong></article>
           <article><span>Needs review</span><strong>{reviewCount}</strong></article>
           <article><span>Production jobs</span><strong>{data?.jobs.length ?? 0}</strong></article>
+        </section>
+        <section className="production-data production-tests" aria-label="Simulated purchases">
+          <div className="production-actions">
+            <div><p className="production-eyebrow">OWNER TESTING · NO ACTUAL CHARGE</p>
+              <h2>Your simulated purchases</h2>
+              <p>Build a real design on the customer site, select
+                <b> Simulate Etsy Purchase</b> and review its exact files and parts here.
+                These tests never enter Etsy sales, inventory demand or real fulfillment.</p>
+            </div>
+            <span className="production-test-badge">{testOrders.length} test orders</span>
+          </div>
+          {testError&&<p className="production-error" role="alert">{testError}</p>}
+          {testOrders.length>0?<div className="production-table-scroll">
+            <table className="production-table production-test-table">
+              <thead><tr><th>DESIGN ID</th><th>CREATED</th><th>FRAME</th>
+                <th>PHYSICAL STARS</th><th>STATUS</th><th>OPEN / REMOVE</th></tr></thead>
+              <tbody>{testOrders.map(order=><tr key={order.designId}
+                className={testSelected===order.designId?'production-active-row':''}>
+                <td><strong>{order.designId}</strong></td>
+                <td>{dateLabel(order.createdAt)}</td>
+                <td>{order.finish==='ebony'?'Matte black':order.finish==='walnut'?
+                  'Two-tone walnut':order.finish}</td>
+                <td>{order.stars} LEDs</td>
+                <td><span className="production-status production-test-label">
+                  TEST · no payment</span></td>
+                <td><div className="production-test-actions">
+                  <button type="button" className="production-row-link" onClick={()=>{
+                    setTestSelected(order.designId);setSelected(null)}}>
+                    Open exact test work order</button>
+                  <button type="button" className="production-test-delete"
+                    disabled={testDeleting===order.designId}
+                    onClick={()=>void deleteTestOrder(order.designId)}>
+                    {testDeleting===order.designId?'Deleting…':'Delete test'}</button>
+                </div></td>
+              </tr>)}</tbody>
+            </table>
+          </div>:<div className="production-empty">
+            <h3>No simulated purchases yet</h3>
+            <p>Finish a keepsake in <a href="/">the customer workshop</a>,
+              then select <b>Simulate Etsy Purchase</b>. Only you can add
+              test orders using your owner access key.</p>
+          </div>}
+          {testSelected&&testOrders.some(row=>row.designId===testSelected)&&
+            <section className="production-test-workorder" id="test-work-order"
+              aria-label="Exact saved design simulated work order">
+              <div className="production-detail-heading">
+                <div><p className="production-eyebrow">SIMULATED PURCHASE · NOT PAID</p>
+                  <h2>Test work order · {testSelected}</h2>
+                  <p>Review this actual saved design and its own manufacturing
+                    requirements, as though it came from checkout. No real sales,
+                    purchases or shipping are authorized.</p></div>
+                <button type="button" className="production-ghost"
+                  onClick={()=>setTestSelected(null)}>Close ×</button>
+              </div>
+              <div className="production-test-next">
+                <strong>Next: inspect your real photograph, print files and star map</strong>
+                <p>Confirm frame finish, supplier compatibility, print alignment and
+                  electrical tests before declaring this design buildable.</p>
+                {materialsError&&<small>{materialsError}</small>}
+              </div>
+              <OwnerProductionFiles key={testSelected} adminKey={key}
+                receiptId={0} transactionId={0} designId={testSelected}
+                simulated materials={materials}/>
+            </section>}
         </section>
         <SampleProductionOrder />
         <section className="production-data production-purchased" aria-label="Verified purchased designs">

@@ -31,16 +31,17 @@ function stockSnapshot(part:MakerPart,materials:MaterialSnapshot|null){
 function safeLink(url:string|null|undefined){
   return url&&/^https:\/\//i.test(url)?url:null
 }
-export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,adminKey}:{
+export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,adminKey,simulated=false}:{
   plan:MakerPlan;materials:MaterialSnapshot|null;receiptId:number;transactionId:number;
-  adminKey:string
+  adminKey:string;simulated?:boolean
 }){
   const [done,setDone]=useState<Record<string,boolean>>({})
   const [serverReady,setServerReady]=useState(false)
   const [progressError,setProgressError]=useState('')
   const [pending,setPending]=useState('')
-  const endpoint='/api/production/checklist?receiptId='+receiptId+
-    '&transactionId='+transactionId
+  const endpoint=simulated?
+    '/api/production/simulate?designId='+encodeURIComponent(plan.designId)+'&view=checklist':
+    '/api/production/checklist?receiptId='+receiptId+'&transactionId='+transactionId
   useEffect(()=>{
     let active=true
     void (async()=>{
@@ -88,12 +89,16 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,a
   const savedChecklist=()=>JSON.stringify({
     ...JSON.parse(makerChecklistJson(plan)),
     receiptId,transactionId,
-    warning:'Private Vercel Blob server-persisted checklist. Not an audited electrical safety approval or authorization to ship.',
+    warning:simulated?
+      'SIMULATION ONLY. Private test progress, not paid, certified or authorized to ship.':
+      'Private Vercel Blob server-persisted checklist. Not an audited electrical safety approval or authorization to ship.',
     steps:plan.steps.map(s=>({...s,status:done[s.id]?'saved_on_server':'not_started'}))
   },null,2)
   return <section className="omp-panel" aria-label="Saved-design physical manufacturing plan">
     <div className="omp-header">
-      <div><span className="omp-kicker">VERIFIED PAID JOB · SAVED DESIGN READ ONLY</span>
+      <div><span className="omp-kicker">{simulated?
+          'SIMULATED UNPAID TEST · EXACT SAVED DESIGN':
+          'VERIFIED PAID JOB · SAVED DESIGN READ ONLY'}</span>
         <h4>Exact design manufacturing review</h4></div>
       <span className="omp-hold">PRODUCTION HOLD</span>
     </div>
@@ -187,7 +192,9 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,a
     </details>)}
     <details className="omp-details">
       <summary>Build and QA checklist — {complete} / {plan.steps.length} steps saved</summary>
-      <p>{serverReady?'Your progress is stored privately on Vercel and will reload on other devices.':
+      <p>{serverReady?(simulated?
+        'Your test-only checklist is saved privately and will reload on another device.':
+        'Your progress is stored privately on Vercel and will reload on other devices.'):
         'Checking private server storage. Editing stays disabled until it is available.'}
         {' '}Step completion does not replace physical quality inspection,
         certification or owner permission to ship.</p>

@@ -32,6 +32,38 @@ async function authorizedJson(res){
   }
   return res.json();
 }
+/** Reuse Azure's existing owner secret and rate-limited authority.
+ * A public customer design key is NEVER enough to simulate an order. */
+export async function authorizeOwner(req){
+  const key=req.headers.get('x-starkeepsake-admin-key')||'';
+  if(key.length<32||key.length>256)
+    throw new PrivateAccessError('Owner access key required.',401);
+  await authorizedJson(await fetch(backend()+'/api/admin/designs',{
+    cache:'no-store',redirect:'error',
+    headers:{'X-Starkeepsake-Admin-Key':key},
+  }));
+  return true;
+}
+export async function authorizedDesignAsset(id,key,type){
+  if(!['original','foreground'].includes(type))
+    throw new PrivateAccessError('Unknown private asset.',400);
+  if(!DESIGN_RE.test(id)||!KEY_RE.test(key))
+    throw new PrivateAccessError('Private design reference invalid.',401);
+  const res=await fetch(backend()+'/api/designs/'+id+'/assets/'+type,{
+    cache:'no-store',redirect:'error',
+    headers:{'X-Design-Access-Key':key},
+  });
+  if(!res.ok){
+    if(res.status===404)return null;
+    if([401,403].includes(res.status))
+      throw new PrivateAccessError('Private design asset unavailable.',401);
+    throw new PrivateAccessError('Private design storage unavailable.',503);
+  }
+  const mime=res.headers.get('content-type')||'';
+  if(!['image/jpeg','image/png','image/webp'].includes(mime.split(';')[0].trim()))
+    throw new PrivateAccessError('Unsupported private photo type.',503);
+  return res;
+}
 export async function authorizeDesign(id,key){
   if(!DESIGN_RE.test(id)||!KEY_RE.test(key))
     throw new PrivateAccessError('Invalid saved-design credentials.',401);

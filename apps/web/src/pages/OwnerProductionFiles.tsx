@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from 'react'
+import {useEffect,useMemo,useRef,useState} from 'react'
 import {createCustomerPacket,downloadFile} from '../customerOrder'
 import {PRINT_VARIANTS,trimSafeGuideSvg} from '../manufacturingPrint'
 import type {PrintVariantId} from '../manufacturingPrint'
@@ -11,9 +11,9 @@ import './OwnerProductionFiles.css'
 const BASE=(import.meta.env.VITE_API_BASE_URL as string|undefined)?.replace(/\/$/,'')??''
 type Packet=Awaited<ReturnType<typeof createCustomerPacket>>
 
-export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,materials}:{
+export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,materials,simulated=false}:{
   adminKey:string;receiptId:number;transactionId:number;designId:string;
-  materials:MaterialSnapshot|null
+  materials:MaterialSnapshot|null;simulated?:boolean
 }){
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
@@ -24,9 +24,17 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
     bytes:number|null}|null>(null)
   const [archiveBusy,setArchiveBusy]=useState(false)
   const [archiveError,setArchiveError]=useState('')
-  const archiveUrl='/api/production/archive?receiptId='+receiptId+
-    '&transactionId='+transactionId
-  const url=BASE+'/api/admin/production/jobs/'+receiptId+'/'+transactionId
+  const [photoPreview,setPhotoPreview]=useState('')
+  const [proofPreview,setProofPreview]=useState('')
+  const proofObject=useRef('')
+  const simulationUrl='/api/production/simulate?designId='+encodeURIComponent(designId)
+  const archiveUrl=simulated?simulationUrl+'&view=archive':
+    '/api/production/archive?receiptId='+receiptId+'&transactionId='+transactionId
+  const url=simulated?simulationUrl:
+    BASE+'/api/admin/production/jobs/'+receiptId+'/'+transactionId
+  const designUrl=simulated?simulationUrl+'&view=design':url+'/design'
+  const assetUrl=(type:'original'|'foreground')=>simulated?
+    simulationUrl+'&view=asset&type='+type:url+'/assets/'+type
   // The saved design metadata alone is enough to show the N-dependent BOM.
   // Original photo bytes are requested only when owner explicitly clicks Prepare.
   useEffect(()=>{
@@ -34,9 +42,10 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
     let active=true
     void (async()=>{
       try{
-        const response=await fetch(url+'/design',{
+        const response=await fetch(designUrl,{
           cache:'no-store',headers:{'X-Starkeepsake-Admin-Key':adminKey}})
-        if(!response.ok)throw Error('A verified, paid and matched Etsy design could not be loaded.')
+        if(!response.ok)throw Error(simulated?'Test design is unavailable.':
+          'A verified, paid and matched Etsy design could not be loaded.')
         const saved=await response.json() as LoadedDesign
         if(!active)return
         if(saved.designId!==designId)throw Error('Saved Design ID mismatches the paid Etsy item.')
@@ -58,23 +67,30 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
       }
     })()
     return ()=>{active=false}
-  },[adminKey,url,designId,archiveUrl])
+  },[adminKey,designUrl,designId,archiveUrl,simulated])
   const plan=useMemo(()=>{
     if(!savedMeta)return null
     try{return buildManufacturingJobPlan(savedMeta.design,savedMeta.preferences)}
     catch{return null}
   },[savedMeta])
   async function get(path:string):Promise<Response>{
-    const response=await fetch(url+path,{cache:'no-store',
+    const location=path==='/design'?designUrl:
+      path==='/assets/original'?assetUrl('original'):
+      path==='/assets/foreground'?assetUrl('foreground'):url+path
+    const response=await fetch(location,{cache:'no-store',
       headers:{'X-Starkeepsake-Admin-Key':adminKey}})
     if(response.status===401)throw Error('Owner authorization expired; sign in again.')
-    if(response.status===404)throw Error('A verified paid matched job or its files could not be found.')
+    if(response.status===404)throw Error(simulated?
+      'The test order was deleted or its saved files are unavailable.':
+      'A verified paid matched job or its files could not be found.')
     if(!response.ok)throw Error('Owner files temporarily unavailable (HTTP '+response.status+').')
     return response
   }
   async function prepare(){
     if(busy)return
     setBusy(true);setError('');setPacket(null)
+    if(proofObject.current){URL.revokeObjectURL(proofObject.current);proofObject.current=''}
+    setProofPreview('')
     let originalUrl='',cutoutUrl=''
     try{
       const saved=await(await get('/design')).json() as LoadedDesign
@@ -88,10 +104,13 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
       originalUrl=URL.createObjectURL(original)
       if(saved.hasPreparedForeground)
         cutoutUrl=URL.createObjectURL(await(await get('/assets/foreground')).blob())
-      setPacket(await createCustomerPacket({
+      const prepared=await createCustomerPacket({
         design:saved.design,prefs:saved.preferences,photo,photoUrl:originalUrl,
         cutoutUrl,savedDesignId:saved.designId
-      }))
+      })
+      proofObject.current=URL.createObjectURL(prepared.sheet)
+      setProofPreview(proofObject.current)
+      setPacket(prepared)
     }catch(e){
       setError(e instanceof Error?e.message:'Could not create manufacturing files.')
     }finally{
@@ -113,6 +132,23 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
       error.message:'Frozen packet could not be downloaded.')}
     finally{setArchiveBusy(false)}
   }
+  // Owner-only original and actual generated order proof, never generic demo data.
+  useEffect(()=>{
+    if(!simulated||!adminKey)return
+    let active=true,objectUrl=''
+    void (async()=>{
+      try{
+        const result=await fetch(simulationUrl+'&view=asset&type=original',{
+          cache:'no-store',headers:{'X-Starkeepsake-Admin-Key':adminKey}})
+        if(!result.ok)return
+        objectUrl=URL.createObjectURL(await result.blob())
+        if(active)setPhotoPreview(objectUrl)
+        else URL.revokeObjectURL(objectUrl)
+      }catch{/* The private maker files remain available via the owner controls. */}
+    })()
+    return()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl)}
+  },[simulated,adminKey,simulationUrl])
+  useEffect(()=>()=>{if(proofObject.current)URL.revokeObjectURL(proofObject.current)},[])
   const specs=packet?.manifest.manufacturing?.printVariants
   function downloadSupplement(id:PrintVariantId,kind:'spec'|'guide'){
     const variant=PRINT_VARIANTS.find(v=>v.id===id)
@@ -122,17 +158,29 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
     downloadFile(new Blob([body],{type:kind==='spec'?'application/json':'image/svg+xml'}),
       designId+'-'+(kind==='spec'?variant.spec:variant.guide))
   }
-  return <section className="opf-panel" aria-label="Private paid-order manufacturing files">
+  return <section className="opf-panel" aria-label={simulated?
+    'Private simulated-order manufacturing files':'Private paid-order manufacturing files'}>
+    {simulated&&<div className="opf-test-banner" role="note">
+      <strong>TEST WORK ORDER · NO ETSY PAYMENT</strong>
+      <span>This is your exact saved design. Test checklist progress is separate
+        from genuine orders. All physical, stock and safety holds still apply.</span>
+    </div>}
+    {simulated&&photoPreview&&<div className="opf-test-photo">
+      <img src={photoPreview} alt="Original photograph uploaded for the exact saved test design"/>
+      <div><strong>Original customer photograph</strong>
+        <p>The real saved photo, not a demo image.
+          Generate the print proof below to see the combined star map.</p></div>
+    </div>}
     <div className="opf-heading">
-      <div><h4>Owner manufacturing files</h4>
-        <p>Download the exact checkout ZIP frozen before Etsy payment. New print
-          regenerations are only reference copies and may change with later code.</p></div>
+      <div><h4>{simulated?'Your saved design — manufacturing files':'Owner manufacturing files'}</h4>
+        <p>{simulated?'Download the exact ZIP prepared in Chapter 05 or generate printable artwork here without reopening the customer builder.':
+          'Download the exact checkout ZIP frozen before Etsy payment. New print regenerations are only reference copies and may change with later code.'}</p></div>
       <button type="button" className="production-primary" onClick={()=>void prepare()}
         disabled={!adminKey||busy}>{busy?'Rendering print formats…':
           packet?'↻ Regenerate reference files':'Generate reference files (not frozen)'}</button>
     </div>
     {archived?.archived&&<div className="opf-archive-confirm" role="status">
-      <strong>✓ Original checkout maker ZIP preserved in private Vercel storage</strong>
+      <strong>✓ {simulated?'Original test design ZIP':'Original checkout maker ZIP'} preserved in private Vercel storage</strong>
       <small>{archived.frozenAt?'Frozen '+new Date(archived.frozenAt).toLocaleString():
         'Frozen time not available'} · {archived.bytes?
           Math.round(archived.bytes/1024/1024)+' MB':'Size not available'}</small>
@@ -151,9 +199,16 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
     </p>}
     {plan&&<OwnerManufacturingPlan key={plan.designId} plan={plan}
       materials={materials} receiptId={receiptId} transactionId={transactionId}
-      adminKey={adminKey}/>}
+      adminKey={adminKey} simulated={simulated}/>}
+
     {error&&<p role="alert" className="production-error">{error}</p>}
     {packet&&<div className="opf-results" role="status">
+      {proofPreview&&<div className="opf-test-photo opf-print-proof">
+        <img src={proofPreview} alt="Generated proof of the exact saved sky and photograph"/>
+        <div><strong>Your saved photograph with its calculated sky</strong>
+          <p>Review the composition here, then approve the chosen print-lab
+            variant against a physical proof.</p></div>
+      </div>}
       <p><strong>Owner print files generated.</strong> Each retains the identical
         11 × 14-inch visible composition. Review the photograph and physical proof before printing.</p>
       {packet.manifest.manufacturing?.photoQuality&&

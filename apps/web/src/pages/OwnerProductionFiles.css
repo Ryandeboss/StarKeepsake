@@ -31,3 +31,17 @@
 .opf-archive-confirm button{justify-self:start}
 .opf-archive-warning{border-left:3px solid #ce9568;color:#e9caa7;
   padding:10px 14px;margin:10px 0}
+
+/* Actual saved photo and generated proof in owner-authorized test jobs. */
+.opf-test-banner{grid-column:1/-1;display:grid;gap:5px;padding:13px 16px;
+ border:1px solid #b29360;border-radius:10px;background:#342e27;color:#f0dfc4}
+.opf-test-banner strong{font-size:12px;letter-spacing:.09em}
+.opf-test-banner span{font-size:11px;line-height:1.6;color:#d9cbb9}
+.opf-test-photo{grid-column:1/-1;display:flex;align-items:center;gap:20px;
+ padding:16px;border:1px solid #485d66;border-radius:12px;background:#0e2330}
+.opf-test-photo img{width:150px;max-height:190px;object-fit:contain;border-radius:6px;
+ border:1px solid #526a71}
+.opf-test-photo strong{font-size:14px;color:#ecdfc3}
+.opf-test-photo p{font-size:12px;line-height:1.6;color:#afc4ca;margin:8px 0}
+.opf-print-proof img{width:185px;max-height:270px}
+@media(max-width:580px){.opf-test-photo{flex-direction:column;align-items:flex-start}}

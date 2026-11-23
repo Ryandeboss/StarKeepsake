@@ -92,3 +92,50 @@ test('supplier research never implies validated stock or power safety',()=>{
   assert.equal(supplierCandidateFor('wall_power'),null)
   assert.equal(supplierCandidateFor('fuse'),null)
 })
+
+test('owner-only simulated orders cannot be created, listed or deleted anonymously',async()=>{
+  const simulator=(await import('../api/production/simulate.js')).default
+  const url='https://example.invalid/api/production/simulate'
+  for(const [method,query] of [['GET',''],['DELETE','?designId=SK-0123456789ABCDEF']]){
+    const res=await simulator.fetch(new Request(url+query,{method}))
+    assert.equal(res.status,401)
+    assert.equal(res.headers.get('Cache-Control'),'private, no-store')
+  }
+  const noOwner=await simulator.fetch(new Request(url,{method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({designId:'SK-0123456789ABCDEF',accessKey:'a'.repeat(43)})}))
+  assert.equal(noOwner.status,401)
+})
+test('test purchases require owner key, actual saved design and already frozen archive',()=>{
+  const server=read('../api/production/simulate.js')
+  const auth=read('../server/archiveAccess.js')
+  assert.match(server,/await authorizeOwner\(request\)/)
+  assert.match(server,/await authorizeDesign\(body\.designId,body\.accessKey\)/)
+  assert.match(server,/findBlob\(frozenPath\(body\.designId\)\)/)
+  assert.match(server,/status:'SIMULATED_NOT_PAID'/)
+  assert.match(server,/production\/simulations\/orders\//)
+  assert.match(server,/STEP_IDS/)
+  assert.match(server,/view==='checklist'/)
+  assert.match(server,/await del\(\[pathFor\(id\),/)
+  assert.match(server,/DO NOT delete the saved design/)
+  assert.doesNotMatch(server,/api\/admin\/production\/sync|api\/webhooks\/etsy/)
+  assert.match(auth,/export async function authorizeOwner/)
+  assert.match(auth,/\/api\/admin\/designs/)
+})
+test('real Etsy authorization and simulated checklist use distinct validated paths',()=>{
+  const original=read('../src/pages/OwnerProductionFiles.tsx')
+  const plan=read('../src/pages/OwnerManufacturingPlan.tsx')
+  const dash=read('../src/pages/ProductionDashboardPage.tsx')
+  assert.match(original,/simulated=false/)
+  assert.match(original,/simulationUrl\+'\&view=design'/)
+  assert.match(original,/simulationUrl\+'\&view=archive'/)
+  assert.match(original,/URL\.createObjectURL\(packet\.sheet\)/)
+  assert.match(plan,/simulated=false/)
+  assert.match(plan,/view=checklist/)
+  assert.match(plan,/await fetch\(endpoint/)
+  assert.match(dash,/Your simulated purchases/)
+  assert.match(dash,/deleteTestOrder/)
+  assert.match(dash,/simulated materials=\{materials\}/)
+  assert.match(dash,/setTestOrders\(orders=>orders\.filter/)
+  assert.match(dash,/purchasedDesigns=useMemo/)
+})

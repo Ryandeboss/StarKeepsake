@@ -267,3 +267,15 @@ test('demo cannot fake stock, star geometry, persisted QA or shipping readiness'
   assert.match(sample,/not a customer's actual photo or calculated sky/)
   assert.doesNotMatch(sample,/fetch\(|api\(|createCustomerPacket\(|saveCustomerDesign\(/)
 })
+
+test('owner simulation CTA saves the current design and archives before server test insert',()=>{
+  assert.match(studio,/Simulate Etsy Purchase/)
+  assert.match(studio,/async function simulateEtsyPurchase/)
+  assert.match(studio,/const receipt=await buildOrderPacket\(\)/)
+  assert.match(studio,/await freezeManufacturingPacket\(receipt,packet\)/)
+  assert.match(studio,/\/api\/production\/simulate/)
+  assert.match(studio,/X-Starkeepsake-Admin-Key/)
+  assert.match(studio,/type="password" autoComplete="off"/)
+  assert.match(studio,/Open this test work order in Production Studio/)
+  assert.match(studio,/This does not buy anything or contact Etsy/)
+})

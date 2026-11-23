@@ -1016,3 +1016,27 @@
 @media(prefers-reduced-motion:reduce){.at-order-preparing-orbit,
  .at-order-button-spinner{animation:none}
  .at-order-preparing-track>span{transition:none}}
+
+/* Explicit owner-only test action, subordinate to the real Etsy checkout. */
+.at-owner-simulate{display:grid;gap:10px;margin-top:13px;padding:15px;
+ border:1px dashed #5b7580;border-radius:11px;background:#0a2230}
+.at-owner-simulate>.at-kicker{font-size:10px;color:#c0b391}
+.at-owner-simulate-toggle{display:flex;align-items:center;justify-content:space-between;
+ border:1px solid #7e8074!important;background:#173340!important;
+ color:#f1dec0!important;border-radius:8px;padding:12px 14px!important;
+ font-size:12px;font-weight:700;cursor:pointer}
+.at-owner-simulate>small,.at-owner-simulate-form small{font-size:10px;
+ line-height:1.65;color:#a9bdc4}
+.at-owner-simulate-form{display:grid;gap:9px}
+.at-owner-simulate-form label{font-size:11px;color:#e8d5ae}
+.at-owner-simulate-form input{box-sizing:border-box;width:100%;border:1px solid #607980;
+ border-radius:7px;padding:12px;background:#081e2a;color:#f4e7da}
+.at-owner-simulate-form button{padding:12px;border:1px solid #d4b88a;border-radius:8px;
+ background:#dec89d;color:#132c39;font-size:12px;font-weight:700;cursor:pointer}
+.at-owner-simulate-form button:disabled{opacity:.6;cursor:wait}
+.at-owner-simulate-error{margin:0;font-size:11px;color:#ffc7c7}
+.at-owner-simulate-success{display:grid;gap:8px;padding:12px;background:#19382f;
+ border:1px solid #547b65;border-radius:9px}
+.at-owner-simulate-success strong{color:#e5efdd;font-size:12px}
+.at-owner-simulate-success small{color:#c1d8cc;font-size:11px;line-height:1.6}
+.at-owner-simulate-success a{color:#f1d5a4;font-size:12px;font-weight:650}

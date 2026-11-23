@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { DragEvent } from 'react'
+import type { DragEvent, FormEvent } from 'react'
 import { generateAstronomy, resolveMoment, searchLocations } from '../api'
 import type { LocationCandidate } from '../api'
 import { SkyMaskEditor } from '../components/SkyMaskEditor'
@@ -148,6 +148,11 @@ export function ExperiencePage() {
   const [orderBusy,setOrderBusy]=useState(false)
   const [orderPreparingStep,setOrderPreparingStep]=useState<'save'|'render'|'archive'|null>(null)
   const [orderError,setOrderError]=useState('')
+  const [simulationOpen,setSimulationOpen]=useState(false)
+  const [simulationKey,setSimulationKey]=useState('')
+  const [simulationBusy,setSimulationBusy]=useState(false)
+  const [simulationError,setSimulationError]=useState('')
+  const [simulationDone,setSimulationDone]=useState<string|null>(null)
   const [saveBusy,setSaveBusy]=useState(false)
   const [saveError,setSaveError]=useState('')
   const [copied,setCopied]=useState<'link'|'order'|'details'|null>(null)
@@ -781,12 +786,12 @@ export function ExperiencePage() {
     }
   }
 
-  async function buildOrderPacket(){
-    if(currentOrder)return
-    if(!photo)return
+  async function buildOrderPacket():Promise<SavedDesignReceipt|null>{
+    if(currentOrder)return savedDesign?.receipt??null
+    if(!photo)return null
     if(!activeDesign.physicalStars?.length){
       setOrderError('Choose a view with at least one physical star light before preparing your Etsy order.')
-      return
+      return null
     }
     const key=orderKey
     const preferences={...orderPreferences}
@@ -806,9 +811,50 @@ export function ExperiencePage() {
       setOrderPreparingStep('archive')
       await freezeManufacturingPacket(receipt,packet)
       setPreparedOrder({key,packet})
+      return receipt
     }catch(cause){
       setOrderError(cause instanceof Error?cause.message:'Could not prepare your order files.')
+      return null
     }finally{setOrderBusy(false);setOrderPreparingStep(null)}
+  }
+
+  async function simulateEtsyPurchase(event:FormEvent<HTMLFormElement>){
+    event.preventDefault()
+    if(simulationBusy||orderBusy||saveBusy)return
+    const adminKey=simulationKey.trim()
+    if(adminKey.length<32){
+      setSimulationError('Enter your existing owner admin access key to create a test order.')
+      return
+    }
+    setSimulationBusy(true);setSimulationError('')
+    try{
+      // Always save this exact current design and finish its private maker archive
+      // before the owner-only server can create a simulated purchase.
+      const receipt=await buildOrderPacket()
+      if(!receipt)throw Error('Preparing the exact design failed. Review the save error above.')
+      const response=await fetch('/api/production/simulate',{
+        method:'POST',cache:'no-store',
+        headers:{'Content-Type':'application/json',
+          'X-Starkeepsake-Admin-Key':adminKey},
+        body:JSON.stringify({designId:receipt.designId,accessKey:receipt.accessKey}),
+      })
+      if(!response.ok){
+        let message='Could not create a test order (HTTP '+response.status+').'
+        try{
+          const body=await response.json() as {error?:string}
+          if(body.error)message=body.error
+        }catch{/* Keep the generic error from a proxy. */}
+        throw Error(message)
+      }
+      const result=await response.json() as {order:{designId:string}}
+      if(result.order.designId!==receipt.designId)
+        throw Error('Test order and saved Design ID do not match.')
+      setSimulationDone(receipt.designId)
+      setSimulationKey('')
+      setSimulationOpen(false)
+    }catch(error){
+      setSimulationError(error instanceof Error?error.message:'Could not create the test order.')
+    }finally{setSimulationBusy(false)}
   }
 
   if(!draftReady)return <div className="at-shell at-draft-loading" role="status">
@@ -1504,6 +1550,45 @@ export function ExperiencePage() {
                     Download complete design backup (ZIP)</button>
                 </details>
               </div>}
+              <div className="at-owner-simulate">
+                <span className="at-kicker">OWNER TESTING · NO PAYMENT</span>
+                <button type="button" className="at-owner-simulate-toggle"
+                  disabled={simulationBusy||orderBusy||saveBusy||restoreBusy}
+                  aria-expanded={simulationOpen}
+                  onClick={()=>{setSimulationOpen(value=>!value);setSimulationError('')}}>
+                  Simulate Etsy Purchase <span aria-hidden="true">↗</span>
+                </button>
+                <small>For the store owner only. Saves your exact current design
+                  as a simulated work order to test the admin manufacturing process.
+                  This does not buy anything or contact Etsy.</small>
+                {simulationOpen&&<form className="at-owner-simulate-form"
+                  onSubmit={event=>void simulateEtsyPurchase(event)}>
+                  <label htmlFor="at-test-owner-key">Owner admin access key</label>
+                  <input id="at-test-owner-key" type="password" autoComplete="off"
+                    minLength={32} required value={simulationKey}
+                    disabled={simulationBusy||orderBusy}
+                    onChange={event=>setSimulationKey(event.target.value)}
+                    placeholder="Your existing Production Studio access key"/>
+                  <button type="submit" disabled={simulationBusy||orderBusy}>
+                    {simulationBusy?'Saving exact test order…':
+                      'Create simulated purchase in admin'}
+                  </button>
+                  <small>The key is used once to authorize this test and is not
+                    stored in your browser. Test orders can be deleted in Production Studio.</small>
+                </form>}
+                {simulationError&&<p role="alert" className="at-owner-simulate-error">
+                  {simulationError}</p>}
+                {simulationDone===savedDesign?.receipt.designId&&savedCurrent&&
+                  <div className="at-owner-simulate-success" role="status">
+                    <strong>✓ Test purchase saved · {simulationDone}</strong>
+                    <small>This is NOT a real Etsy payment. Your exact design can now
+                      be inspected, assembled on paper and checked off in the test work order.</small>
+                    <a href={'/admin/production?testDesign='+encodeURIComponent(simulationDone)}
+                      target="_blank" rel="noopener noreferrer">
+                      Open this test work order in Production Studio ↗
+                    </a>
+                  </div>}
+              </div>
               {savedCurrent&&savedDesign&&<details className="at-saved-design at-saved-design-private">
                 <summary>Keep editing later · private reopening link</summary>
                 <strong>Saved design: {savedDesign.receipt.designId}</strong>

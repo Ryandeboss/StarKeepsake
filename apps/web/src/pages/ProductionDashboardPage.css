@@ -79,3 +79,27 @@
 
 /* A fixed demo module follows verified live counts, without affecting them. */
 .production-purchased .production-design-count{white-space:nowrap}
+
+/* Owner-authenticated saved-design simulations are never Etsy paid records. */
+.production-tests .production-test-badge{font-size:12px;color:#ebd4a6;
+ padding:8px 12px;border:1px solid #987b58;border-radius:99px;white-space:nowrap}
+.production-tests .production-test-table{min-width:840px}
+.production-tests .production-test-table strong{color:#ecd5a7}
+.production-test-label{background:#3d3129;color:#f0d5a2;border-color:#997950}
+.production-test-actions{display:flex;gap:14px;align-items:center}
+.production-test-delete{border:1px solid #8f6460;background:transparent;color:#e9b7b0;
+ border-radius:7px;padding:7px 10px;font-size:11px!important;white-space:nowrap}
+.production-test-delete:hover:not(:disabled){background:#4a2932}
+.production-test-workorder{border-top:1px solid #4b6371;background:#0c1d2b;
+ padding:0 18px 22px;scroll-margin-top:18px}
+.production-test-workorder .production-detail-heading{padding:22px 6px}
+.production-test-workorder .production-detail-heading p:last-child{color:#adc3cc;
+ font-size:12px;line-height:1.65;max-width:700px}
+.production-test-workorder .opf-panel{margin-top:15px}
+.production-test-next{padding:15px 18px;border-radius:10px;background:#1c3440;
+ border:1px solid #806d50}
+.production-test-next strong{color:#efdbb5;font-size:14px}
+.production-test-next p,.production-test-next small{color:#bdcdd3;font-size:12px;
+ line-height:1.6;margin:7px 0 0;display:block}
+@media(max-width:560px){.production-test-workorder{padding:0 8px 16px}
+ .production-test-actions{flex-direction:column;align-items:flex-start}}
