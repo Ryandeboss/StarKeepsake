@@ -1730,3 +1730,49 @@ Clarification:
 - If variable frame sizes are supported, the production packet must freeze actual trim width/height, print dimensions, star print-space coordinates, drilling geometry, panel size, and per-order BOM for that specific frame.
 - Avoid assuming that a random Amazon frame matching the image aspect ratio is automatically suitable; verify depth, glazing, rabbet/opening, backing, hanger, finish, and service access.
 - A practical compromise may be a small supported catalog of standard frame sizes/aspect ratios rather than arbitrary frame dimensions for every order.
+
+
+---
+
+# Latest turn — Quality review of example manufacturing packet SK-CF00A426C2685565
+
+The user uploaded an example order packet and asked for a quality assessment.
+
+Reviewed artifacts included:
+- manufacturing-job-plan.json;
+- order.json;
+- physical-star-map CSVs;
+- 1:1 drilling-template SVG;
+- order-sheet PNG;
+- exact-11x14 artwork PNG.
+
+Findings:
+
+## Strong / working well
+- Manufacturing plan identifies the correct design and reports 9 physical stars, one TLC5947 driver, one connector group, and geometryValidated=true.
+- Physical-star CSV contains exactly 9 rows with LED indices 0..8 and print-space X/Y coordinates matching the manufacturing plan.
+- Drill template contains the 11x14 nominal rectangle, the same 9 star centers, TOP orientation, a 50 mm verification ruler, and an explicit DRAFT / NOT AUTHORIZED TO DRILL warning.
+- Order packet correctly expects the major print variants, print guides/specs, photo-quality report, manufacturing plan, star map, candidate parts, assembly checklist, and drill template.
+- Order sheet is visually polished and suitable as a design/Etsy reference card.
+- Exact artwork visually looks coherent and premium enough as a concept.
+
+## Important issues / holds
+- The order itself is UNPAID_PREVIEW, not a paid production order.
+- Manufacturing plan is HOLD_FOR_MANUFACTURING_APPROVAL and explicitly lists unresolved print/star registration, drill-diameter, brightness/PWM, electrical/thermal, Etsy frame-variation, supplier, pricing, and inventory validation.
+- This specific example's photo-quality preflight reports effective PPI ~78.79 and warns that the composition stretches the source photograph to the 11x14 print aspect ratio and has insufficient original pixels for the intended printed-photo size. This is a major print-quality blocker.
+- The uploaded copy of print-artwork-exact-11x14 received in ChatGPT measured 1609x2048 and contained no PNG pHYs DPI chunk, while order.json declares the intended exact print variant as 3300x4200 at 300 DPI. This could be due to attachment/downsampling in the chat pipeline, so verify the original site-downloaded file locally before treating this as a site-export defect.
+- PWM values and aperture categories in the physical-star map remain NOT CALIBRATED.
+- Drill SVG is structurally useful but should remain proof/calibration only until a real 100%-scale print-to-panel registration test is completed.
+
+Overall assessment:
+- Design/reference output: ~8.5/10.
+- Manufacturing data structure: ~8/10.
+- Actual print-production readiness for this particular example: ~4/10 because the photo preflight is failing badly.
+- Overall packet as a prototype/rehearsal artifact: ~7/10.
+- Not yet suitable for real customer fulfillment without resolving the photo fit/PPI issue and the existing physical/electrical validation holds.
+
+Recommended next software priority:
+1. Fix the photo compositor so wide source photos are cropped/fit without anisotropic stretching into 11x14 portrait.
+2. Treat low effective PPI as an obvious admin/customer production blocker or required owner approval.
+3. Verify original downloaded print PNG dimensions/DPI locally.
+4. Keep star/drill/electronics calibration holds explicit until physical prototype tests pass.
