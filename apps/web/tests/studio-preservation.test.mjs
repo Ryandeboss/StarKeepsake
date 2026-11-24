@@ -166,9 +166,11 @@ test('Chapter 05 places room choices in the right-hand card instead of facts', (
   assert.match(landingCss,/\.at-home-spec \.at-home-choice-list\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/)
 })
 
-test('Chapter 05 only shows the full light picker for more than 24 print-safe stars', () => {
+test('Chapter 05 exposes the star picker whenever visible digital stars exceed drill-safe LEDs', () => {
   const chapter5=studio.split('CHAPTER 05 / BRING YOUR NIGHT HOME')[1]
-  assert.match(chapter5,/physicalView&&physicalView\.physicalSelection\.eligibleStars>24&&\s*<section className="at-physical-choices"/)
+  assert.match(chapter5,/physicalView&&\(physicalView\.physicalSelection\.eligibleStars>24\|\|/)
+  assert.match(chapter5,/digitalOnlyCount>0\)&&/)
+  assert.match(chapter5,/className="at-physical-choices"/)
   assert.match(chapter5,/physicalView\.physicalSelection\.eligibleStars===0/)
   assert.match(chapter5,/physicalView\.physicalSelection\.eligibleStars<=24&&\s*design\.physicalStarOverrides\?\.mode==='manual'/)
   assert.match(chapter5,/Restore automatic star selection/)

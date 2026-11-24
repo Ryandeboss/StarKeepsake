@@ -1,4 +1,5 @@
 import {upload} from '@vercel/blob/client'
+import {assertManifestStarParity} from './physicalStarParity'
 import type {SavedDesignReceipt} from './savedDesign'
 import type {createCustomerPacket} from './customerOrder'
 
