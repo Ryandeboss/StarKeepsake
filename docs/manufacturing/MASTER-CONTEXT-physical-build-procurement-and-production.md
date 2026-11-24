@@ -1801,3 +1801,32 @@ Key architectural correction:
 - Legacy 11x14 designs should remain reproducible and must not be silently remapped.
 
 Current uploaded example showed exactly why this matters: the wide source image was being forced into a portrait 11x14 print, producing a preflight warning for stretching and very low effective PPI. The variable-frame refactor should prevent that class of distortion.
+
+
+---
+
+# 2026-11-24 — Missing supplier links for admin BOM
+
+Owner supplied a 10-star example order and requested credible supplier links for all No link rows. Research candidates (not production approvals; no purchases made):
+
+- Wall adapter: Adafruit 1466, UL-listed 5V 4A, $14.95 when checked, https://www.adafruit.com/product/1466 . Final load and protection still HOLD.
+- Power inlet: Same Sky PJ-011A panel jack 5.5/2.1mm, 5A, https://www.digikey.com/en/products/detail/same-sky-formerly-cui-devices/PJ-011A/305540 ; verify mating, panel thickness, and cable retention.
+- Fuse holder: OptiFuse LPC-08B-18R, https://www.digikey.com/en/products/detail/optifuse/LPC-08B-18R/12089489 ; 5x20 holder only, final DC-rated fuse selection HOLD.
+- Distribution: two separately isolated WAGO 221-415 connectors for positive/ground, https://www.digikey.com/en/products/detail/wago-corporation/221-415/13549457 ; 24-12 AWG only; secure mechanically, don't insert 26 AWG channel wire.
+- 12-channel harness: Molex Micro-Fit 43025-1200 receptacle https://www.digikey.com/en/products/detail/molex/0430251200/252501 ; 43020-1201 plug https://www.newark.com/molex/43020-1201/connector-housing-plug-12pos/dp/56H9388 ; female 43030-0010 https://www.digikey.com/en/products/detail/molex/0430300010/252480 ; male 43031-0010 https://www.digikey.com/en/products/detail/molex/0430310010/252484 . 26-30 AWG terminals; check insulation OD, crimp tool and actual mating/fit. One pair per ceil(N/12), N contacts each gender. Prewired option https://www.commoncables.com/molex-micro-fit-3-0/12-pin .
+- Star and accent service connectors: Adafruit 2880 JST SM pair https://www.adafruit.com/product/2880 ; conditional on verified current ratings and mistake-proof keying; do not interchange with star supply or use as main 4A input.
+- Main wire prototype candidate 18 AWG stranded copper red/black https://www.jameco.com/z/JMS822-01G-Jameco-ValuePro-18-AWG-6-Color-Stranded-Tinned-Copper-Hook-Up-Wire-Assortment-25-Feet_2206281.html ; final branch wire gauge and terminal fit HOLD.
+- Heat shrink Adafruit 344 https://www.adafruit.com/product/344 .
+- Nylon standoffs M2.5 https://www.adafruit.com/product/3299 ; M3 if required https://www.adafruit.com/product/4685 .
+- Cable tie mounts Gardner Bender MB-20 https://www.homedepot.com/p/205879478 ; validate adhesion/retention.
+- Rear cover turn buttons https://framing4yourself.com/product/turn-buttons-and-screws/ ; for wood frames only if fit/strength verified.
+- Hangers OOK ReadyScrew D rings https://ookhardware.com/products/readyscrew-d-ring ; size to finished weight/frame strength.
+- Packaging Uline artwork/mirror boxes https://www.uline.com/BL_7901/Artwork-Mirror-Boxes ; corners https://www.uline.com/BL_2160/Corrugated-Corner-Protectors ; adapter pouch https://www.uline.com/Product/Detail/S-14761/Bubble-Bags/5-x-8-Self-Seal-Bubble-Bags ; measure actual outer frame and test shipment.
+- Continuous warm-white COB candidate BTF-LIGHTING 5V USB FCOB 8mm, https://www.btf-lighting.com/collections/dim-fcob-5v-12v-24v/products/dc5v-usb-fcob-led-light-strip-8mm-pcb-320-leds-fob-cob-ra90-flexible-from-3000k-to-6000k-linear-dimmable ; select 3000K, verify exact rated W/m and bare two-wire tape compatibility; measure full-brightness current. Adafruit 5648 continuous limit 1.5A, don't use PWM as excuse to exceed ratings. Optional short bench sample DFRobot FIT0876 https://www.dfrobot.com/product-2492.html is 60mm, 600mA, with heatsink; not a full perimeter strip.
+- Channel/diffuser Diode LED S1 48-inch up to 12mm tape https://www.beeslighting.com/products/diode-led-di-chb-s1-48al-s1-channel-bundle-for-tape-lights-up-to-12mm-48in-classic-frosted-lens-aluminum ; fit/length/thermal proof required.
+- Neutral cure black RTV DOWSIL 737 https://www.ellsworth.com/products/by-market/consumer-products/sealants/silicone/dow-737-neutral-cure-sealant-silicone-black-300-ml-cartridge/ ; cure and adhesion coupon required.
+- Care card Avery 8387 inkjet matte https://www.avery.com/products/cards/8387 .
+- Black 1/8-inch glazing spacer candidate https://www.webpictureframes.com/product4/3296/glass-spacers-picture-frame-supplies-glsspcrblk18.html .
+- Pickup/delivery is actual expense, no product link needed.
+
+Important: source confidence is separate from physical qualification. No actual supplier stock/price guarantee, fuse amperage, safety certification of the complete product, or measured frame fit established. No live admin catalog or procurement sheet edited in this turn. Current parts list still has generic frame/print links and 26 AWG category page; can improve later with approved specific SKUs. StarPods 9mm flange means 4.5mm hole spacing isn't necessarily adequate; check real holder footprints and edge clearance before any build.
