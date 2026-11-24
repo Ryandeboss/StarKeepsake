@@ -432,3 +432,12 @@ test('Chapter 04 help stays in the right-aligned star count column',()=>{
   assert.match(css,/\.skw-footline-count\{[^}]*flex-direction:column[^}]*align-items:flex-end[^}]*margin-left:auto/)
   assert.match(css,/\.skw-footline-count \.at-star-count-help\{[^}]*text-align:right/)
 })
+
+test('Chapter 04 star help floats above its link without reflowing the footer',()=>{
+  const css=file('../src/components/SkyWorkshopPreview.css')
+  assert.match(css,/\.skw-footline-count \.at-star-count-help\{[^}]*position:relative/)
+  assert.match(css,/\.skw-footline-count \.at-star-count-help-content\{position:absolute;right:0;bottom:100%/)
+  assert.match(css,/\.skw-footline-count \.at-star-count-help-content\[hidden\]\{display:none\}/)
+  assert.match(studio,/From sky to keepsake/)
+  assert.match(studio,/document\.addEventListener\('pointerdown',dismiss\)/)
+})

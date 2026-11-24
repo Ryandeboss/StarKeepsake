@@ -42,10 +42,21 @@ import './ExperiencePage.css'
 // Shared, independently dismissible disclosure for the sky and showroom counts.
 function StarCountHelp({view,manual}:{view:ReturnType<typeof makePhysicalView>;manual:boolean}){
   const id=useId()
+  const helpRef=useRef<HTMLDivElement>(null)
   const [pinned,setPinned]=useState(false)
   const [hovered,setHovered]=useState(false)
   const expanded=pinned||hovered
-  return <div className="at-star-count-help"
+  useEffect(()=>{
+    if(!pinned)return
+    function dismiss(event:PointerEvent){
+      if(event.target instanceof Node&&!helpRef.current?.contains(event.target)){
+        setPinned(false);setHovered(false)
+      }
+    }
+    document.addEventListener('pointerdown',dismiss)
+    return ()=>document.removeEventListener('pointerdown',dismiss)
+  },[pinned])
+  return <div className="at-star-count-help" ref={helpRef}
     onPointerEnter={event=>{if(event.pointerType==='mouse')setHovered(true)}}
     onPointerLeave={()=>setHovered(false)}
     onKeyDown={event=>{if(event.key==='Escape'){setPinned(false);setHovered(false)}}}>
@@ -54,18 +65,17 @@ function StarCountHelp({view,manual}:{view:ReturnType<typeof makePhysicalView>;m
       Why are some stars not illuminated?
     </button>
     <div id={id} className="at-star-count-help-content" hidden={!expanded}>
-      <p>Some stars remain visible in your artwork without an individual LED.</p>
-      <ul>
-        <li><b>Spacing:</b> Nearby stars may be too close for separate lights.</li>
-        <li><b>Edges:</b> Stars near or outside the finished print edge cannot safely receive a light.</li>
-        <li><b>Capacity:</b> Each keepsake supports up to {view.physicalSelection.maxPhysicalStars} illuminated stars.
-          Automatic selection favors brighter stars and good spacing.</li>
+      <div className="at-star-help-title">From sky to keepsake</div>
+      <p>Not every visible star can have its own physical light.</p>
+      <ul className="at-star-help-reasons">
+        <li><b>Spacing</b><span>Nearby stars may be too close for separate lights.
+          {view.tooClose>0&&<em>{view.tooClose} skipped in this view</em>}</span></li>
+        <li><b>Edges</b><span>Lights need clearance from the finished print edge.
+          {view.unavailableForDrilling>0&&<em>{view.unavailableForDrilling} outside the safe print area</em>}</span></li>
+        <li><b>Capacity</b><span>Up to {view.physicalSelection.maxPhysicalStars} lights, selected for brightness and spacing.</span></li>
       </ul>
-      {view.unavailableForDrilling>0&&<p>In your design, {view.unavailableForDrilling}
-        {' '}visible stars are outside the safe print area.</p>}
-      {view.tooClose>0&&<p>{view.tooClose} stars were skipped because their light positions are too close together.</p>}
-      {manual&&<p>Your manual star choices can also leave stars unlit.</p>}
-      <p>Adjust your sky or choose eligible lights in Chapter 05 to customize which stars illuminate.</p>
+      {manual&&<p>Your manual choices can also leave stars unlit.</p>}
+      <p className="at-star-help-note">Digital-only stars can remain in your artwork. Fine-tune eligible lights in Chapter 05.</p>
     </div>
   </div>
 }

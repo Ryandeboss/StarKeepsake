@@ -1068,3 +1068,12 @@
 .at-star-count-help-content p{margin:0 0 8px}
 .at-star-count-help-content p:last-child{margin-bottom:0}
 .at-star-count-help-content ul{margin:0 0 8px;padding-left:20px}
+
+/* A small studio-style explanation, with clear labels instead of dense prose. */
+.at-star-count-help-content .at-star-help-title{font:500 19px/1.25 Georgia,serif;color:#f6e1b5;margin:0 0 7px}
+.at-star-count-help-content .at-star-help-reasons{list-style:none;display:grid;gap:8px;padding:10px 0;margin:10px 0;border-top:1px solid #314856;border-bottom:1px solid #314856}
+.at-star-help-reasons li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:9px;align-items:start}
+.at-star-help-reasons li b{font-weight:600;color:#eacb99}
+.at-star-help-reasons li span{font:inherit;color:#d1dfe3;min-width:0}
+.at-star-help-reasons em{display:block;font:500 12px/1.5 system-ui,sans-serif;color:#eacb99;margin-top:2px}
+.at-star-count-help-content .at-star-help-note{font-size:12px;color:#adc4cd;line-height:1.5}
