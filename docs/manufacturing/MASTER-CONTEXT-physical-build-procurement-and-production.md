@@ -1690,3 +1690,26 @@ The fake test build should be able to progress independently through:
 - ready to ship TEST state.
 
 This week's goal is to make one synthetic paid-like job usable as a complete physical prototype rehearsal without contaminating the real Etsy payment path.
+
+
+---
+
+# Latest turn — Immediate files expected after a paid order
+
+For each legitimately paid StarKeepsake order, the owner should immediately have access to the core production files needed to reproduce that exact design:
+
+1. Final customer-approved preview.
+2. Original customer image (private recovery/reference).
+3. Final processed image/cutout if applicable.
+4. Print-ready artwork files:
+   - exact 11×14;
+   - 1/8-inch bleed;
+   - 1/4-inch bleed master.
+5. Print specification / trim-safe metadata indicating which file to use for the chosen print lab.
+6. Physical-star map / star CSV or JSON with exact N selected stars, LED indices, IDs, magnitudes and print-space coordinates.
+7. 1:1 drilling template when geometry validation passes.
+8. Frozen maker/build ZIP containing the complete immutable production packet.
+9. Order-specific BOM / parts list.
+10. Persistent order-specific build/QA checklist.
+
+The owner should not need to reopen the customer builder or regenerate these outputs manually.
