@@ -12,10 +12,14 @@ import './OwnerProductionFiles.css'
 const BASE=(import.meta.env.VITE_API_BASE_URL as string|undefined)?.replace(/\/$/,'')??''
 type Packet=Awaited<ReturnType<typeof createCustomerPacket>>
 
-export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,materials,simulated=false}:{
+export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
+  materials,simulated=false,module='all'}:{
   adminKey:string;receiptId:number;transactionId:number;designId:string;
-  materials:MaterialSnapshot|null;simulated?:boolean
+  materials:MaterialSnapshot|null;simulated?:boolean;
+  module?:'all'|'files'|'parts'|'checklist'
 }){
+  const showFiles=module==='all'||module==='files'
+  const showPlan=module==='all'||module==='parts'||module==='checklist'
   const [busy,setBusy]=useState(false)
   const [error,setError]=useState('')
   const [packet,setPacket]=useState<Packet|null>(null)
@@ -141,7 +145,7 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
   }
   // Owner-only original and actual generated order proof, never generic demo data.
   useEffect(()=>{
-    if(!simulated||!adminKey)return
+    if(!simulated||!adminKey||!showFiles)return
     let active=true,objectUrl=''
     void (async()=>{
       try{
@@ -154,7 +158,7 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
       }catch{/* The private maker files remain available via the owner controls. */}
     })()
     return()=>{active=false;if(objectUrl)URL.revokeObjectURL(objectUrl)}
-  },[simulated,adminKey,simulationUrl])
+  },[simulated,adminKey,simulationUrl,showFiles])
   useEffect(()=>()=>{if(proofObject.current)URL.revokeObjectURL(proofObject.current)},[])
   useEffect(()=>{
     if(!simulated||!adminKey)return
@@ -203,6 +207,7 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
     {simulated&&frozenError&&<p className="production-error" role="alert">
       Frozen packet could not be verified: {frozenError}.
       Hold this build; do not replace the snapshot with regenerated files.</p>}
+    {showFiles&&<>
     {simulated&&frozenLoaded&&<div className="opf-frozen-master">
       <div className="opf-frozen-heading">
         <span>FILES FOR THIS BUILD · ORIGINAL SNAPSHOT</span>
@@ -286,15 +291,18 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
       Regenerated files below are not an immutable customer-checkout copy.
     </p>}
     {archiveError&&<p role="alert" className="production-error">{archiveError}</p>}
+    </>}
     {metaError&&<p role="alert" className="production-error">{metaError}</p>}
-    {savedMeta&&!plan&&<p role="alert" className="production-error">
+    {savedMeta&&!plan&&!frozenBusy&&<p role="alert" className="production-error">
       Saved design manufacturing data is invalid; do not purchase parts.
     </p>}
-    {plan&&<OwnerManufacturingPlan key={plan.designId} plan={plan}
+    {showPlan&&plan&&<OwnerManufacturingPlan key={plan.designId} plan={plan}
       materials={materials} receiptId={receiptId} transactionId={transactionId}
-      adminKey={adminKey} simulated={simulated}/>}
+      adminKey={adminKey} simulated={simulated} module={module}/>}
 
 
+
+    {showFiles&&<>
     {error&&<p role="alert" className="production-error">{error}</p>}
     {packet&&<div className="opf-results" role="status">
       {proofPreview&&<div className="opf-test-photo opf-print-proof">
@@ -339,5 +347,6 @@ export function OwnerProductionFiles({adminKey,receiptId,transactionId,designId,
         chosen bleed dimensions. Actual photo quality and star/hole alignment still require
         a physical proof. No supplier order or manufacturing step is triggered.</small>
     </div>}
+    </>}
   </section>
 }

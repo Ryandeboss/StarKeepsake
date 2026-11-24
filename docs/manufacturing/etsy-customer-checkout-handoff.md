@@ -416,3 +416,79 @@ skip print rendering and register quickly. Real customer checkout still
 requires an Etsy-paid receipt for actual fulfillment. If a frozen upload
 fails or times out, it should show a useful retry message; saved Design ID
 is not lost. Do not assume completion from a mere saved-design row.
+
+## November 23, 2026 — Production Studio navigation redesign
+
+Owner confirmed the exact saved-design simulation, source files and order contents
+now correspond to what they designed. Requested **presentation-only simplification**:
+a clear top nav, a compact Orders home page with clickable rectangular cards, separate
+parts and checklist modules, and a spreadsheet-like supplier directory for
+Amazon shopping with names, website links, last-entered prices and notes.
+
+- New authenticated top-level tabs: **Orders** (default), **Shopping & suppliers**
+  and **Operations**. Existing private admin key and authoritative Etsy/simulated
+  order backends remain unchanged. The default view does NOT mount the large
+  Amazon queue, inventory, procurement or old sample components.
+- Orders tab combines privately saved owner simulations (clearly **TEST · UNPAID**)
+  and imported real Etsy receipts (status computed from actual Etsy fields)
+  into searchable, filterable rectangular cards sorted by creation date. A card
+  identifies its Design ID or receipt, created/purchased date, frame and status.
+  Receipt cards must not be called paid without real payment confirmation.
+  Unmatched/unpaid receipts show an explicit manufacturing hold; only genuinely
+  verified paid and matched single-item Etsy jobs expose owner-only work modules.
+- Selecting an order opens three action cards **Parts & supplies**, **Build
+  checklist**, and **Artwork & files**. Each opens its own accessible Escape-
+  dismissable modal. The existing `OwnerProductionFiles`,
+  `OwnerManufacturingPlan` and `RehearsalWorkbench` have optional module
+  props, so the content is **scoped and filtered**, not duplicated or switched
+  to new storage. Files still load the exact private frozen ZIP. Test parts
+  continue saving in the isolated owner-only simulation records. The 14-phase/
+  103-step rehearsal checklist, QA/photo evidence and physical HOLD criteria are
+  unchanged and remain server-persisted. Paid Etsy checklist still uses its
+  own paid-job-scoped endpoints.
+- Shopping & suppliers tab: new `SupplierCatalogTable.tsx` and CSS render
+  a searchable sheet-style table containing user-entered M3 catalog rows and
+  separately flagged researched supplier candidates. Columns: product/SKU,
+  supplier, website, price/unit, on hand, source type, notes/validation. M3
+  unit price is labeled **RECORDED NOT LIVE**. Research rows say price not
+  verified; clicking source opens actual vendor page to check its *current*
+  price and stock. No Amazon Business price API exists yet; do not invent live
+  quotes or classify stock as allocated. Catalog editing remains available in
+  Operations. Existing `ManualAmazonPurchasingPanel` lives in an expandable
+  Shopping section for confirmed paid-job shortages and manual receipt logging.
+- Operations tab retains old genuine Etsy sync/register/CSV, purchased Design
+  IDs, saved drafts, the existing M3 Materials catalog/stock/allocations,
+  procurement/ASIN mapping, and the previous fixed sample (now folded away).
+  Real Etsy sales totals and any purchasing/receiving actions are not touched.
+  The old demo stays labeled fictional, not paid or a production record.
+- Styling: quiet dark/studio palette, clear 3-column desktop cards and responsive
+  1-column mobile cards; sticky tab nav, compact module launchers, wide readable
+  modal content, keyboard Escape/backdrop to dismiss, visible focus outlines,
+  search and filter states, and no bulky data blocks until their tab/module is
+  deliberately opened.
+- Key preservation: a direct owner link `?testDesign=SK-...` still opens its
+  corresponding test card/workspace; deleting a test still requires confirmation
+  and only clears that test's isolated server records. No new backend routes
+  or data migrations. User-entered supplier notes remain from existing M3
+  metadata, not new unsecured browser state. No actual live supplier pricing
+  integration is claimed.
+- Test owner acceptance: sign in, see Orders by default, open the same test
+  Design ID, open Parts and save a status, open Checklist and tick one step,
+  close and reopen to verify server persistence, open Files and verify frozen
+  art and star map; confirm real paid receipt is distinct from TEST; browse
+  Shopping sheet rows/links and marked non-live prices; expand Amazon queue;
+  open Operations and verify existing M3 and Etsy registers still usable.
+
+### Navigation compatibility detail
+
+The manual Amazon buying queue is loaded only after its accordion is opened
+in the Shopping tab; closing it unmounts its two-minute poller. Its existing
+`Go to M3 recipes and job BOMs` action now switches to Operations and focuses
+the real Materials panel. Links to the combined Amazon queue from the legacy
+Etsy-item detail now switch tabs and expand the queue rather than pointing to
+a hidden anchor. Modal navigation includes Escape, keyboard Tab focus
+containment and focus restoration to its trigger; closing or switching tabs
+does not write any order state. The card's **Ordered** field uses the actual
+Etsy `created_at_etsy` field, never the potentially later `last_synced_at`
+timestamp. Its receipt total is separately labeled and not computed for
+internal unpaid tests.

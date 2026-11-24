@@ -16,7 +16,8 @@ export type EtsySnapshot = {
 }
 export type Material = {
   sku:string;name:string;unit:string;on_hand:number;unit_cost_cents:number|null;
-  supplier_name:string|null;supplier_url:string|null
+  supplier_name:string|null;supplier_url:string|null;
+  notes?:string|null;category?:string
 }
 export type MaterialPlan = {
   shop_id:number;receipt_id:number;transaction_id:number;status:string

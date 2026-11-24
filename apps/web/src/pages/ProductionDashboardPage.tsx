@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import './ProductionDashboardPage.css'
 import { MaterialsPanel } from './MaterialsPanel'
 import { ProcurementPanel } from './ProcurementPanel'
 import { ManualAmazonPurchasingPanel } from './ManualAmazonPurchasingPanel'
+import { SupplierCatalogTable } from './SupplierCatalogTable'
 import type { MaterialSnapshot } from '../manualAmazonQueue'
 import { materialsForProductionJob } from '../orderFulfillment'
 import { OwnerProductionFiles } from './OwnerProductionFiles'
@@ -52,6 +53,8 @@ type SavedDesignSummary = {
   hasPreparedForeground: boolean
 }
 type Filter = 'all' | 'review' | 'ready' | 'canceled'
+type StudioTab = 'orders'|'shopping'|'operations'
+type OrderModule = 'parts'|'checklist'|'files'
 type SimulatedOrder={
   designId:string;createdAt:string;status:'SIMULATED_NOT_PAID';
   finish:string;layout:string;stars:number
@@ -122,6 +125,15 @@ export function ProductionDashboardPage() {
   const [testDeleting,setTestDeleting]=useState<string|null>(null)
   const [testLink,setTestLink]=useState('')
   const [testCreating,setTestCreating]=useState(false)
+  const [activeTab,setActiveTab]=useState<StudioTab>('orders')
+  const [shoppingQueueOpen,setShoppingQueueOpen]=useState(false)
+  const [focusMaterials,setFocusMaterials]=useState(false)
+  const [orderKind,setOrderKind]=useState<'all'|'test'|'etsy'>('all')
+  const [orderSearch,setOrderSearch]=useState('')
+  const [orderModule,setOrderModule]=useState<OrderModule|null>(null)
+  const [orderTransaction,setOrderTransaction]=useState<number|null>(null)
+  const modalCloseRef=useRef<HTMLButtonElement|null>(null)
+  const modalReturnRef=useRef<HTMLButtonElement|null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [selected, setSelected] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
@@ -143,7 +155,14 @@ export function ProductionDashboardPage() {
       return true
     })
   }, [data, filter])
-  const selectedRow = rows.find(x => x.receipt.receipt_id === selected)
+  // The Operations receipt filter must not affect a selected card in Orders.
+  const selectedRow = data&&selected!==null?(()=>{
+    const receipt=data.receipts.find(x=>x.receipt_id===selected)
+    return receipt?{receipt,
+      items:data.items.filter(x=>x.receipt_id===receipt.receipt_id),
+      jobs:data.jobs.filter(x=>x.receipt_id===receipt.receipt_id),
+      state:orderState(receipt,data.items,data.jobs)}:undefined
+  })():undefined
   // Purchase is only verified with a paid receipt, matching single-unit item
   // and corresponding owner-only production job. Never elevate an unpaid draft.
   const purchasedDesigns=useMemo(()=>{
@@ -162,6 +181,41 @@ export function ProductionDashboardPage() {
     [purchasedDesigns])
   const testDesignIds=useMemo(()=>new Set(testOrders.map(x=>x.designId)),
     [testOrders])
+  const selectedTestOrder=testOrders.find(order=>order.designId===testSelected)
+  const matchedItems=selectedRow?.items.filter(item=>{
+    const job=selectedRow.jobs.find(row=>row.transaction_id===item.transaction_id)
+    return receiptStatus(selectedRow.receipt)==='Paid'&&
+      item.match_state==='matched'&&item.quantity===1&&Boolean(item.design_id)&&
+      job?.design_id===item.design_id
+  })??[]
+  const chosenItem=matchedItems.find(item=>item.transaction_id===orderTransaction)
+    ??matchedItems[0]??null
+  const orderCards=useMemo(()=>{
+    const tests=testOrders.map(item=>({
+      key:'test:'+item.designId,kind:'test' as const,id:item.designId,
+      date:item.createdAt,finish:item.finish,title:'Custom illuminated keepsake',
+      status:'Internal test · unpaid',stars:item.stars,receiptId:null as number|null,
+      amount:'—',
+    }))
+    const genuine=(data?.receipts||[]).map(receipt=>{
+      const item=data?.items.find(row=>row.receipt_id===receipt.receipt_id)
+      const design=savedDesigns.find(d=>d.designId===item?.design_id)
+      return {key:'etsy:'+receipt.receipt_id,kind:'etsy' as const,
+        id:item?.design_id||'#'+receipt.receipt_id,date:receipt.created_at_etsy,
+        finish:design?.finish||'Verify finish',title:item?.title||'Etsy purchase',
+        status:orderState(receipt,data!.items,data!.jobs),
+        stars:null as number|null,receiptId:receipt.receipt_id,amount:money(receipt)}
+    })
+    return [...tests,...genuine].sort((a,b)=>
+      (Date.parse(b.date||'')||0)-(Date.parse(a.date||'')||0))
+  },[testOrders,data,savedDesigns])
+  const filteredOrderCards=orderCards.filter(card=>
+    (orderKind==='all'||card.kind===orderKind)&&
+    [card.id,card.title,card.finish,card.status,
+      String(card.receiptId||'')].join(' ').toLowerCase().includes(orderSearch.toLowerCase().trim())
+  )
+  const ordersSelected=Boolean(selectedTestOrder||selectedRow)
+
   const paidCount = data?.receipts.filter(r => receiptStatus(r) === 'Paid').length ?? 0
   const reviewCount = data?.receipts.filter(r =>
     ['Review design','Refund review','Not paid','On hold'].includes(
@@ -189,8 +243,11 @@ export function ProductionDashboardPage() {
       setTestOrders(json.orders)
       setTestError('')
       const requested=new URLSearchParams(window.location.search).get('testDesign')
-      if(requested&&json.orders.some(row=>row.designId===requested))
+      if(requested&&json.orders.some(row=>row.designId===requested)){
         setTestSelected(requested)
+        setSelected(null)
+        setActiveTab('orders')
+      }
     }catch{
       setTestOrders([])
       setTestError('Test-order list unavailable right now. Real Etsy receipts remain separate.')
@@ -218,11 +275,48 @@ export function ProductionDashboardPage() {
   // An owner opening the link from Chapter 05 should land ON the test work
   // order, not on an unrelated Etsy "no matched payment" table below.
   useEffect(()=>{
-    if(!key||!testSelected)return
-    document.getElementById('test-work-order')?.scrollIntoView({
+    if(!key||!testSelected||activeTab!=='orders')return
+    document.getElementById('studio-work-order')?.scrollIntoView({
       behavior:'smooth',block:'start'
     })
-  },[key,testSelected,testOrders])
+  },[key,testSelected,testOrders,activeTab])
+  useEffect(()=>{
+    if(activeTab!=='operations'||!focusMaterials)return
+    const frame=window.requestAnimationFrame(()=>{
+      document.getElementById('materials-planning')?.scrollIntoView({
+        behavior:'smooth',block:'start'
+      })
+      setFocusMaterials(false)
+    })
+    return()=>window.cancelAnimationFrame(frame)
+  },[activeTab,focusMaterials])
+  useEffect(()=>{
+    if(!orderModule)return
+    const restore=document.body.style.overflow
+    document.body.style.overflow='hidden'
+    const onKey=(event:KeyboardEvent)=>{
+      if(event.key==='Escape'){setOrderModule(null);return}
+      // Keep keyboard focus inside the chosen work module until it closes.
+      if(event.key!=='Tab')return
+      const dialog=modalCloseRef.current?.closest('[role="dialog"]')
+      const choices=dialog?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')
+      if(!choices?.length)return
+      const first=choices[0],last=choices[choices.length-1]
+      if(event.shiftKey&&document.activeElement===first){
+        event.preventDefault();last.focus()
+      }else if(!event.shiftKey&&document.activeElement===last){
+        event.preventDefault();first.focus()
+      }
+    }
+    window.addEventListener('keydown',onKey)
+    modalCloseRef.current?.focus()
+    return()=>{
+      window.removeEventListener('keydown',onKey)
+      document.body.style.overflow=restore
+      modalReturnRef.current?.focus()
+    }
+  },[orderModule])
 
   async function refresh(sync: boolean) {
     if (!key) return
@@ -296,6 +390,7 @@ export function ProductionDashboardPage() {
       if(!response.ok)throw Error('Could not delete this test order (HTTP '+response.status+').')
       setTestOrders(orders=>orders.filter(row=>row.designId!==designId))
       setTestSelected(selected=>selected===designId?null:selected)
+      setOrderModule(null)
     }catch(e){setTestError(e instanceof Error?e.message:'Test deletion failed.')}
     finally{setTestDeleting(null)}
   }
@@ -333,6 +428,7 @@ export function ProductionDashboardPage() {
         {key && <button type="button" className="production-ghost" onClick={() => {
           setKey(''); setData(null); setSavedDesigns([]); setMaterials(null); setSelected(null);
           setTestOrders([]);setTestSelected(null);setTestError('');
+          setOrderModule(null);
           setFailure(''); setSavedDesignsError(''); setMessage('')
         }}>Lock studio</button>}
       </header>
@@ -352,6 +448,179 @@ export function ProductionDashboardPage() {
         {failure && <p className="production-error" role="alert">{failure}</p>}
         <small>Not your Etsy Shared Secret or Supabase key. No order is changed by signing in.</small>
       </section> : <>
+        <nav className="studio-main-nav" aria-label="Production Studio sections">
+          {([
+            ['orders','Orders',orderCards.length],
+            ['shopping','Shopping & suppliers',null],
+            ['operations','Operations',null],
+          ] as const).map(([id,label,count])=><button type="button" key={id}
+            aria-current={activeTab===id?'page':undefined}
+            className={activeTab===id?'studio-nav-active':''}
+            onClick={()=>{
+              setActiveTab(id)
+              setOrderModule(null)
+            }}>
+            {label}{count!==null&&<span>{count}</span>}
+          </button>)}
+        </nav>
+        {activeTab==='orders'&&<section className="studio-orders" aria-label="Order workspace">
+          {!ordersSelected?<><header className="studio-section-head">
+            <div><span className="production-eyebrow">WORKSHOP / CURRENT ORDERS</span>
+              <h2>All your orders</h2>
+              <p>Real Etsy receipts and internal tests in one place. Only genuinely paid,
+                matched Etsy orders count toward sales.</p></div>
+            <button type="button" className="studio-light-button"
+              disabled={busy} onClick={()=>void refresh(false)}>
+              {busy?'Refreshing…':'Refresh orders'}</button>
+          </header>
+          {testError&&<p className="production-error" role="alert">{testError}</p>}
+          {failure&&<p className="production-error" role="alert">{failure}</p>}
+          <div className="studio-orders-toolbar">
+            <div className="studio-order-filters" role="group" aria-label="Order type">
+              {([['all','All'],['test','Tests'],['etsy','Etsy']] as const)
+                .map(([id,label])=><button key={id} type="button"
+                  aria-pressed={orderKind===id} onClick={()=>setOrderKind(id)}>{label}</button>)}
+            </div>
+            <label className="studio-order-search"><span className="sr-only">Search orders</span>
+              <input type="search" value={orderSearch}
+                onChange={e=>setOrderSearch(e.target.value)}
+                placeholder="Search order or Design ID…"/></label>
+          </div>
+          {filteredOrderCards.length?
+            <div className="studio-order-grid">
+              {filteredOrderCards.map(card=><button type="button" key={card.key}
+                className="studio-order-card" onClick={()=>{
+                  setOrderModule(null);setOrderTransaction(null)
+                  if(card.kind==='test'){
+                    setTestSelected(card.id);setSelected(null)
+                  }else{
+                    setSelected(card.receiptId);setTestSelected(null);setFilter('all')
+                  }
+                }}>
+                <span className="studio-order-card-top">
+                  <span className={'studio-order-chip studio-order-chip-'+card.kind}>
+                    {card.kind==='test'?'TEST · UNPAID':'ETSY'}</span>
+                  <span className="studio-order-arrow" aria-hidden="true">↗</span>
+                </span>
+                <strong>{card.id}</strong>
+                <span className="studio-order-card-title">{card.title}</span>
+                <span className="studio-order-card-divider"/>
+                <span className="studio-order-card-detail">
+                  <span>{card.kind==='test'?'Created':'Ordered'}</span>
+                  <b>{dateLabel(card.date)}</b>
+                </span>
+                <span className="studio-order-card-detail">
+                  <span>Frame</span><b>{card.finish==='walnut'?'Two-tone walnut':
+                    card.finish==='ebony'?'Matte black':card.finish}</b>
+                </span>
+                <span className="studio-order-card-detail">
+                  <span>Status</span><b>{card.status}</b>
+                </span>
+                {card.kind==='etsy'&&<span className="studio-order-card-detail">
+                  <span>Receipt total</span><b>{card.amount}</b>
+                </span>}
+                {card.kind==='test'&&<span className="studio-order-card-hint">
+                  {card.stars} physical stars</span>}
+              </button>)}
+            </div>:<div className="studio-order-empty">
+              <h3>No orders to display</h3>
+              <p>{orderCards.length?'Clear the filters to see other orders.':
+                'Finish a keepsake and click Simulate Etsy Purchase to create your first test work order.'}</p>
+              <a href="/">Open the keepsake builder ↗</a>
+            </div>}
+          </>:<div className="studio-order-workspace" id="studio-work-order">
+            <button type="button" className="studio-back-link" onClick={()=>{
+              setSelected(null);setTestSelected(null);setOrderModule(null)
+            }}>← All orders</button>
+            <div className="studio-workspace-header">
+              <div>
+                <span className="production-eyebrow">{selectedTestOrder?
+                  'INTERNAL TEST · NEVER PAID':'ETSY RECEIPT · VERIFIED STATUS'}</span>
+                <h2>{selectedTestOrder?.designId||'Etsy #'+selectedRow?.receipt.receipt_id}</h2>
+                <p>{selectedTestOrder?'Simulated on ':'Etsy order placed '}
+                  {dateLabel(selectedTestOrder?.createdAt||selectedRow?.receipt.created_at_etsy||null)}
+                  {' · '}{selectedTestOrder?.finish==='walnut'?'Two-tone walnut':
+                    selectedTestOrder?.finish==='ebony'?'Matte black':
+                      selectedTestOrder?.finish||selectedRow?.state}
+                  {selectedTestOrder?' · '+selectedTestOrder.stars+' physical stars':
+                    selectedRow?' · '+money(selectedRow.receipt):''}</p>
+              </div>
+              {selectedTestOrder&&<button type="button" className="production-test-delete"
+                disabled={testDeleting===selectedTestOrder.designId}
+                onClick={()=>void deleteTestOrder(selectedTestOrder.designId)}>
+                {testDeleting===selectedTestOrder.designId?'Deleting…':'Delete test order'}
+              </button>}
+            </div>
+            {!selectedTestOrder&&selectedRow&&<>
+              <p className="studio-payment-note">Payment: <strong>
+                {receiptStatus(selectedRow.receipt)}</strong>.
+                {' '}Only a paid, matched single-item Etsy transaction can open manufacturing modules.</p>
+              {matchedItems.length>1&&<label className="studio-transaction-picker">
+                Item to inspect
+                <select value={chosenItem?.transaction_id??''}
+                  onChange={e=>setOrderTransaction(Number(e.target.value))}>
+                  {matchedItems.map(item=><option key={item.transaction_id}
+                    value={item.transaction_id}>{item.title} · #{item.transaction_id}</option>)}
+                </select>
+              </label>}
+              {!chosenItem&&<div className="studio-order-not-ready">
+                <strong>Manufacturing files unavailable until this item is verified.</strong>
+                <p>This receipt may be unpaid, canceled, refunded, multi-item, or missing
+                  the customer's text Design ID. Review it in Operations before building
+                  or purchasing parts.</p>
+                <button type="button" className="studio-light-button"
+                  onClick={()=>setActiveTab('operations')}>Review Etsy receipt ↗</button>
+              </div>}
+            </>}
+            {(selectedTestOrder||chosenItem)&&<>
+              <p className="studio-module-intro">Choose what you need for this order.</p>
+              <div className="studio-module-grid">
+                {([
+                  ['parts','Parts & supplies','See every component and update this order’s sourcing status.','01'],
+                  ['checklist','Build checklist','Track the assembly, testing and quality-control steps.','02'],
+                  ['files','Artwork & files','Open the exact photo, star map and print-ready downloads.','03'],
+                ] as const).map(([id,title,description,num])=><button
+                  key={id} type="button" className="studio-module-card"
+                  onClick={event=>{
+                    modalReturnRef.current=event.currentTarget
+                    setOrderModule(id)
+                  }}>
+                  <span className="studio-module-number">{num} / WORK ORDER</span>
+                  <strong>{title}</strong>
+                  <p>{description}</p>
+                  <span className="studio-module-open">Open module ↗</span>
+                </button>)}
+              </div>
+              {selectedTestOrder&&<p className="studio-workspace-footnote">
+                TEST ONLY · No Etsy payment, supplier purchase or stock reservation.
+                Progress is saved independently for this Design ID.</p>}
+            </>}
+          </div>}
+        </section>}
+        {activeTab==='shopping'&&<section className="studio-shopping" aria-label="Shopping and suppliers">
+          <header className="studio-section-head">
+            <div><span className="production-eyebrow">SOURCING / PURCHASING</span>
+              <h2>Shopping & suppliers</h2>
+              <p>Find each component and its source without mixing supplier
+                research with real paid-order purchasing.</p></div>
+          </header>
+          <details className="studio-shopping-queue" open={shoppingQueueOpen}
+            onToggle={event=>setShoppingQueueOpen(event.currentTarget.open)}>
+            <summary><span><strong>Amazon shopping checklist</strong>
+              <small>View actual paid-order shortages, pack mappings and manually
+                record purchases already placed</small></span>
+              <span aria-hidden="true">＋</span></summary>
+            {shoppingQueueOpen&&<ManualAmazonPurchasingPanel adminKey={key}
+              refreshVersion={manualQueueVersion}
+              onOpenMaterials={()=>{
+                setFocusMaterials(true);setActiveTab('operations')
+              }}/>} 
+          </details>
+          <SupplierCatalogTable materials={materials} onManage={()=>{
+            setFocusMaterials(true);setActiveTab('operations')
+          }}/>
+        </section>}
+        {activeTab==='operations'&&<>
         <section className="production-metrics" aria-label="Production overview">
           <article><span>Imported receipts</span><strong>{data?.receipts.length ?? '—'}</strong></article>
           <article><span>Paid receipts</span><strong>{paidCount}</strong></article>
@@ -440,7 +709,10 @@ export function ProductionDashboardPage() {
                 simulated materials={materials}/>
             </section>}
         </section>
-        <SampleProductionOrder />
+        <details className="studio-legacy-demo">
+          <summary>Open the old sample work order (reference only)</summary>
+          <SampleProductionOrder />
+        </details>
         <section className="production-data production-purchased" aria-label="Verified purchased designs">
           <div className="production-actions">
             <div><h2>Purchased Design IDs</h2>
@@ -621,19 +893,50 @@ export function ProductionDashboardPage() {
                         <td>{row.pendingFromSuppliers} {row.unit}</td>
                       </tr>)}</tbody>
                     </table></div>
-                    <p><a href="#manual-amazon-purchasing">
-                      View combined Amazon shopping checklist and manually record orders</a></p>
+                    <p><button type="button" className="production-row-link"
+                      onClick={()=>{setActiveTab('shopping');setShoppingQueueOpen(true)}}>
+                      View combined Amazon shopping checklist and manually record orders</button></p>
                   </>}
               </div>}
             </article>
           })}
           {!selectedRow.items.length && <p>There are no Etsy transactions saved for this receipt yet.</p>}
         </section>}
-        <ManualAmazonPurchasingPanel adminKey={key} refreshVersion={manualQueueVersion} />
         <MaterialsPanel adminKey={key} />
         <ProcurementPanel adminKey={key} />
         <p className="production-footnote">This studio never places purchases, changes Etsy orders,
           or launches fabrication. Order amounts include Etsy receipt totals, not net profit.</p>
+        </>}
+        {orderModule&&(selectedTestOrder||chosenItem)&&<div
+          className="studio-modal-backdrop" role="presentation"
+          onMouseDown={event=>{if(event.currentTarget===event.target)
+            setOrderModule(null)}}>
+          <section className="studio-module-dialog" role="dialog" aria-modal="true"
+            aria-labelledby="studio-module-dialog-title">
+            <div className="studio-dialog-topbar">
+              <div><span className="production-eyebrow">
+                {selectedTestOrder?'SIMULATED · NO PAYMENT':'VERIFIED ETSY ORDER'}
+              </span>
+                <h2 id="studio-module-dialog-title">{orderModule==='parts'?
+                  'Parts & supplies':orderModule==='checklist'?
+                    'Build checklist':'Artwork & files'}</h2>
+                <p>{selectedTestOrder?.designId||chosenItem?.design_id}
+                  {' · '}All changes stay scoped to this order.</p></div>
+              <button type="button" ref={modalCloseRef} className="studio-dialog-close"
+                onClick={()=>setOrderModule(null)} aria-label="Close module">×</button>
+            </div>
+            <div className="studio-dialog-body">
+              <OwnerProductionFiles
+                key={(selectedTestOrder?.designId||chosenItem?.design_id||'')+orderModule}
+                adminKey={key}
+                simulated={Boolean(selectedTestOrder)}
+                receiptId={selectedTestOrder?0:selectedRow!.receipt.receipt_id}
+                transactionId={selectedTestOrder?0:chosenItem!.transaction_id}
+                designId={selectedTestOrder?.designId||chosenItem!.design_id!}
+                module={orderModule} materials={materials}/>
+            </div>
+          </section>
+        </div>}
       </>}
     </div>
   </main>

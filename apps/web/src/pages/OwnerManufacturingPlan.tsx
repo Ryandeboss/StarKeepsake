@@ -32,9 +32,10 @@ function stockSnapshot(part:MakerPart,materials:MaterialSnapshot|null){
 function safeLink(url:string|null|undefined){
   return url&&/^https:\/\//i.test(url)?url:null
 }
-export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,adminKey,simulated=false}:{
+export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,
+  adminKey,simulated=false,module='all'}:{
   plan:MakerPlan;materials:MaterialSnapshot|null;receiptId:number;transactionId:number;
-  adminKey:string;simulated?:boolean
+  adminKey:string;simulated?:boolean;module?:'all'|'files'|'parts'|'checklist'
 }){
   const [done,setDone]=useState<Record<string,boolean>>({})
   const [serverReady,setServerReady]=useState(false)
@@ -107,13 +108,17 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,a
       component list, not a verified supplier order or approval to manufacture.
       Etsy frame variation, safety, parts, print alignment and actual stock must be reviewed.</p>
     {simulated&&<RehearsalWorkbench plan={plan} adminKey={adminKey}
-      materials={materials}/>}
+      materials={materials} view={module==='parts'?'parts':
+        module==='checklist'?'checklist':'all'}/>}
+
+    {(module==='all'||(module==='parts'&&!simulated))&&<>
     <div className="omp-summary">
       <article><small>Saved illuminated stars</small><b>{plan.physicalCount}</b></article>
       <article><small>TLC5947 boards · 24 channels</small><b>{plan.driverCount}</b></article>
       <article><small>12-channel connector groups</small><b>{plan.connectorGroupCount}</b></article>
       <article><small>Chosen finish</small><b>{plan.product.frameFinish}</b></article>
     </div>
+    {module==='all'&&<>
     <p><b>Customer's sky:</b> {plan.astronomy.date},
       {' '}{plan.astronomy.time??'time not specified'} ·
       {' '}{plan.astronomy.location?.displayName??'Location unresolved'} ·
@@ -157,10 +162,12 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,a
           <td>{s.selectionReason}</td><td>Not calibrated</td>
         </tr>)}</tbody></table></div>
     </details>
+    </>}
     <div className="omp-section-title"><h4>Job-specific parts, derived from N = {plan.physicalCount}</h4>
       <small>Stock is global, not reserved for this job. Research listing links are not
         approved supplier SKUs, price quotes, availability, or tested component compatibility.</small></div>
-    {groups.map(group=><details key={group.id} className="omp-details" open>
+    {groups.map(group=><details key={group.id} className="omp-details"
+      open={module==='all'||group.id==='buy'}>
       <summary>{group.name} · {plan.parts.filter(p=>p.group===group.id).length} entries</summary>
       <p>{group.intro}</p>
       <div className="omp-scroll"><table><thead><tr>
@@ -193,7 +200,8 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,a
         </tr>
       })}</tbody></table></div>
     </details>)}
-    {!simulated&&<details className="omp-details">
+    </>}
+    {!simulated&&(module==='all'||module==='checklist')&&<details className="omp-details">
       <summary>Build and QA checklist — {complete} / {plan.steps.length} steps saved</summary>
       <p>{serverReady?(simulated?
         'Your test-only checklist is saved privately and will reload on another device.':

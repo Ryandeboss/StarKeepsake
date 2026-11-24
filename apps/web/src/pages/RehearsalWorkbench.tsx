@@ -129,8 +129,9 @@ function EvidenceEditor({code,label,value,onSave,busy}:{
 
 /** Reuses the same exact frozen N-star plan as the genuine owner manufacturing UI.
  * All write operations are owner-authenticated and isolated from Etsy jobs. */
-export function RehearsalWorkbench({plan,adminKey,materials}:{
-  plan:MakerPlan;adminKey:string;materials:MaterialSnapshot|null
+export function RehearsalWorkbench({plan,adminKey,materials,view='all'}:{
+  plan:MakerPlan;adminKey:string;materials:MaterialSnapshot|null;
+  view?:'all'|'parts'|'checklist'
 }){
   const [work,setWork]=useState<WorkState|null>(null)
   const [failure,setFailure]=useState('')
@@ -216,18 +217,22 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
     }catch(error){setFailure(error instanceof Error?error.message:'Could not open this photo.')}
     finally{setBusy('')}
   }
+  const showParts=view==='all'||view==='parts'
+  const showChecklist=view==='all'||view==='checklist'
   const topBlocker=work?.blockers[0]||'Review the next uncompleted checklist step'
   const next=phases.phases.flatMap(p=>p.steps).find(s=>work?.steps[s.id]?.checked!==true)
   return <section className="rw-workbench" aria-label="Persistent test-production rehearsal">
     <header className="rw-head">
       <div><span>INTERNAL TEST · {work?.testOrderId||plan.designId}</span>
-        <h4>{work?.buildStatus?.replace(/_/g,' ')||'Loading test work order…'}</h4>
+        <h4>{view==='parts'?'Parts to source & track':
+          view==='checklist'?'Build checklist & QA':
+            work?.buildStatus?.replace(/_/g,' ')||'Loading test work order…'}</h4>
         <p>Original frozen manufacturing version: {work?.packetVersion||'checking…'} ·
           {' '}maker plan: {work?.planVersion||plan.version}</p></div>
       <b>NO REAL ETSY PAYMENT</b>
     </header>
     {failure&&<p className="production-error" role="alert">{failure}</p>}
-    <div className="rw-overview">
+    {showChecklist&&<div className="rw-overview">
       <div><small>CURRENT PHASE</small><strong>{
         phases.phases.find(p=>p.steps.some(s=>!work?.steps[s.id]?.checked))?.label||'Final review'
       }</strong></div>
@@ -235,11 +240,11 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
       <div><small>TOP HOLD</small><strong>{topBlocker}</strong></div>
       <div><small>REHEARSAL PROGRESS</small><strong>{work?.done??0} / {work?.total??0}</strong>
         <progress max={work?.total||1} value={work?.done||0}/></div>
-    </div>
+    </div>}
     <p className="rw-notice">The checklist is your test build log, not an electrical
       certification or permission to fulfill a paid order. Real inventory is not
       reserved automatically, no supplier purchase is placed, and Etsy shipping remains untouched.</p>
-    <section className="rw-section">
+    {showChecklist&&<section className="rw-section">
       <h5>Approved print file for this supplier</h5>
       <p>Choose the print variant only AFTER the printer explicitly confirms the
         document dimensions, trim and bleed. Use the original frozen files above.</p>
@@ -268,8 +273,8 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
         {' '}{PRINT_VARIANTS.find(v=>v.id===work.print?.variant)?.artwork}
         {' '}— from the ORIGINAL frozen packet above, not a regenerated copy.
       </p>}
-    </section>
-    <section className="rw-section">
+    </section>}
+    {showParts&&<section className="rw-section">
       <h5>Parts for this exact build · {plan.physicalCount} stars</h5>
       <p>{plan.physicalCount} individual LEDs, {plan.physicalCount} StarPods,
         {' '}{plan.driverCount} TLC5947 driver and {plan.connectorGroupCount}
@@ -285,8 +290,8 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
           busy={Boolean(busy)||!work}
           onSave={value=>save(value,'part-'+p.key)}/>)}</div>
       </details>)}
-    </section>
-    <section className="rw-section rw-engineering">
+    </section>}
+    {showChecklist&&<section className="rw-section rw-engineering">
       <h5>Electrical engineering HOLD · Pico W → TLC5947 → discrete stars</h5>
       <p><b>Do not use legacy WS2812 firmware</b> (including the old
         {' '}<code>firmware/pico2w/main.py</code> demonstration) as production
@@ -303,8 +308,8 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
       <p>First power-up needs a current-limited bench supply, channel walk,
         measured supply current, temperatures, burn-in and recorded abnormalities.
         Never choose final PSU/fuse sizing until those measurements exist.</p>
-    </section>
-    <section className="rw-section">
+    </section>}
+    {showChecklist&&<section className="rw-section">
       <h5>Build checklist · 14 phases · {work?.done??0}/{work?.total??0}</h5>
       <p>Each check is saved to private per-order storage, so you can stop,
         refresh, sign in again and resume this exact build. Checking a step
@@ -323,8 +328,8 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
               <span>{step.title}</span></label>)}</div>
         </details>
       })}
-    </section>
-    <section className="rw-section">
+    </section>}
+    {showChecklist&&<section className="rw-section">
       <h5>Electrical, optical, burn-in and QA test records</h5>
       <p>Record measurements, dates, inspected wiring, defects, and actual
         results. These entries are private to this exact test Design ID.</p>
@@ -338,8 +343,8 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
             busy={Boolean(busy)||!work}/>)}
         </div>
       </details>)}
-    </section>
-    <section className="rw-section">
+    </section>}
+    {showChecklist&&<section className="rw-section">
       <h5>Private final QC photographs</h5>
       <p>Attach one or more real inspection photos for this specific test.
         They are stored in owner-only Vercel storage and are never attached
@@ -357,8 +362,8 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
         <button type="button" disabled={Boolean(busy)}
           onClick={()=>void downloadQc(p.photoId,p.ext)}>↓ Open private QC photo</button>
       </div>)}
-    </section>
-    <section className="rw-section rw-completion">
+    </section>}
+    {showChecklist&&<section className="rw-section rw-completion">
       <h5>Test build closeout</h5>
       <p><strong>{work?.readyToBuild?'Ready for owner-reviewed prototype assembly':
         'HOLD — not ready for test assembly'}</strong>. The button below can only
@@ -377,6 +382,6 @@ export function RehearsalWorkbench({plan,adminKey,materials}:{
         Owner-reported test completed at {new Date(work.completedAt).toLocaleString()}.
         This is NOT an actual Etsy payment, certified electrical design, or shipping action.
       </p>}
-    </section>
+    </section>}
   </section>
 }

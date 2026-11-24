@@ -29,7 +29,9 @@ const cents=(value:string):number|null=>{
   if(!Number.isSafeInteger(v)||v<0||v>100000000)throw new Error('Invalid unit price.')
   return v
 }
-export function ManualAmazonPurchasingPanel({adminKey,refreshVersion}:{adminKey:string;refreshVersion:number}){
+export function ManualAmazonPurchasingPanel({adminKey,refreshVersion,onOpenMaterials}:{
+  adminKey:string;refreshVersion:number;onOpenMaterials?:()=>void
+}){
   const [state,setState]=useState<Snapshot|null>(null)
   const [loading,setLoading]=useState(false)
   const [saving,setSaving]=useState(false)
@@ -145,7 +147,9 @@ export function ManualAmazonPurchasingPanel({adminKey,refreshVersion}:{adminKey:
         Use the M3 Materials section below to create the matching recipe and prepare its job BOM.</p>
       <ul>{queue?.unplanned.map(j=><li key={j.shopId+':'+j.receiptId+':'+j.transactionId}>
         Etsy #{j.receiptId}, item #{j.transactionId} — {j.reason}</li>)}</ul>
-      <a href="#materials-planning">Go to M3 recipes and job BOMs</a>
+      {onOpenMaterials?<button type="button" onClick={onOpenMaterials}>
+        Go to M3 recipes and job BOMs ↗</button>:
+        <a href="#materials-planning">Go to M3 recipes and job BOMs</a>}
     </div>}
     {!!otherReview&&<div className="manual-amazon-attention">
       <h3>Orders requiring review — do not source blindly</h3>

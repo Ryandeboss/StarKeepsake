@@ -119,3 +119,165 @@
 .production-saved-test-state{display:flex;align-items:center;gap:9px;
  flex-wrap:wrap}
 .production-saved-test-state .production-row-link{font-size:11px}
+
+/* 2026-11-23 — Minimal owner Studio. Heavy legacy tools live behind Operations. */
+.studio-main-nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:5px;
+ padding:10px 0;margin:0 0 23px;background:#0b1422ee;backdrop-filter:blur(16px);
+ border-bottom:1px solid #35475a;overflow-x:auto;scrollbar-width:thin}
+.studio-main-nav button{border:1px solid transparent;background:transparent;color:#a9b8c9;
+ padding:12px 18px;border-radius:9px;white-space:nowrap;font-size:13px;font-weight:600;
+ display:flex;gap:9px;align-items:center}
+.studio-main-nav button:hover{background:#1a2a3d;color:#f0e6d5}
+.studio-main-nav button.studio-nav-active{color:#f1dfbd;background:#223549;
+ border-color:#52657a}
+.studio-main-nav button span{border-radius:99px;background:#354d5e;padding:2px 7px;
+ color:#d4e0ea;font-size:10px;font-variant-numeric:tabular-nums}
+.studio-orders,.studio-shopping{min-height:52vh;margin:3px 0 32px}
+.studio-section-head{display:flex;align-items:center;justify-content:space-between;
+ gap:22px;margin:0 0 24px}
+.studio-section-head h2,.studio-workspace-header h2{font:400 clamp(29px,3vw,38px) Georgia,serif;
+ color:#f4e8d4;margin:5px 0 10px;letter-spacing:-.025em;overflow-wrap:anywhere}
+.studio-section-head p{font-size:12px;color:#a2b6c6;max-width:620px;
+ line-height:1.7;margin:0}
+.studio-light-button{border:1px solid #536d82;border-radius:8px;
+ background:#14273a;color:#dce7ee;padding:11px 15px;font-size:12px;white-space:nowrap}
+.studio-light-button:hover{background:#223b50;border-color:#c8a97b}
+.studio-orders-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;
+ margin:0 0 18px}
+.studio-order-filters{display:flex;gap:4px;padding:4px;border:1px solid #2d4359;
+ background:#102235;border-radius:9px}
+.studio-order-filters button{padding:8px 15px;background:transparent;border:0;
+ color:#9caebe;font-size:11px;border-radius:7px}
+.studio-order-filters button[aria-pressed=true]{background:#314a5e;color:#f0e5cf}
+.studio-order-search{flex:1;max-width:350px}
+.studio-order-search input{width:100%;box-sizing:border-box;background:#0d2134;
+ border:1px solid #364d63;color:#e8eff4;padding:11px 13px;border-radius:9px;
+ outline:none;font-size:12px}
+.studio-order-search input:focus{border-color:#cba978}
+.studio-order-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.studio-order-card{display:flex;flex-direction:column;gap:11px;text-align:left;
+ min-height:238px;border:1px solid #34485c;background:#132337e8;
+ border-radius:15px;color:#e6ecf1;padding:19px 20px;box-shadow:0 14px 30px #0002;
+ transition:transform .18s ease,background .18s ease,border-color .18s ease}
+.studio-order-card:hover{transform:translateY(-2px);border-color:#a58e6c;
+ background:#1a2e43}
+.studio-order-card:focus-visible,.studio-module-card:focus-visible,
+.studio-main-nav button:focus-visible{outline:2px solid #e9c48d;outline-offset:3px}
+.studio-order-card-top{display:flex;align-items:center;justify-content:space-between}
+.studio-order-chip{font-size:10px;letter-spacing:.06em;line-height:1.3;
+ padding:5px 9px;border-radius:6px;border:1px solid #587184;color:#c1d9ea}
+.studio-order-chip-test{border-color:#8c714c;color:#efd1a6;background:#332c29}
+.studio-order-chip-etsy{border-color:#597e74;color:#c8e5db;background:#1e3436}
+.studio-order-arrow{font-size:18px;color:#bdac90;line-height:1}
+.studio-order-card>strong{font-size:17px;line-height:1.4;font-weight:600;
+ color:#f0dfbc;overflow-wrap:anywhere;letter-spacing:-.018em}
+.studio-order-card-title{font-size:11px;color:#a5b7c7;line-height:1.5;
+ overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.studio-order-card-divider{height:1px;width:100%;background:#33485c;margin:3px 0}
+.studio-order-card-detail{display:flex;align-items:baseline;justify-content:space-between;
+ gap:10px;font-size:11px;line-height:1.5}
+.studio-order-card-detail>span{color:#8ea4b7;flex-shrink:0}
+.studio-order-card-detail>b{text-align:right;color:#dbe4ea;font-size:11px;font-weight:550;
+ overflow-wrap:anywhere}
+.studio-order-card-hint{margin-top:auto;color:#cdb88e;font-size:10px;padding-top:4px}
+.studio-order-empty{padding:55px 20px;text-align:center;background:#102034;
+ border:1px solid #31485d;border-radius:13px}
+.studio-order-empty h3{font:normal 25px Georgia,serif;color:#e8decf}
+.studio-order-empty p{font-size:12px;color:#9bafc1}
+.studio-order-empty a{font-size:12px;color:#e6c693}
+.studio-order-workspace{scroll-margin-top:92px;background:#101f31;
+ border:1px solid #30465c;border-radius:17px;padding:27px;max-width:100%}
+.studio-back-link{background:transparent;border:0;color:#c2b098;font-size:12px;
+ padding:0 0 16px}
+.studio-back-link:hover{text-decoration:underline}
+.studio-workspace-header{display:flex;align-items:start;justify-content:space-between;gap:17px}
+.studio-workspace-header h2{font-size:clamp(22px,3vw,33px)}
+.studio-workspace-header p{font-size:12px;color:#a4b7c6;line-height:1.7}
+.studio-workspace-footnote{font-size:11px;color:#a5b8c8;margin-top:21px;line-height:1.7}
+.studio-module-intro{font-size:13px;color:#b2c6d1;margin:23px 0 12px}
+.studio-module-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.studio-module-card{min-height:185px;display:grid;align-content:start;gap:12px;text-align:left;
+ color:#f0e4d1;border:1px solid #385269;background:#152a3d;padding:19px;
+ border-radius:12px}
+.studio-module-card:hover{background:#1b344b;border-color:#d4b07e}
+.studio-module-number{color:#9db3bf;font-size:10px;letter-spacing:.1em}
+.studio-module-card>strong{font:400 23px Georgia,serif;color:#f3e5ce}
+.studio-module-card p{font-size:11px;line-height:1.6;color:#9fb3c2;margin:0}
+.studio-module-open{font-size:11px;color:#e2c79d;font-weight:650;margin-top:6px}
+.studio-payment-note{border:1px solid #465c6b;background:#1a2b3a;padding:12px 14px;
+ border-radius:9px;font-size:12px;color:#bbcbd7}
+.studio-transaction-picker{display:grid;gap:8px;margin:13px 0;
+ color:#bed0d8;font-size:12px}
+.studio-transaction-picker select{background:#142c3e;color:#e8edf1;
+ border:1px solid #577185;padding:9px;border-radius:7px}
+.studio-order-not-ready{border:1px solid #83674d;background:#292936;
+ border-radius:11px;padding:20px;color:#f0dec4}
+.studio-order-not-ready p{font-size:12px;line-height:1.65;color:#c6c0b8}
+.studio-shopping-queue{border:1px solid #3e5367;border-radius:13px;
+ background:#102335;margin:0 0 16px;overflow:hidden}
+.studio-shopping-queue>summary{display:flex;justify-content:space-between;
+ align-items:center;gap:14px;padding:20px 24px;cursor:pointer;list-style:none}
+.studio-shopping-queue>summary::-webkit-details-marker{display:none}
+.studio-shopping-queue>summary span:first-child{display:grid;gap:5px}
+.studio-shopping-queue>summary strong{color:#e9dfc8;font:400 20px Georgia,serif}
+.studio-shopping-queue>summary small{color:#9bb4bf;font-size:11px;line-height:1.6}
+.studio-shopping-queue>summary span:last-child{color:#e6c89f;font-size:21px}
+.studio-shopping-queue[open]>summary{border-bottom:1px solid #355267}
+.studio-shopping-queue>.manual-amazon{margin:0;border:0;border-radius:0}
+.studio-legacy-demo{border:1px solid #30465b;border-radius:12px;padding:15px 21px;
+ margin:0 0 18px;background:#111f30}
+.studio-legacy-demo>summary{cursor:pointer;color:#c7d3dc;font-size:12px}
+.studio-legacy-demo>section{margin:15px 0 0}
+.studio-modal-backdrop{position:fixed;inset:0;background:rgba(4,10,18,.84);
+ backdrop-filter:blur(7px);z-index:1000;display:grid;place-items:center;padding:20px;
+ box-sizing:border-box}
+.studio-module-dialog{display:flex;flex-direction:column;width:min(100%,1100px);
+ max-height:calc(100dvh - 40px);min-height:200px;overflow:hidden;
+ border:1px solid #486275;border-radius:17px;background:#0c1d2c;
+ box-shadow:0 28px 120px #0009;color:#e9f0f1}
+.studio-dialog-topbar{display:flex;justify-content:space-between;align-items:center;
+ gap:20px;flex:none;border-bottom:1px solid #344b5e;padding:20px 26px;background:#142b3a}
+.studio-dialog-topbar .production-eyebrow{font-size:10px;margin-bottom:4px}
+.studio-dialog-topbar h2{font:400 clamp(23px,3vw,31px) Georgia,serif;
+ color:#f2e1c6;margin:0 0 4px}
+.studio-dialog-topbar p{font-size:11px;color:#a7bbc4;line-height:1.5;
+ overflow-wrap:anywhere;margin:0}
+.studio-dialog-close{display:grid;place-items:center;flex:none;
+ background:#273e50;color:#eee6d8;border:1px solid #5d7586;
+ border-radius:10px;width:42px;height:42px;font-size:25px;line-height:1}
+.studio-dialog-close:hover{background:#35546b}
+.studio-dialog-body{flex:1;min-height:0;overflow:auto;padding:20px}
+.studio-dialog-body .opf-panel{margin:0}
+.studio-dialog-body .rw-workbench{margin:0;padding:12px;border:0;background:transparent}
+.studio-dialog-body .omp-panel{margin:0;background:transparent;max-width:100%}
+.studio-dialog-body .opf-archive-warning,.studio-dialog-body .production-error{margin:10px 0}
+@media(max-width:1100px){.studio-order-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+ .studio-section-head{align-items:flex-start;flex-direction:column}
+ .studio-module-grid{grid-template-columns:1fr}
+ .studio-workspace-header{align-items:start;flex-direction:column}
+ .studio-modal-backdrop{padding:7px}
+ .studio-module-dialog{max-height:calc(100dvh - 14px);border-radius:12px}
+ .studio-dialog-topbar{padding:14px 16px}
+ .studio-dialog-body{padding:12px}
+}
+@media(max-width:610px){
+ .studio-order-grid{grid-template-columns:1fr}
+ .studio-orders-toolbar{align-items:stretch;flex-direction:column}
+ .studio-order-search{max-width:unset}
+ .studio-order-card{min-height:220px}
+ .studio-order-workspace{padding:16px}
+ .studio-main-nav button{padding:10px 12px;font-size:11px}
+ .studio-main-nav{margin-bottom:18px}
+ .studio-shopping-queue>summary{padding:16px}
+}
+@media(prefers-reduced-motion:reduce){.studio-order-card{transition:none}
+ .studio-order-card:hover{transform:none}}
+
+/* Override the legacy generic form-control font reset in the new Studio shell. */
+.production-page .studio-main-nav button{font-size:13px}
+.production-page .studio-order-filters button{font-size:11px}
+.production-page .studio-order-card{font-size:12px}
+.production-page .studio-module-card{font-size:12px}
+.production-page .studio-dialog-close{font-size:25px}
+@media(max-width:610px){.production-page .studio-main-nav button{font-size:11px}}
