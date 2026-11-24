@@ -48,3 +48,14 @@ export function domeAltitudeY(altitude: number, top = 30, height = 90): number {
   return top + ((SKY_DOME_MAX_ALTITUDE - clipped) /
     (SKY_DOME_MAX_ALTITUDE - SKY_DOME_MIN_ALTITUDE)) * height
 }
+
+/** Inverse of the mini-dome projection, bounded to the workshop camera controls.
+ * Normalized x/y are measured within the plotted rectangle, not the SVG labels.
+ */
+export function domePointToOrientation(x: number, y: number): {heading:number;pitch:number} {
+  const boundedX = Math.max(0,Math.min(1,x))
+  const boundedY = Math.max(0,Math.min(1,y))
+  const heading = normalizeBearing(Math.round(boundedX * 360))
+  const altitude = SKY_DOME_MAX_ALTITUDE - boundedY * (SKY_DOME_MAX_ALTITUDE - SKY_DOME_MIN_ALTITUDE)
+  return {heading,pitch:Math.max(-8,Math.min(88,Math.round(altitude)))}
+}

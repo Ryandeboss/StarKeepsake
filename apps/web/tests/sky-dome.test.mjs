@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { domeWindow, domeAltitudeY, normalizeBearing } from '../src/skyDomeMath.ts'
+import { domeWindow, domeAltitudeY, normalizeBearing, domePointToOrientation } from '../src/skyDomeMath.ts'
 import { observerHorizonY } from '../src/skyLandscapeData.ts'
 import { altitudeAtSkyRow, atmosphereRows, atmosphericLight, photoHorizonBottomPercent } from '../src/skyAtmosphereMath.ts'
 
@@ -62,4 +62,18 @@ test('Chicago flat photo plate follows vertical horizon with sky and remains upr
   assert.ok(Math.abs(photoHorizonBottomPercent(15, 105)) < .00001)
   assert.ok(photoHorizonBottomPercent(40, 105) < -20)
   assert.ok(photoHorizonBottomPercent(-5, 105) > 15)
+})
+
+test('clicking within the dome selects the corresponding heading and altitude',()=>{
+  assert.deepEqual(domePointToOrientation(.25,(90-16)/115),{heading:90,pitch:16})
+  assert.deepEqual(domePointToOrientation(.5,90/115),{heading:180,pitch:0})
+  assert.deepEqual(domePointToOrientation(.75,(90-65)/115),{heading:270,pitch:65})
+  assert.deepEqual(domePointToOrientation(74/360,(90-16)/115),{heading:74,pitch:16})
+})
+test('dome drag clamps to camera limits and wraps true north',()=>{
+  assert.deepEqual(domePointToOrientation(0,0),{heading:0,pitch:88})
+  assert.deepEqual(domePointToOrientation(1,1),{heading:0,pitch:-8})
+  assert.deepEqual(domePointToOrientation(-.1,-.2),{heading:0,pitch:88})
+  assert.deepEqual(domePointToOrientation(1.1,1.2),{heading:0,pitch:-8})
+  assert.deepEqual(domePointToOrientation(359/360,.5),{heading:359,pitch:33})
 })

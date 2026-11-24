@@ -24,3 +24,8 @@
   .sky-dome { width: 165px; top: 5px; left: 5px; }
   .sky-dome-title span { font-size: 7px; }
 }
+
+/* Only the standalone, editable orientation map receives pointer input. */
+.sky-dome.sky-dome-interactive{pointer-events:auto}
+.sky-dome.sky-dome-interactive svg{cursor:crosshair!important;touch-action:none!important;user-select:none}
+.sky-dome.sky-dome-interactive svg:focus-visible{outline:2px solid #f2d9ad;outline-offset:3px;border-radius:5px}

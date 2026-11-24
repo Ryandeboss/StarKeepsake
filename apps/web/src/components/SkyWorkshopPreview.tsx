@@ -266,8 +266,9 @@ export function SkyWorkshopOrientation({
   onHeading:(v:number)=>void;onPitch:(v:number)=>void;onFov:(v:number)=>void;onReset:()=>void
 }) {
   return <div className="skw-orientation-controls">
-    <div className="skw-dome-holder"><SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}/></div>
-    <p className="skw-orientation-copy">Choose the direction your photograph was facing. The gold window shows how much of the sky the frame is looking toward.</p>
+    <div className="skw-dome-holder"><SkyOrientationMiniMap heading={heading} pitch={pitch} horizontalFov={fov}
+      onOrientationChange={(nextHeading,nextPitch)=>{onHeading(nextHeading);onPitch(nextPitch)}}/></div>
+    <p className="skw-orientation-copy">Click or drag inside the sky map to change your view. The gold window shows the portion of the sky you are looking toward.</p>
     <fieldset className="skw-compass-buttons">
       <legend>Face a direction</legend>
       {SKY_DIRECTION_PRESETS.map(item => <button key={item.label}
