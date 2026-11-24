@@ -104,8 +104,24 @@ test('supplier candidates have real HTTPS listing URLs and explicitly unapproved
   assert.ok(SUPPLIER_CANDIDATES.length>=8)
   assert.ok(SUPPLIER_CANDIDATES.every(x=>x.status==='LISTED_NOT_BUILD_VALIDATED'&&
     new URL(x.url).protocol==='https:'&&
-    /^2026-11-(18|23)$/.test(x.checked)&&
+    /^2026-11-(18|23|24)$/.test(x.checked)&&
     x.buildValidation==='Research Candidate'&&Boolean(x.sourceConfidence)))
   assert.match(supplierCandidateFor('star_led').product,/LED3FWAW/)
-  assert.equal(supplierCandidateFor('wall_power'),null)
+  assert.match(supplierCandidateFor('wall_power').product,/5V 4A/)
+})
+
+test('maker catalog mapping and distribution quantities preserve measured items and N',()=>{
+  const x=fixture(13)
+  assert.equal(row(x,'distribution').quantity,2)
+  assert.equal(row(x,'distribution').skuHint,'WAGO-221-415')
+  assert.equal(row(x,'harness_groups').quantity,2)
+  assert.equal(row(x,'star_led').quantity,13)
+  assert.equal(row(x,'channel_wire').skuHint,'WIRE-26AWG-3002582')
+  assert.equal(row(x,'accent_cob').quantity,null)
+  assert.equal(row(x,'wall_power').review,'HOLD')
+  assert.equal(row(x,'print_pickup').skuHint,null)
+  const wide=fixture(10,{physicalArtwork:{widthMm:300,heightMm:400}})
+  assert.equal(row(wide,'mount_film').quantity,.12)
+  assert.match(row(wide,'sintra').rule,/300 × 400/)
+  assert.equal(wide.geometryValidated,false,'non-11x14 still requires separate geometry approval')
 })

@@ -1,3 +1,4 @@
+import {supplierSkuFor} from './supplierCandidates.ts'
 /**
  * Per-saved-design physical production planning, NOT an approved shopping cart.
  * Never derive N from available driver channels or the digital star count.
@@ -130,9 +131,9 @@ export function buildManufacturingJobPlan(design:DesignSpec,prefs:OrderPreferenc
   const add=(group:MakerGroup,key:string,name:string,quantity:number|null,
     unit:string,rule:string,skuHint:string|null,review:MakerPart['review'],
     notes:string,required=true)=>parts.push({
-      group,key,name,quantity,unit,rule,skuHint,review,notes,required
+      group,key,name,quantity,unit,rule,skuHint:supplierSkuFor(key,skuHint),review,notes,required
     })
-  add('buy','frame','11×14 deep shadow-box frame — '+prefs.finish,1,'frame','one per order',null,
+  add('buy','frame','Deep shadow-box frame — '+prefs.finish,1,'frame','one per order',null,
     'SOURCE_AND_VERIFY','Match the Etsy purchased finish and actual rabbet, depth, glazing and hanger.')
   add('buy','professional_print','Professional luster/satin print (exact customer artwork)',1,'print',
     'one print per frame',null,'SOURCE_AND_VERIFY',
@@ -154,7 +155,7 @@ export function buildManufacturingJobPlan(design:DesignSpec,prefs:OrderPreferenc
     '1 set per frame',null,'HOLD','Final chassis fit, retention and strain test required.')
   add('pack','fuse','Main fuse/protection assembly',1,'set','1 per frame',
     null,'HOLD','Fuse rating/circuit approval pending.')
-  add('pack','distribution','Power distribution board/block',1,'board','1 per frame',
+  add('pack','distribution','Power distribution lever connectors',2,'each','positive and ground; two per frame',
     null,'HOLD','Wiring gauge and terminal ratings unapproved.')
   add('pack','harness_groups','Numbered star harness connector groups',
     connectorGroupCount,'group','ceil(N / 12)',null,'HOLD',

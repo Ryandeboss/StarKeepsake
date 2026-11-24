@@ -49,6 +49,8 @@ jobs:
       - run: npm run test:studio-preservation
       - run: npm run test:production-storage
       - run: npm run test:rehearsal
+      - run: npm run test:supplier-catalog
+      - run: npm run test:maker-plan
       - run: npm run test:manual-amazon
       - run: npm run test:etsy-checkout
       - run: npm run test:showroom

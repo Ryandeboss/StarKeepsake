@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react'
 import {downloadFile} from '../customerOrder'
-import {supplierCandidateFor} from '../supplierCandidates'
+import {supplierCandidateFor,supplierSkuFor,resolveSupplierLink} from '../supplierCandidates'
 import {RehearsalWorkbench} from './RehearsalWorkbench'
 import type {MaterialSnapshot} from '../manualAmazonQueue'
 import type {MakerGroup,MakerPart,MakerPlan} from '../manufacturingJobPlan'
@@ -20,17 +20,19 @@ const groups:readonly {id:MakerGroup;name:string;intro:string}[]=[
 ]
 const unitName=(x:number|null,unit:string)=>x===null?'TO MEASURE':x+' '+unit
 function stockSnapshot(part:MakerPart,materials:MaterialSnapshot|null){
-  const sku=part.skuHint?.toLowerCase()
+  const sku=supplierSkuFor(part.key,part.skuHint)?.toLowerCase()
   const found=sku?materials?.parts.find(p=>p.sku.toLowerCase()===sku):undefined
   if(!found)return null
   const pending=materials!.purchases.filter(p=>p.sku===found.sku&&
     ['ordered','partially_received'].includes(p.status)).reduce(
     (acc,p)=>acc+Math.max(0,Number(p.quantity_ordered)-Number(p.quantity_received)),0)
-  return {found,pending,estimate:part.quantity!==null?
+  // A spool, sheet, or alternative assembly is not one drilled position or m².
+  // Compare numeric stock only when the plan and catalog units are compatible.
+  const compatible=part.unit===found.unit||(found.unit==='each'&&
+    ['LED','board','frame','print','adapter','pair'].includes(part.unit)&&
+    !(part.key==='distribution'&&part.unit==='board'))
+  return {found,pending,estimate:part.quantity!==null&&compatible?
     Math.max(0,part.quantity-Number(found.on_hand)):null}
-}
-function safeLink(url:string|null|undefined){
-  return url&&/^https:\/\//i.test(url)?url:null
 }
 export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,
   adminKey,simulated=false,module='all'}:{
@@ -176,8 +178,8 @@ export function OwnerManufacturingPlan({plan,materials,receiptId,transactionId,
       </tr></thead><tbody>{plan.parts.filter(p=>p.group===group.id).map(p=>{
         const stock=stockSnapshot(p,materials)
         const vendor=stock?.found
-        const link=safeLink(vendor?.supplier_url)
         const candidate=supplierCandidateFor(p.key)
+        const link=resolveSupplierLink(supplierSkuFor(p.key,p.skuHint),null,materials?.parts)
         return <tr key={p.key}>
           <td><b>{p.name}</b><small>{p.notes}</small></td>
           <td>{unitName(p.quantity,p.unit)}</td>

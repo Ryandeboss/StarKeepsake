@@ -1,6 +1,6 @@
 import {useMemo,useState} from 'react'
 import type {MaterialSnapshot} from '../manualAmazonQueue'
-import {SUPPLIER_CANDIDATES} from '../supplierCandidates'
+import {SUPPLIER_CANDIDATES,SUPPLIER_COMPONENTS,resolveSupplierLink} from '../supplierCandidates'
 import './SupplierCatalogTable.css'
 
 type Item={
@@ -11,17 +11,20 @@ const price=(cents:number|null)=>cents===null?'—':
   new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100)
 const safe=(url:string|null|undefined)=>/^https:\/\//i.test(url||'')?url!:null
 
+const candidates=[...SUPPLIER_CANDIDATES,...SUPPLIER_COMPONENTS]
+  .filter((part,index,all)=>all.findIndex(p=>p.sku===part.sku)===index)
+
 export function SupplierCatalogTable({materials,onManage}:{
   materials:MaterialSnapshot|null;onManage:()=>void
 }){
   const [search,setSearch]=useState('')
   const rows=useMemo<Item[]>(()=>[
     ...(materials?.parts||[]).map(part=>({
-      id:'catalog-'+part.sku,name:part.name,url:safe(part.supplier_url),
+      id:'catalog-'+part.sku,name:part.name,url:safe(part.supplier_url)||resolveSupplierLink(part.sku,candidates.find(c=>c.sku===part.sku)||null),
       price:part.unit_cost_cents,notes:part.notes||'—',source:'saved' as const
     })),
-    ...SUPPLIER_CANDIDATES.map(part=>({
-      id:'research-'+part.key,name:part.product,url:safe(part.url),
+    ...candidates.filter(part=>!materials?.parts.some(p=>p.sku.toUpperCase()===part.sku.toUpperCase())).map(part=>({
+      id:'research-'+part.key+'-'+part.sku,name:part.product,url:safe(part.url),
       price:null,notes:part.notes,source:'research' as const
     }))
   ],[materials])

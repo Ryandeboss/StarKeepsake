@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState} from 'react'
 import {readFrozenMakerPacket} from '../frozenMakerReader'
 import {PRINT_VARIANTS} from '../manufacturingPrint'
 import {MAKER_STEPS,type MakerPart} from '../manufacturingJobPlan'
-import {supplierCandidateFor} from '../supplierCandidates'
+import {supplierCandidateFor,supplierSkuFor,resolveSupplierLink,SUPPLIER_COMPONENTS,assemblyQuantity} from '../supplierCandidates'
 import type {MaterialSnapshot} from '../manualAmazonQueue'
 import rehearsal from '../rehearsalPhases.json'
 import {downloadFile} from '../customerOrder'
@@ -37,11 +37,7 @@ async function json<T>(url:string,key:string,post?:unknown):Promise<T>{
   return await response.json() as T
 }
 function linkFor(part:SimplePart,materials:MaterialSnapshot|null){
-  const stock=part.skuHint?materials?.parts.find(p=>p.sku.toLowerCase()===
-    part.skuHint?.toLowerCase()):null
-  const url=stock?.supplier_url||supplierCandidateFor(part.key)?.url||''
-  // Do not render untrusted or invalid catalog URLs as links.
-  return /^https:\/\//i.test(url)?url:null
+  return resolveSupplierLink(supplierSkuFor(part.key,part.skuHint),supplierCandidateFor(part.key),materials?.parts)
 }
 const count=(quantity:number|null,unit:string)=>quantity===null?'Measure':
   quantity.toLocaleString('en-US',{maximumFractionDigits:2})+
@@ -129,6 +125,7 @@ export function SimpleStudioModule({module,adminKey,designId,simulated,
   },[adminKey,archiveEndpoint,designId,module,needsZip,partEndpoint,progressEndpoint,simulated])
   const relevant=useMemo(()=>parts.filter(p=>p.group!=='make'),[parts])
   const checkedParts=relevant.filter(p=>marked[p.key]).length
+  const starCount=parts.find(p=>p.key==='star_led')?.quantity??null
   const phases=simulated?testPhases:paidPhases
   const steps=phases.flatMap(p=>p.steps)
   const done=steps.filter(s=>marked[s.id]).length
@@ -197,10 +194,31 @@ export function SimpleStudioModule({module,adminKey,designId,simulated,
               {count(part.quantity,part.unit)} {part.name}
             </span>
           </label>
-          {linkFor(part,materials)?<a target="_blank" rel="noopener noreferrer"
-            title="Verify price, stock and compatibility with the seller"
-            href={linkFor(part,materials)!}>Supplier ↗</a>:
-            <span className="simple-missing-link">No link</span>}
+          {part.key==='print_pickup'?<span className="simple-expense">Expense</span>:
+            SUPPLIER_COMPONENTS.some(c=>c.key===part.key)?<details className="simple-supplier-details">
+              <summary>Suppliers</summary>
+              <div className="simple-supplier-items">
+                {part.key==='shipping'&&linkFor(part,materials)&&<a href={linkFor(part,materials)!} target="_blank" rel="noopener noreferrer">1 × Carton ↗</a>}
+                {part.key==='mounting_hardware'&&linkFor(part,materials)&&<a href={linkFor(part,materials)!} target="_blank" rel="noopener noreferrer">Measure · M2.5 kit ↗</a>}
+                {SUPPLIER_COMPONENTS.filter(c=>c.key===part.key).map(component=>{
+                  const quantity=assemblyQuantity(component.quantityRule,part.quantity,starCount)
+                  const link=resolveSupplierLink(component.sku,component,materials?.parts)
+                  return <div key={component.sku}>{link?<a href={link} target="_blank" rel="noopener noreferrer">
+                    {component.quantityRule==='alternative'?'Alternative':quantity===null?'Measure':quantity+' ×'} {component.product} ↗</a>:component.product}
+                    <small>{component.notes}</small></div>
+                })}
+                {part.key==='harness_groups'&&linkFor(part,materials)&&<a href={linkFor(part,materials)!} target="_blank" rel="noopener noreferrer">Alternative: preassembled harness ↗</a>}
+                <small>Research candidates only — validate compatibility before purchase.</small>
+              </div>
+            </details>:linkFor(part,materials)?<a target="_blank" rel="noopener noreferrer"
+              title="Research candidate: verify price, stock and compatibility"
+              href={linkFor(part,materials)!}>Supplier ↗</a>:
+              <span className="simple-missing-link">Selection pending</span>}
+          {part.key!=='print_pickup'&&supplierCandidateFor(part.key)&&
+            <details className="simple-part-notes"><summary>Details</summary>
+              <div className="simple-part-note-text">{materials?.parts.find(p=>p.sku.toUpperCase()===supplierSkuFor(part.key,part.skuHint)?.toUpperCase())?.notes||supplierCandidateFor(part.key)?.notes}</div>
+              <small>Research candidate · physical validation required</small>
+            </details>}
         </div>)}
       </div>:<div className="simple-empty">No components found.</div>}
     </>}

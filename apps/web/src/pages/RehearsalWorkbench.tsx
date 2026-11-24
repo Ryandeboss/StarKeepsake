@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react'
 import {downloadFile} from '../customerOrder'
 import type {MakerPlan,MakerPart} from '../manufacturingJobPlan'
 import type {MaterialSnapshot} from '../manualAmazonQueue'
-import {supplierCandidateFor} from '../supplierCandidates'
+import {supplierCandidateFor,supplierSkuFor,resolveSupplierLink} from '../supplierCandidates'
 import {PRINT_VARIANTS} from '../manufacturingPrint'
 import phases from '../rehearsalPhases.json'
 import './RehearsalWorkbench.css'
@@ -76,8 +76,9 @@ function PartEditor({part,current,materials,onSave,busy}:{
   const [validation,setValidation]=useState(current?.validation||'research_candidate')
   const [notes,setNotes]=useState(current?.notes||'')
   const listed=supplierCandidateFor(part.key)
-  const stock=part.skuHint?materials?.parts.find(m=>m.sku.toLowerCase()===
-    part.skuHint?.toLowerCase()):null
+  const sku=supplierSkuFor(part.key,part.skuHint)
+  const stock=sku?materials?.parts.find(m=>m.sku.toLowerCase()===sku.toLowerCase()):null
+  const savedUrl=resolveSupplierLink(sku,null,materials?.parts)
   return <div className="rw-part-row">
     <div className="rw-part-description">
       <strong>{part.name}</strong>
@@ -85,8 +86,8 @@ function PartEditor({part,current,materials,onSave,busy}:{
         {' · '}{part.required?'Required':'Conditional'} · {part.rule}</small>
       <small>{part.notes}</small>
       {listed?<div className="rw-source">
-        <a href={listed.url} target="_blank" rel="noopener noreferrer">{listed.supplier} · {listed.product}</a>
-        <span>Source confidence: {listed.sourceConfidence}</span>
+        <a href={savedUrl||listed.url} target="_blank" rel="noopener noreferrer">{savedUrl?(stock?.supplier_name||'Saved supplier'):listed.supplier} · {stock?.name||listed.product}</a>
+        <span>Research listing source confidence: {listed.sourceConfidence}</span>
         <span>Build validation: {current?.validation?.replace(/_/g,' ')||listed.buildValidation}</span>
       </div>:<div className="rw-source">
         <span>Supplier: Not selected</span><span>Source confidence: Unknown — Do Not Purchase</span>

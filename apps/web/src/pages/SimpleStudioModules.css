@@ -62,3 +62,14 @@
  .simple-phase-controls select{order:-1;flex-basis:100%;width:100%}
 }
 @media(prefers-reduced-motion:reduce){.simple-spinner{animation:none}}
+
+.simple-expense{color:#53666d;font-size:15px}
+.simple-todo-row:has(.simple-part-notes){flex-wrap:wrap}
+.simple-supplier-details{flex:0 0 auto;color:#136971;font-size:16px;max-width:100%}
+.simple-supplier-details[open]{flex:1 1 100%;padding-left:42px}
+.simple-supplier-details summary,.simple-part-notes summary{cursor:pointer;font-weight:600}
+.simple-supplier-items{display:grid;gap:10px;padding:10px 0}
+.simple-supplier-items a{color:#136971;font-weight:600;overflow-wrap:anywhere}
+.simple-supplier-items small,.simple-part-notes small{display:block;color:#52636a;font-size:13px;line-height:1.5}
+.simple-part-notes{flex:1 1 100%;padding-left:42px;color:#52636a;font-size:13px}
+.simple-part-note-text{margin:5px 0;line-height:1.5}
