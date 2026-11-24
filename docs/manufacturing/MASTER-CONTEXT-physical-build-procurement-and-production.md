@@ -1713,3 +1713,20 @@ For each legitimately paid StarKeepsake order, the owner should immediately have
 10. Persistent order-specific build/QA checklist.
 
 The owner should not need to reopen the customer builder or regenerate these outputs manually.
+
+
+---
+
+# Latest turn — Fixed 11x14 is a manufacturing simplification, not a hard product requirement
+
+The user questioned why StarKeepsake must always use an 11x14 frame instead of buying a frame that matches the uploaded image's aspect ratio.
+
+Clarification:
+
+- 11x14 was chosen as a standardized prototype/retail size to simplify print exports, drilling templates, SINTRA panel dimensions, frame sourcing, electronics fit, packaging, pricing, and QA.
+- There is no inherent technical requirement that every StarKeepsake be 11x14.
+- The more important physical constraint is that the chosen frame must provide enough usable depth and rear access for the artwork panel, StarPods/LEDs, wiring, electronics carrier, power entry, and removable rear cover.
+- A future product architecture may support multiple standardized frame sizes/aspect ratios or choose a frame size based on the customer's image aspect ratio.
+- If variable frame sizes are supported, the production packet must freeze actual trim width/height, print dimensions, star print-space coordinates, drilling geometry, panel size, and per-order BOM for that specific frame.
+- Avoid assuming that a random Amazon frame matching the image aspect ratio is automatically suitable; verify depth, glazing, rabbet/opening, backing, hanger, finish, and service access.
+- A practical compromise may be a small supported catalog of standard frame sizes/aspect ratios rather than arbitrary frame dimensions for every order.
