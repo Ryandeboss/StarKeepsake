@@ -123,6 +123,8 @@ export function ExperiencePage() {
   const [physicalOnly,setPhysicalOnly]=useState(true)
   const [customizingLights,setCustomizingLights]=useState(false)
   const [physicalMessage,setPhysicalMessage]=useState('')
+  const [starHelpOpen,setStarHelpOpen]=useState(false)
+  const [starHelpHover,setStarHelpHover]=useState(false)
   // Incrementing this id replays the confirmation animation even if the
   // customer clicks restore twice without changing their selection.
   const [physicalRestoreId,setPhysicalRestoreId]=useState(0)
@@ -1340,12 +1342,44 @@ export function ExperiencePage() {
                 onPerspectiveInteract={()=>{}}
                 onHeading={()=>{}} onPitch={()=>{}}/>
             </HomeShowroom>
-            {physicalView&&<div className="at-physical-count-total" role="status">
-              <strong>✦ {displayedPhysicalLedCount} physical LED stars</strong>
-              <span>{digitalOnlyCount>0
-                ?(physicalView.visibleDigitalCount+' stars are visible digitally; '+
-                  digitalOnlyCount+' cannot be illuminated in this print layout or spacing.')
+            {physicalView&&<div className="at-physical-count-total">
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <strong>✦ {displayedPhysicalLedCount} physical LED stars</strong>
+                <button type="button" aria-label="Why are some stars not illuminated?"
+                  aria-expanded={starHelpOpen||starHelpHover}
+                  aria-controls="at-star-count-help"
+                  onPointerEnter={event=>{if(event.pointerType==='mouse')setStarHelpHover(true)}}
+                  onPointerLeave={()=>setStarHelpHover(false)}
+                  onClick={()=>{setStarHelpOpen(value=>!value);setStarHelpHover(false)}}
+                  onKeyDown={event=>{if(event.key==='Escape'){setStarHelpOpen(false);setStarHelpHover(false)}}}
+                  style={{width:30,height:30,borderRadius:'50%',border:'1px solid #a88e65',
+                    background:'transparent',color:'#f6e1b5',fontSize:16,fontWeight:700,
+                    cursor:'pointer',padding:0,flexShrink:0}}>?</button>
+              </div>
+              <span role="status">{digitalOnlyCount>0
+                ?physicalView.visibleDigitalCount+' stars in view · '+digitalOnlyCount+' digital-only'
                 :'Every displayed star is selected for a physical LED.'}</span>
+              <div id="at-star-count-help" hidden={!(starHelpOpen||starHelpHover)}
+                style={{flexBasis:'100%',padding:'12px 14px',borderRadius:8,
+                  background:'#101f2c',color:'#e5edf0',fontSize:14,lineHeight:1.55}}>
+                <b style={{color:'#f6e1b5'}}>Why are some stars not illuminated?</b>
+                <p style={{margin:'6px 0'}}>Your sky can show more stars than your frame can physically light.
+                  Stars may remain digital-only for three reasons:</p>
+                <ul style={{margin:'6px 0',paddingLeft:20}}>
+                  <li><b>Spacing:</b> Nearby stars may be too close to fit separate lights.</li>
+                  <li><b>Edges:</b> Stars near or outside the finished print edge cannot safely receive a light.</li>
+                  <li><b>Capacity:</b> Each keepsake supports up to {physicalView.physicalSelection.maxPhysicalStars} illuminated stars.
+                    Automatic selection favors brighter stars and good spacing.</li>
+                </ul>
+                {physicalView.unavailableForDrilling>0&&<p style={{margin:'6px 0'}}>
+                  In your design, {physicalView.unavailableForDrilling} visible stars fall outside the safe print area.</p>}
+                {physicalView.tooClose>0&&<p style={{margin:'6px 0'}}>
+                  {physicalView.tooClose} stars were skipped because their light positions are too close together.</p>}
+                {design.physicalStarOverrides?.mode==='manual'&&<p style={{margin:'6px 0'}}>
+                  Your manual star choices can also leave stars unlit.</p>}
+                <p style={{margin:'6px 0 0'}}>Digital-only stars can still appear in your artwork.
+                  Adjust your sky or choose eligible lights to customize which stars illuminate.</p>
+              </div>
             </div>}
             {physicalView&&(physicalView.physicalSelection.eligibleStars>24||
               digitalOnlyCount>0)&&
