@@ -424,3 +424,11 @@ test('both customer star-count sections offer the same readable exclusion explan
   assert.match(studio,/event\.key==='Escape'/)
   assert.match(css,/\.at-star-count-help-content\[hidden\]/)
 })
+
+test('Chapter 04 help stays in the right-aligned star count column',()=>{
+  const sky=file('../src/components/SkyWorkshopPreview.tsx')
+  const css=file('../src/components/SkyWorkshopPreview.css')
+  assert.match(sky,/className="skw-footline-count">[\s\S]*?DIGITAL STARS IN VIEW[\s\S]*?\{starCountHelp\}\s*<\/div>/)
+  assert.match(css,/\.skw-footline-count\{[^}]*flex-direction:column[^}]*align-items:flex-end[^}]*margin-left:auto/)
+  assert.match(css,/\.skw-footline-count \.at-star-count-help\{[^}]*text-align:right/)
+})

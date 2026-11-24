@@ -218,3 +218,9 @@
 /* In manual LED mode the stars remain astronomical, with an explicit ring. */
 .skw-catalog-stars [role="button"]{cursor:pointer}
 .skw-catalog-stars [role="button"]:focus-visible{outline:2px solid #f6daab;outline-offset:2px}
+
+/* Keep the count and its help link together on the right, even on narrow screens. */
+.skw-footline-count{display:flex;flex-direction:column;align-items:flex-end;gap:3px;margin-left:auto;min-width:0;max-width:100%;text-align:right}
+.skw-footline-count .at-star-count-help{flex:0 0 auto;text-align:right;align-self:stretch}
+.skw-footline-count .at-star-count-help-trigger{text-align:right}
+.skw-footline-count .at-star-count-help-content{text-align:left;max-width:380px;margin-left:auto;box-sizing:border-box}
