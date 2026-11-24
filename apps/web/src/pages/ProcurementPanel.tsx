@@ -8,6 +8,13 @@ type Preview={mode:string;checkoutEnabled:boolean;offersVerified:boolean;
   activePaidJobs:number;snapshotComplete:boolean;estimatedMaterialsCents:number|null;lines:Need[]}
 type Mapping={sku:string;asin:string;pack_quantity:number;enabled:boolean}
 type Response={preview:Preview;mappings:Mapping[]}
+type CatalogStatus={enabled:boolean;configured:boolean;buyerEmailConfigured:boolean;
+  catalogRoleConfirmed:boolean;checkoutEnabled:boolean;region:string;mode:string;missingConfiguration:string[]}
+type CatalogQuote={sku:string;asin:string;offerId:string|null;productTitle:string|null;
+  merchant:string|null;packPriceCents:number|null;unitPriceCents:number|null;
+  availability:string|null;condition:string|null;withinCap:boolean;flags:string[]}
+type CatalogSnapshot={source:string;mode:string;checkoutEnabled:boolean;observedAtUtc:string;
+  expiresAtUtc:string;mappedCount:number;quotes:CatalogQuote[];notices:string[]}
 const BASE=(import.meta.env.VITE_API_BASE_URL as string|undefined)?.replace(/\/$/,'')??''
 const money=(c:number|null)=>c===null?'Unpriced':
   new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(c/100)
@@ -33,12 +40,40 @@ export function ProcurementPanel({adminKey}:{adminKey:string}){
   const [pack,setPack]=useState('1')
   const [maxPrice,setMaxPrice]=useState('')
   const [enabled,setEnabled]=useState(false)
+  const [catalogStatus,setCatalogStatus]=useState<CatalogStatus|null>(null)
+  const [catalogSnapshot,setCatalogSnapshot]=useState<CatalogSnapshot|null>(null)
+  const [catalogBusy,setCatalogBusy]=useState(false)
+  const [catalogError,setCatalogError]=useState('')
   useEffect(()=>{let live=true
     void req<Response>(adminKey,'/api/admin/procurement/preview')
       .then(x=>{if(live)setData(x)})
       .catch(e=>{if(live)setError(e instanceof Error?e.message:'M6 unavailable.')})
+    void req<CatalogStatus>(adminKey,'/api/admin/procurement/catalog/status')
+      .then(x=>{if(live)setCatalogStatus(x)})
+      .catch(()=>{if(live)setCatalogError('Could not retrieve Amazon connection status.')})
     return()=>{live=false}
   },[adminKey])
+  const refreshOffers=async()=>{
+    setCatalogBusy(true);setCatalogError('')
+    try{
+      const result=await fetch(BASE+'/api/admin/procurement/catalog/quotes/refresh',{
+        method:'POST',cache:'no-store',
+        headers:{'X-Starkeepsake-Admin-Key':adminKey,'Content-Type':'application/json'},
+        body:'{}'
+      })
+      if(!result.ok){
+        const body:unknown=await result.json().catch(()=>null)
+        const code=body&&typeof body==='object'&&'code' in body?
+          String((body as {code:unknown}).code):'PROVIDER_UNAVAILABLE'
+        throw new Error(result.status===429?
+          'Amazon Business limits new lookups for a short time. Try again later.':
+          result.status===401?'Your admin session is no longer authorized.':
+          'Amazon Business read-only lookup unavailable ('+code+'). Check configuration and API approval.')
+      }
+      setCatalogSnapshot(await result.json() as CatalogSnapshot)
+    }catch(e){setCatalogError(e instanceof Error?e.message:'Unable to look up offers.')}
+    finally{setCatalogBusy(false)}
+  }
   const refresh=async()=>{
     setBusy(true);setError('')
     try{setData(await req<Response>(adminKey,'/api/admin/procurement/preview'))}
@@ -123,6 +158,40 @@ export function ProcurementPanel({adminKey}:{adminKey:string}){
           <ul>{data.mappings.map(m=><li key={m.sku}>{m.sku}: {m.asin} ·
             {qty(m.pack_quantity)} units/pack · {m.enabled?'enabled for estimates':'disabled'}</li>)}</ul>}
       </div>
+    </div>
+    <div className="materials-form m6-catalog">
+      <h3>Amazon Business featured offers · read-only</h3>
+      <p>This provider lookup checks saved enabled ASIN mappings only. It never places an
+        order or changes your M3 material costs, customer prices, or Etsy listings.</p>
+      <p className="m6-catalog-status" role="status">{catalogStatus?.configured
+        ?'Server credentials configured · catalog role not yet verified for this session'
+        :catalogStatus?'Not connected: '+catalogStatus.missingConfiguration.join('; ')
+          :'Checking Amazon integration settings…'}</p>
+      <button type="button" className="production-primary"
+        disabled={catalogBusy||!catalogStatus?.configured||!data?.mappings.some(m=>m.enabled)}
+        onClick={()=>void refreshOffers()}>
+        {catalogBusy?'Checking authorized offers…':'Check featured offers (read-only)'}
+      </button>
+      {catalogError&&<p role="alert" className="materials-error">{catalogError}</p>}
+      {catalogSnapshot&&<div className="m6-offer-result">
+        <p className="materials-explain">Retrieved {new Date(catalogSnapshot.observedAtUtc).toLocaleString()}.
+          Quotes expire {new Date(catalogSnapshot.expiresAtUtc).toLocaleString()}.
+          Supplier pricing does not include verified shipping or tax.</p>
+        <div className="materials-table-scroll"><table><thead><tr>
+          <th>SKU / ASIN</th><th>AMAZON BUSINESS PRODUCT</th><th>OFFER PRICE</th>
+          <th>UNIT ESTIMATE</th><th>REVIEW REQUIRED</th>
+        </tr></thead><tbody>{catalogSnapshot.quotes.map(q=><tr key={q.sku}>
+          <td>{q.sku}<small>{q.asin}</small></td>
+          <td>{q.productTitle??'No matched offer'}<small>{q.merchant??'Merchant not reported'}</small></td>
+          <td>{money(q.packPriceCents)}</td><td>{money(q.unitPriceCents)}</td>
+          <td>{q.flags.length?q.flags.map(f=>f.replaceAll('_',' ').toLowerCase()).join('; '):
+            'Physical pack, shipping, and tax still require review'}</td>
+        </tr>)}</tbody></table></div>
+        <p className="materials-footnote">The ASIN's sellable unit may not match your
+          mapped physical part quantity. These prices are informative only; checkout remains disabled.</p>
+      </div>}
+      <p><a href="https://docs.business.amazon.com/docs/product-search-api-overview"
+        target="_blank" rel="noopener noreferrer">Amazon Business Product Search onboarding</a></p>
     </div>
     <p className="materials-footnote">Every simulated line remains blocked from live ordering.
       No payment methods, customer delivery addresses or Amazon credentials are stored in this interface.</p>
