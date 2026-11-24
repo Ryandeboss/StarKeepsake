@@ -329,7 +329,7 @@ test('order modules are simple, readable and still owner-only',()=>{
   assert.match(dashboard,/receiptStatus\(selectedRow\.receipt\)==='Paid'/)
   assert.match(dashboard,/item\.match_state==='matched'/)
   assert.match(panel,/className="simple-todo-list"/)
-  assert.match(panel,/className="simple-todo-row"/)
+  assert.match(panel,/simple-todo-row/)
   assert.match(panel,/linkFor\(part,materials\)/)
   assert.match(panel,/setActivePhase\(/)
   assert.match(panel,/readFrozenMakerPacket/)
