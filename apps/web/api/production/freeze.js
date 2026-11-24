@@ -33,10 +33,14 @@ async function handler(request){
           pathname!==frozenPath(claim.designId))
           throw new PrivateAccessError('Invalid frozen-packet path.',401);
         const saved=await authorizeDesign(claim.designId,claim.accessKey);
-        if(!Array.isArray(saved.design.physicalStars)||
-           saved.design.physicalStars.length===0||
-           !saved.design.astronomy)
-          throw new PrivateAccessError('Design lacks finalized physical stars.',409);
+        const n=saved.design?.physicalStars?.length;
+        if(!Number.isInteger(n)||n<1||n>24||!saved.design.astronomy)
+          throw new PrivateAccessError('Design lacks 1–24 finalized physical LEDs.',409);
+        if(claim.physicalCount!==n||
+          (saved.design.physicalSelection?.selectedStars!==undefined&&
+           saved.design.physicalSelection.selectedStars!==n))
+          throw new PrivateAccessError(
+            'Saved Design ID has a different physical LED count than the maker packet.',409);
         if(await frozenBlob(claim.designId))
           throw new PrivateAccessError('This Design ID already has a frozen ZIP.',409);
         return {

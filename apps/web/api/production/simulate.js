@@ -155,6 +155,9 @@ async function handler(request){
         'Saved Design ID and private edit key required.');
       const saved=await authorizeDesign(body.designId,body.accessKey);
       const n=saved.design?.physicalStars?.length;
+      if(saved.design?.physicalSelection?.selectedStars!==undefined&&
+        saved.design.physicalSelection.selectedStars!==n)
+        return responseJson({error:'Saved LED star count is inconsistent. Reopen and reprepare your design.'},409);
       if(!Number.isInteger(n)||n<1||!saved.design.astronomy)
         return responseJson({error:'Finish the star selections before testing.'},409);
       if(n>24)return responseJson({error:'Retail test orders may have at most 24 physical LEDs. Legacy designs remain on hold.'},409);

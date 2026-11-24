@@ -9,11 +9,14 @@ const SK='SK-0123456789ABCDEF'
 const enc=new TextEncoder()
 
 test('frozen packet carries exact snapshot, real Design ID and three print variants',async()=>{
-  const manifest={reference:SK,status:'UNPAID_PREVIEW',manufacturing:{
-    candidatePlan:{version:'maker-v1'},selectedPhysicalStars:2,
-  }}
+  const ledStars=[{ledIndex:0,hipparcosId:101},
+    {ledIndex:1,hipparcosId:102}]
+  const manifest={reference:SK,status:'UNPAID_PREVIEW',
+    design:{physicalStars:ledStars,physicalSelection:{selectedStars:2}},
+    manufacturing:{candidatePlan:{version:'maker-v1',physicalCount:2},
+      selectedPhysicalStars:2}}
   const plan={designId:SK,version:'maker-v1',physicalCount:2,
-    stars:[{ledIndex:0},{ledIndex:1}]}
+    stars:ledStars}
   const items=[
     ['order.json',JSON.stringify(manifest)],
     ['manufacturing-job-plan.json',JSON.stringify(plan)],

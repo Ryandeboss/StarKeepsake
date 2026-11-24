@@ -26,6 +26,7 @@ import { skyAboveArtworkAspect } from '../frameSkyBalance'
 import { makePhysicalView } from '../physicalStarView'
 import { maskWorkingDimensions } from '../skyMaskMath'
 import { physicalToggleError } from '../physicalStarSelection'
+import { countPhysicalLeds } from '../physicalStarParity'
 import type { AbovePhotoFitMode } from '../frameSkyBalance'
 import { createCustomerPacket, downloadFile } from '../customerOrder'
 import {freezeManufacturingPacket,getFrozenStatus} from '../frozenPacket'
@@ -208,6 +209,9 @@ export function ExperiencePage() {
   const physicalStarIds=useMemo(()=>
     new Set((activeDesign.physicalStars??[]).map(s=>s.hipparcosId)),
     [activeDesign.physicalStars])
+  const displayedPhysicalLedCount=activeDesign.physicalStars?.length??0
+  const digitalOnlyCount=Math.max(0,(physicalView?.visibleDigitalCount??0)-
+    displayedPhysicalLedCount)
   function resetPhysicalLights(){
     setDesign(current=>({...current,physicalStarOverrides:undefined}))
     setPhysicalMessage('')
@@ -808,6 +812,14 @@ export function ExperiencePage() {
       setOrderError('Choose a view with at least one physical star light before preparing your Etsy order.')
       return null
     }
+    // If the preview, selected set or LED numbering diverged, stop instead
+    // of producing a different number of lights in the admin work order.
+    try{countPhysicalLeds(activeDesign)}
+    catch(cause){
+      setOrderError(cause instanceof Error?cause.message:
+        'Physical LED count changed. Review your stars before saving.')
+      return null
+    }
     const key=orderKey
     const preferences={...orderPreferences}
     setOrderBusy(true);setOrderError('');setOrderPreparingStep('save')
@@ -883,8 +895,9 @@ export function ExperiencePage() {
       const preparedPlan=buildManufacturingJobPlan({
         ...activeDesign,designId:receipt.designId
       },{...orderPreferences})
-      if(preparedPlan.designId!==receipt.designId)
-        throw Error('The saved Design ID and test manufacturing plan disagree.')
+      if(preparedPlan.designId!==receipt.designId||
+        preparedPlan.physicalCount!==countPhysicalLeds(activeDesign))
+        throw Error('The saved Design ID or physical LED count does not match the test plan.')
       const response=await withDeadline(fetch('/api/production/simulate',{
         method:'POST',cache:'no-store',
         headers:{'Content-Type':'application/json',
@@ -1327,7 +1340,15 @@ export function ExperiencePage() {
                 onPerspectiveInteract={()=>{}}
                 onHeading={()=>{}} onPitch={()=>{}}/>
             </HomeShowroom>
-            {physicalView&&physicalView.physicalSelection.eligibleStars>24&&
+            {physicalView&&<div className="at-physical-count-total" role="status">
+              <strong>✦ {displayedPhysicalLedCount} physical LED stars</strong>
+              <span>{digitalOnlyCount>0
+                ?(physicalView.visibleDigitalCount+' stars are visible digitally; '+
+                  digitalOnlyCount+' cannot be illuminated in this print layout or spacing.')
+                :'Every displayed star is selected for a physical LED.'}</span>
+            </div>}
+            {physicalView&&(physicalView.physicalSelection.eligibleStars>24||
+              digitalOnlyCount>0)&&
               <section className="at-physical-choices"
                 aria-label="Choose which stars have real LED lights">
               <div className="at-physical-choices-heading">
@@ -1339,10 +1360,9 @@ export function ExperiencePage() {
                   {customizingLights?'✓ Done choosing':'✦ Choose illuminated stars'}
                 </button>
               </div>
-              <p>StarKeepsake automatically lights every safely spaced star in
-                your chosen view when there are up to {physicalView.physicalSelection.maxPhysicalStars}.
-                For busier skies, the brightest stars and their spacing guide the
-                selection. All other stars remain visible digitally.</p>
+              <p>The physical LEDs are selected from stars with safe drilled
+                positions and spacing. A star can remain visible digitally but have
+                no physical LED. You can review or swap eligible stars below.</p>
               <p className="at-physical-capacity-summary">
                 Up to 24 illuminated stars per keepsake. You can fine-tune
                 which stars light up using the selection controls below.
@@ -1532,6 +1552,10 @@ export function ExperiencePage() {
             </div>
             <div className="at-customer-order">
               <span className="at-kicker">YOUR KEEPSAKE / COMPLETE YOUR DESIGN</span>
+              <div className="at-order-led-count">
+                <strong>{displayedPhysicalLedCount} physical LED stars</strong>
+                <span>This exact count is saved for manufacturing.</span>
+              </div>
               <label htmlFor="at-order-inscription">A short inscription (optional)</label>
               <input id="at-order-inscription" type="text" maxLength={65}
                 disabled={orderBusy||saveBusy}
@@ -1571,8 +1595,9 @@ export function ExperiencePage() {
               {currentOrder&&<div className="at-ready-packet at-etsy-simple" role="status">
                 <div className="at-order-ready-heading">
                   <strong>✓ Your design is saved!</strong>
-                  <small>Everything you customized is safely stored. Just two steps
-                    left to order your keepsake on Etsy — no file upload needed.</small>
+                  <small>{currentOrder.manifest.manufacturing?.selectedPhysicalStars}
+                    {' '}physical LED stars are frozen in your manufacturing files.
+                    Two steps remain to order on Etsy — no file upload needed.</small>
                 </div>
                 <div className="at-etsy-handoff-step">
                   <span className="at-etsy-handoff-number">01</span>

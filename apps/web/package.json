@@ -40,7 +40,8 @@
     "test:manual-amazon": "node --experimental-strip-types --test tests/manual-amazon-queue.test.mjs",
     "test:etsy-checkout": "node --experimental-strip-types --test tests/etsy-checkout-journey.test.mjs",
     "test:production-storage": "node --test tests/private-production-storage.test.mjs",
-    "test:rehearsal": "node --experimental-strip-types --test tests/rehearsal.test.mjs"
+    "test:rehearsal": "node --experimental-strip-types --test tests/rehearsal.test.mjs",
+    "test:star-parity": "node --experimental-strip-types --test tests/physical-star-parity.test.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

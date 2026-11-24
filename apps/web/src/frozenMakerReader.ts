@@ -1,6 +1,7 @@
 import type {MakerPlan} from './manufacturingJobPlan'
 import type {OrderManifest} from './orderManifest'
 import {PRINT_VARIANTS} from './manufacturingPrint.ts'
+import {assertMakerStarParity} from './physicalStarParity.ts'
 
 /** Read the original checkout's UNCOMPRESSED V1 ZIP; never regenerate a
  * frozen manufacturing snapshot from today's astronomy or print algorithms. */
@@ -46,6 +47,10 @@ export async function readFrozenMakerPacket(blob:Blob,designId:string){
     throw Error('Frozen packet Design ID, version or star count does not match.')
   if(plan.physicalCount<1||plan.physicalCount>24)
     throw Error('Legacy physical star count exceeds test retail limit.')
+  // The original customer selection, maker plan and archive summary must
+  // agree on both quantity AND the physical HIP identities and LED ordering.
+  assertMakerStarParity(manifest.design,plan,
+    manifest.manufacturing?.selectedPhysicalStars)
   for(const variant of PRINT_VARIANTS){
     if(!files[variant.artwork]||!files[variant.spec]||!files[variant.guide])
       throw Error('Frozen print variant '+variant.id+' is missing.')

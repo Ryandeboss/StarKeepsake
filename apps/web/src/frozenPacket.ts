@@ -29,7 +29,8 @@ export async function freezeManufacturingPacket(
     access:'private',
     handleUploadUrl:'/api/production/freeze',
     clientPayload:JSON.stringify({designId:receipt.designId,
-      accessKey:receipt.accessKey})
+      accessKey:receipt.accessKey,
+      physicalCount:assertManifestStarParity(packet.manifest)})
   })
   const result=await getFrozenStatus(receipt)
   if(!result.archived)throw Error(

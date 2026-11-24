@@ -1045,3 +1045,16 @@
  background:#173240;border:1px solid #607580;border-radius:8px;
  color:#ecdbc1;font-size:11px;line-height:1.5}
 .at-owner-simulate-progress .at-order-button-spinner{flex:none}
+
+/* Final physical LED count is always visible and matches the immutable maker set.
+ * Digital-only stars can stay in the sky, but are never sold as drilled lights. */
+.at-physical-count-total{display:flex;align-items:center;justify-content:space-between;
+ gap:12px;flex-wrap:wrap;background:#162e3d;border:1px solid #a88e65;
+ border-radius:12px;padding:14px 17px}
+.at-physical-count-total strong{font:600 20px Georgia,serif;color:#f6e1b5}
+.at-physical-count-total span{color:#bed1d5;font-size:13px;line-height:1.5;
+ flex:1 1 240px}
+.at-order-led-count{display:grid;gap:5px;border:1px solid #657b7f;
+ background:#112e3a;border-radius:10px;padding:12px 14px}
+.at-order-led-count strong{color:#f3dfb3;font-size:19px;font-weight:700}
+.at-order-led-count span{color:#c2d3d4;font-size:13px;line-height:1.4}

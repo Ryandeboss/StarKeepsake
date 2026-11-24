@@ -8,6 +8,7 @@ import type { FrameQuote } from './storefrontPricing'
 import { printSpecification,trimSafeGuideSvg,embedPngDpi,PRINT_VARIANTS,DEFAULT_PRINT_SETTINGS } from './manufacturingPrint'
 import type {PrintSpecification,PrintVariantId} from './manufacturingPrint'
 import {assessPhotoPrintQuality,samplePhotoVisualMetrics} from './photoPrintQuality'
+import {countPhysicalLeds,assertMakerStarParity} from './physicalStarParity'
 import {buildManufacturingJobPlan,makerChecklistJson,makerStarMapCsv,
   makerPartsCsv,makerDrillTemplateSvg} from './manufacturingJobPlan'
 import type {PhotoVisualMetrics} from './photoPrintQuality'
@@ -191,6 +192,9 @@ export async function createCustomerPacket(input:{
   printVariants:Record<PrintVariantId,Blob>}>{
   if(!input.design.astronomy||!input.design.moment.location)throw Error('Finish the workshop first.')
   if(input.prefs.layout==='within'&&!input.cutoutUrl)throw Error('Save the polished foreground first.')
+  // Final LED count must come from the customer's selected PhysicalStars, not
+  // the larger catalogue of digital stars visible in the observer view.
+  const physicalCount=countPhysicalLeds(input.design)
   const photo=new Uint8Array(await input.photo.arrayBuffer())
   // Server-assigned Design ID supersedes a local packet-only checksum when saved.
   const reference=input.savedDesignId??await orderReference(input.design,input.prefs,photo)
@@ -236,6 +240,9 @@ export async function createCustomerPacket(input:{
     geometryValidated:maker.geometryValidated,
     productionStatus:maker.status,holds:[...maker.holds]
   }
+  if(assertMakerStarParity(manifest.design,maker,
+    manifest.manufacturing.selectedPhysicalStars)!==physicalCount)
+    throw Error('The displayed physical LED count changed while preparing this order.')
   const makerFiles=[
     {name:'manufacturing-job-plan.json',
       data:encoder.encode(JSON.stringify(maker,null,2))},

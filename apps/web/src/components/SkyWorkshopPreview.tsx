@@ -249,7 +249,10 @@ export function SkyWorkshopPreview({
     </div>
     <div className="skw-footline">
       <span>{showroom?'✧ DIMENSIONAL PRODUCT MOCKUP · MOVE TO INSPECT':'✧ DRAG TO LOOK AROUND · HOVER FOR STAR NAMES · CLICK TO EXPLORE'}</span>
-      <span>{visible.length} STARS IN VIEW{editingPhysicalStars?' · CLICK TO TOGGLE PHYSICAL LEDs':''}</span>
+      <span>{showroom
+        ?`${physicalStarIds?.size??stars.length} PHYSICAL LED STARS · MANUFACTURING COUNT`
+        :`${visible.length} DIGITAL STARS IN VIEW · ${physicalStarIds?.size??0} PHYSICAL LED STARS`}
+        {editingPhysicalStars?' · CLICK TO TOGGLE LEDs':''}</span>
     </div>
   </div>
 }
