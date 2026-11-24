@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { DragEvent, FormEvent } from 'react'
 import { generateAstronomy, resolveMoment, searchLocations } from '../api'
 import type { LocationCandidate } from '../api'
@@ -38,6 +38,37 @@ import { PREVIEW_FRAME_QUOTES, frameQuoteFor, loadFramePrices } from '../storefr
 import { etsyListingForFinish, canContinueToEtsy } from '../etsyCheckout'
 import type { FrameQuote } from '../storefrontPricing'
 import './ExperiencePage.css'
+
+// Shared, independently dismissible disclosure for the sky and showroom counts.
+function StarCountHelp({view,manual}:{view:ReturnType<typeof makePhysicalView>;manual:boolean}){
+  const id=useId()
+  const [pinned,setPinned]=useState(false)
+  const [hovered,setHovered]=useState(false)
+  const expanded=pinned||hovered
+  return <div className="at-star-count-help"
+    onPointerEnter={event=>{if(event.pointerType==='mouse')setHovered(true)}}
+    onPointerLeave={()=>setHovered(false)}
+    onKeyDown={event=>{if(event.key==='Escape'){setPinned(false);setHovered(false)}}}>
+    <button type="button" className="at-star-count-help-trigger" aria-expanded={expanded}
+      aria-controls={id} onClick={()=>{setPinned(value=>!value);setHovered(false)}}>
+      Why are some stars not illuminated?
+    </button>
+    <div id={id} className="at-star-count-help-content" hidden={!expanded}>
+      <p>Some stars remain visible in your artwork without an individual LED.</p>
+      <ul>
+        <li><b>Spacing:</b> Nearby stars may be too close for separate lights.</li>
+        <li><b>Edges:</b> Stars near or outside the finished print edge cannot safely receive a light.</li>
+        <li><b>Capacity:</b> Each keepsake supports up to {view.physicalSelection.maxPhysicalStars} illuminated stars.
+          Automatic selection favors brighter stars and good spacing.</li>
+      </ul>
+      {view.unavailableForDrilling>0&&<p>In your design, {view.unavailableForDrilling}
+        {' '}visible stars are outside the safe print area.</p>}
+      {view.tooClose>0&&<p>{view.tooClose} stars were skipped because their light positions are too close together.</p>}
+      {manual&&<p>Your manual star choices can also leave stars unlit.</p>}
+      <p>Adjust your sky or choose eligible lights in Chapter 05 to customize which stars illuminate.</p>
+    </div>
+  </div>
+}
 
 type Stage = 'welcome'|'detecting'|'choice'|'refine'|'moment'|'calculating'|'preview'|'home'
 
@@ -123,8 +154,6 @@ export function ExperiencePage() {
   const [physicalOnly,setPhysicalOnly]=useState(true)
   const [customizingLights,setCustomizingLights]=useState(false)
   const [physicalMessage,setPhysicalMessage]=useState('')
-  const [starHelpOpen,setStarHelpOpen]=useState(false)
-  const [starHelpHover,setStarHelpHover]=useState(false)
   // Incrementing this id replays the confirmation animation even if the
   // customer clicks restore twice without changing their selection.
   const [physicalRestoreId,setPhysicalRestoreId]=useState(0)
@@ -1216,6 +1245,8 @@ export function ExperiencePage() {
           <section className="at-preview-main" aria-label="Interactive sky and photograph">
             <SkyWorkshopPreview
               showroom={false} lightsOn={lightsOn} finish={finish}
+              starCountHelp={physicalView&&digitalOnlyCount>0?<StarCountHelp view={physicalView}
+                manual={design.physicalStarOverrides?.mode==='manual'}/>:undefined}
               stars={design.stars}
               physicalStarIds={physicalStarIds} photoUrl={photoUrl} cutoutUrl={cutoutUrl}
               layout={placement}
@@ -1345,41 +1376,12 @@ export function ExperiencePage() {
             {physicalView&&<div className="at-physical-count-total">
               <div style={{display:'flex',alignItems:'center',gap:8}}>
                 <strong>✦ {displayedPhysicalLedCount} physical LED stars</strong>
-                <button type="button" aria-label="Why are some stars not illuminated?"
-                  aria-expanded={starHelpOpen||starHelpHover}
-                  aria-controls="at-star-count-help"
-                  onPointerEnter={event=>{if(event.pointerType==='mouse')setStarHelpHover(true)}}
-                  onPointerLeave={()=>setStarHelpHover(false)}
-                  onClick={()=>{setStarHelpOpen(value=>!value);setStarHelpHover(false)}}
-                  onKeyDown={event=>{if(event.key==='Escape'){setStarHelpOpen(false);setStarHelpHover(false)}}}
-                  style={{width:30,height:30,borderRadius:'50%',border:'1px solid #a88e65',
-                    background:'transparent',color:'#f6e1b5',fontSize:16,fontWeight:700,
-                    cursor:'pointer',padding:0,flexShrink:0}}>?</button>
               </div>
               <span role="status">{digitalOnlyCount>0
                 ?physicalView.visibleDigitalCount+' stars in view · '+digitalOnlyCount+' digital-only'
                 :'Every displayed star is selected for a physical LED.'}</span>
-              <div id="at-star-count-help" hidden={!(starHelpOpen||starHelpHover)}
-                style={{flexBasis:'100%',padding:'12px 14px',borderRadius:8,
-                  background:'#101f2c',color:'#e5edf0',fontSize:14,lineHeight:1.55}}>
-                <b style={{color:'#f6e1b5'}}>Why are some stars not illuminated?</b>
-                <p style={{margin:'6px 0'}}>Your sky can show more stars than your frame can physically light.
-                  Stars may remain digital-only for three reasons:</p>
-                <ul style={{margin:'6px 0',paddingLeft:20}}>
-                  <li><b>Spacing:</b> Nearby stars may be too close to fit separate lights.</li>
-                  <li><b>Edges:</b> Stars near or outside the finished print edge cannot safely receive a light.</li>
-                  <li><b>Capacity:</b> Each keepsake supports up to {physicalView.physicalSelection.maxPhysicalStars} illuminated stars.
-                    Automatic selection favors brighter stars and good spacing.</li>
-                </ul>
-                {physicalView.unavailableForDrilling>0&&<p style={{margin:'6px 0'}}>
-                  In your design, {physicalView.unavailableForDrilling} visible stars fall outside the safe print area.</p>}
-                {physicalView.tooClose>0&&<p style={{margin:'6px 0'}}>
-                  {physicalView.tooClose} stars were skipped because their light positions are too close together.</p>}
-                {design.physicalStarOverrides?.mode==='manual'&&<p style={{margin:'6px 0'}}>
-                  Your manual star choices can also leave stars unlit.</p>}
-                <p style={{margin:'6px 0 0'}}>Digital-only stars can still appear in your artwork.
-                  Adjust your sky or choose eligible lights to customize which stars illuminate.</p>
-              </div>
+              {digitalOnlyCount>0&&<StarCountHelp view={physicalView}
+                manual={design.physicalStarOverrides?.mode==='manual'}/>}
             </div>}
             {physicalView&&(physicalView.physicalSelection.eligibleStars>24||
               digitalOnlyCount>0)&&

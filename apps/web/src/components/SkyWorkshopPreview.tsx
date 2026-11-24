@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent } from 'react'
 import type { DesignSpec } from '../designSpec'
 import { SkyOrientationMiniMap } from './SkyOrientationMiniMap'
@@ -16,6 +16,7 @@ import './SkyWorkshopPreview.css'
 type Props = {
   stars: DesignSpec['stars']
   physicalStarIds?: ReadonlySet<number>
+  starCountHelp?: ReactNode
   editingPhysicalStars?: boolean
   onTogglePhysicalStar?: (hip:number)=>void
   photoUrl: string
@@ -46,7 +47,7 @@ const SKY_DIRECTION_PRESETS = [
 ] as const
 
 export function SkyWorkshopPreview({
-  stars, physicalStarIds, editingPhysicalStars=false, onTogglePhysicalStar,
+  stars, physicalStarIds, starCountHelp, editingPhysicalStars=false, onTogglePhysicalStar,
   photoUrl, cutoutUrl, layout, imageAspect,
   heading, pitch, fov, skyHeight, photoFit, glow, tone, maskAlpha, maskDimensions,
   showPerspectiveGuide, showroom, lightsOn, finish,
@@ -253,6 +254,7 @@ export function SkyWorkshopPreview({
         ?`${physicalStarIds?.size??stars.length} PHYSICAL LED STARS · MANUFACTURING COUNT`
         :`${visible.length} DIGITAL STARS IN VIEW · ${physicalStarIds?.size??0} PHYSICAL LED STARS`}
         {editingPhysicalStars?' · CLICK TO TOGGLE LEDs':''}</span>
+      {starCountHelp}
     </div>
   </div>
 }

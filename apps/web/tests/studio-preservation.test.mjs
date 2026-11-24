@@ -410,3 +410,17 @@ test('builder displays physical LEDs separately from digital stars and matches f
   assert.match(freeze,/assertManifestStarParity/)
   assert.match(physical,/selectedStars!==n/)
 })
+
+test('both customer star-count sections offer the same readable exclusion explanation',()=>{
+  const sky=file('../src/components/SkyWorkshopPreview.tsx')
+  const css=file('../src/pages/ExperiencePage.css')
+  assert.match(studio,/function StarCountHelp\(/)
+  assert.match(studio,/Why are some stars not illuminated\?/)
+  assert.match(studio,/starCountHelp=\{physicalView&&digitalOnlyCount>0\?<StarCountHelp/)
+  assert.match(studio,/\{digitalOnlyCount>0&&<StarCountHelp/)
+  assert.match(sky,/DIGITAL STARS IN VIEW[\s\S]*?\{starCountHelp\}/)
+  assert.match(studio,/aria-expanded=\{expanded\}/)
+  assert.match(studio,/onPointerEnter/)
+  assert.match(studio,/event\.key==='Escape'/)
+  assert.match(css,/\.at-star-count-help-content\[hidden\]/)
+})
