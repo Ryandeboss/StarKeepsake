@@ -1,0 +1,64 @@
+.simple-module{color:#18272d;font-size:17px;min-height:150px}
+.simple-module button,.simple-module select,.simple-module input{font:inherit}
+.simple-loading{display:flex;align-items:center;gap:14px;justify-content:center;
+ padding:60px 20px;color:#476068;font-size:18px}
+.simple-spinner{width:23px;height:23px;border:3px solid #bfd0d2;
+ border-top-color:#176e73;border-radius:50%;animation:simple-spin .8s linear infinite}
+@keyframes simple-spin{to{transform:rotate(360deg)}}
+.simple-error{border:1px solid #d79292;color:#8f1b28;background:#fff0f0;
+ padding:16px;border-radius:10px;line-height:1.5;margin:10px 0;font-size:16px}
+.simple-progress{display:flex;gap:16px;align-items:center;justify-content:space-between;
+ margin:0 0 20px;flex-wrap:wrap}
+.simple-progress strong{font-size:18px;font-weight:650;color:#1a3539}
+.simple-progress progress{flex:1;min-width:150px;max-width:330px;height:12px;
+ accent-color:#197c7d}
+.simple-todo-list{display:grid;gap:9px}
+.simple-todo-row{display:flex;align-items:center;justify-content:space-between;
+ gap:18px;min-height:70px;padding:12px 19px;border:1px solid #d9e2e3;
+ border-radius:12px;background:#fff;color:#1b2c32;box-sizing:border-box}
+.simple-todo-row:hover{border-color:#8db4b4}
+.simple-todo-row>label,.simple-todo-row.simple-step{display:flex;align-items:center;
+ gap:16px;cursor:pointer;min-width:0;flex:1}
+.simple-todo-row input[type=checkbox]{width:25px;height:25px;flex:none;
+ accent-color:#197c7d;cursor:pointer}
+.simple-todo-name{font-size:18px;font-weight:550;line-height:1.4;
+ overflow-wrap:anywhere}
+.simple-todo-row.is-checked .simple-todo-name{color:#6b8384;text-decoration:line-through;
+ text-decoration-thickness:1px}
+.simple-todo-row>a{flex:none;color:#136971;font-size:17px;
+ font-weight:650;text-decoration:none;padding:10px 0}
+.simple-todo-row>a:hover{text-decoration:underline}
+.simple-missing-link{flex:none;font-size:16px;color:#8d6767}
+.simple-phase-controls{display:flex;align-items:center;gap:12px;margin:20px 0}
+.simple-phase-controls button{border:1px solid #c4d4d6;color:#14565b;
+ background:#fff;border-radius:10px;padding:12px 15px;font-size:16px;
+ white-space:nowrap;cursor:pointer}
+.simple-phase-controls button:disabled{opacity:.35;cursor:default}
+.simple-phase-controls select{flex:1;min-width:0;border:1px solid #c4d4d6;
+ background:#fff;border-radius:10px;color:#142b31;padding:12px 10px;
+ font-size:17px}
+.simple-phase-title{color:#1c3338;font-size:24px;font-weight:650;line-height:1.25;margin:22px 0 15px}
+.simple-art-preview{display:block;max-width:min(100%,440px);max-height:430px;
+ object-fit:contain;border:1px solid #d4dfe0;background:#fff;border-radius:12px;
+ margin:0 auto 22px}
+.simple-zip-button{background:#176d72;color:white;border:0;border-radius:10px;
+ padding:15px 20px;font-size:17px;font-weight:650;margin:0 0 20px;cursor:pointer}
+.simple-file-list{display:grid;gap:8px}
+.simple-file-list button{display:flex;align-items:center;justify-content:space-between;
+ gap:20px;min-height:69px;width:100%;text-align:left;padding:13px 18px;
+ border:1px solid #d9e2e3;border-radius:11px;background:#fff;color:#1b3338;
+ cursor:pointer;font-size:18px;font-weight:550}
+.simple-file-list button:hover{border-color:#7dadaf;background:#f0faf9}
+.simple-file-list button span:last-child{font-size:24px;color:#127478}
+.simple-extra-files{margin-top:20px}
+.simple-extra-files summary{padding:13px 2px;cursor:pointer;font-size:18px;
+ color:#28636a;font-weight:650}
+.simple-empty{font-size:18px;padding:32px;text-align:center;color:#52666c}
+@media(max-width:650px){
+ .simple-todo-row{padding:10px 12px;min-height:68px;gap:9px}
+ .simple-todo-name{font-size:17px}
+ .simple-todo-row>a{font-size:16px}
+ .simple-phase-controls{gap:6px;flex-wrap:wrap}
+ .simple-phase-controls select{order:-1;flex-basis:100%;width:100%}
+}
+@media(prefers-reduced-motion:reduce){.simple-spinner{animation:none}}

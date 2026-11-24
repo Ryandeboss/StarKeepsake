@@ -492,3 +492,66 @@ does not write any order state. The card's **Ordered** field uses the actual
 Etsy `created_at_etsy` field, never the potentially later `last_synced_at`
 timestamp. Its receipt total is separately labeled and not computed for
 internal unpaid tests.
+
+## 2026-11-23 — Simplification follow-up: readable light Studio and true to-do modules
+
+The owner inspected the previous three-tab redesign and reported that it remained
+too crowded, included excessive small captions and paragraphs, and visually
+resembled the dark customer night-sky experience. The correct customer design
+files and simulation functionality were already verified by the owner; **this
+turn fixes presentation, not the astronomy or frozen manufacturing data**.
+
+- Admin-only `StudioLight.css` switches the authenticated Production Studio
+  to a **light off-white, white-card, dark-ink, teal-action** theme with readable
+  base font, substantial click targets, and fewer visual layers. No customer
+  Chapter 05 style or astronomy logic is changed.
+- Compact Orders cards no longer show redundant descriptions. Opening an order
+  shows three simple cards: **Parts & supplies**, **Build checklist** and
+  **Artwork & files**. Each opens one white modal with no explanatory paragraph
+  stack. Existing manager/Operations tab remains available separately.
+- New `SimpleStudioModules.tsx/.css` implements these actual modules:
+  - **Parts:** One per-design list; each row has only a checkbox, quantity+
+    component name and supplier link (or `No link`). Simulated parts read
+    their authoritative per-design candidate-BOM snapshot from authenticated
+    `GET /api/production/simulate?designId=...&view=parts`. Checked items
+    persist as `ready` in existing private test-only `view=work` records,
+    preserving prior validation/notes. Unchecking returns to `needed`. This
+    is the owner's own checkbox assertion of physical readiness, NOT a supplier
+    purchase, production approval or M3 stock allocation. Make-only tasks
+    remain on the Build checklist rather than shopping list.
+  - **Real paid job parts:** new server-only
+    `/api/production/parts?receiptId=...&transactionId=...` provides separate
+    authenticated private Blob checkmarks under
+    `production/paid-parts/<receipt>/<transaction>/<designId>`. The server
+    uses `authorizePaidJob` for GET and its stricter `forWrite` eligibility
+    on POST, so a held/canceled/finished job cannot be silently edited.
+    This lightweight checklist is separate from true M3 stock/allocations.
+    The roster comes exclusively from the frozen saved-design maker packet
+    via the existing authenticated paid-job `/api/production/archive`.
+  - **Build:** A single checklist phase at a time with large rows, a basic
+    progress meter, and Previous/Next phase controls. Simulated owner tests
+    still write the existing individual 103 phase step records via
+    `/api/production/simulate?view=work`. Paid jobs still write their known
+    23 paid-job step IDs through the existing `/api/production/checklist`.
+    The current Test Build Complete safety/QA server gates are NOT modified.
+    Advanced electrical and burn-in records remain available under the
+    original Operations interface if needed. Checking boxes is an owner
+    assertion, not a legal/electrical approval.
+  - **Files:** Original frozen customer preview and a clean download list
+    (star-map CSV, 11×14/⅛/¼ print PNGs, draft drilling guide,
+    original photo and immutable packet). Same original private ZIP
+    `readFrozenMakerPacket` validation, no regenerated false originals.
+    Other technical packet files remain available behind one disclosure.
+- Supplier table now has **four wide readable columns only**: Item,
+  Supplier link, Saved price and Notes. Price remains a recorded M3 amount
+  (or em dash for unverified research), NEVER a fabricated live Amazon quote.
+- Existing private owner credentials never enter URLs or local persistence.
+  The real Etsy receipt verification, test record deletion, supplier purchasing
+  and paid-order revenue are unchanged. All overlays/actions remain keyboard
+  accessible and responsive.
+- Owner acceptance: authenticate, verify light UI and large text, open exact
+  test Design ID, tick a physical part only if acquired, close/reopen to
+  confirm saved status, tick an actual build step and verify persistence,
+  download frozen source artwork, then inspect the clear four-column supplier
+  sheet. Verify genuine paid order is labeled separately; unverified
+  orders are not eligible for paid manufacturing modules.

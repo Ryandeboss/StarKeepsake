@@ -219,6 +219,10 @@ async function handler(request){
     const record=await orderFor(id);
     if(request.method==='GET'&&!view)
       return responseJson({order:publicOrder(record)});
+    if(request.method==='GET'&&view==='parts'){
+      const work=await readWork(id,record);
+      return responseJson({parts:record.parts||[],saved:work.parts});
+    }
     if(request.method==='GET'&&view==='design'){
       const saved=await authorizeDesign(id,record.accessKey);
       return responseJson(saved);

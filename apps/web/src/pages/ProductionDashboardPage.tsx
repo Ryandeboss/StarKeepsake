@@ -4,6 +4,8 @@ import { MaterialsPanel } from './MaterialsPanel'
 import { ProcurementPanel } from './ProcurementPanel'
 import { ManualAmazonPurchasingPanel } from './ManualAmazonPurchasingPanel'
 import { SupplierCatalogTable } from './SupplierCatalogTable'
+import { SimpleStudioModule } from './SimpleStudioModules'
+import './StudioLight.css'
 import type { MaterialSnapshot } from '../manualAmazonQueue'
 import { materialsForProductionJob } from '../orderFulfillment'
 import { OwnerProductionFiles } from './OwnerProductionFiles'
@@ -421,9 +423,7 @@ export function ProductionDashboardPage() {
     <div className="production-container">
       <header className="production-header">
         <div><a className="production-back" href="/">← StarKeepsake</a>
-          <p className="production-eyebrow">PRIVATE WORKSHOP / OPERATIONS</p>
           <h1>Production Studio</h1>
-          <p className="production-subtitle">Verified Etsy orders, custom designs and manufacturing readiness.</p>
         </div>
         {key && <button type="button" className="production-ghost" onClick={() => {
           setKey(''); setData(null); setSavedDesigns([]); setMaterials(null); setSelected(null);
@@ -465,10 +465,7 @@ export function ProductionDashboardPage() {
         </nav>
         {activeTab==='orders'&&<section className="studio-orders" aria-label="Order workspace">
           {!ordersSelected?<><header className="studio-section-head">
-            <div><span className="production-eyebrow">WORKSHOP / CURRENT ORDERS</span>
-              <h2>All your orders</h2>
-              <p>Real Etsy receipts and internal tests in one place. Only genuinely paid,
-                matched Etsy orders count toward sales.</p></div>
+            <div><h2>Orders</h2></div>
             <button type="button" className="studio-light-button"
               disabled={busy} onClick={()=>void refresh(false)}>
               {busy?'Refreshing…':'Refresh orders'}</button>
@@ -503,7 +500,6 @@ export function ProductionDashboardPage() {
                   <span className="studio-order-arrow" aria-hidden="true">↗</span>
                 </span>
                 <strong>{card.id}</strong>
-                <span className="studio-order-card-title">{card.title}</span>
                 <span className="studio-order-card-divider"/>
                 <span className="studio-order-card-detail">
                   <span>{card.kind==='test'?'Created':'Ordered'}</span>
@@ -534,16 +530,15 @@ export function ProductionDashboardPage() {
             }}>← All orders</button>
             <div className="studio-workspace-header">
               <div>
-                <span className="production-eyebrow">{selectedTestOrder?
-                  'INTERNAL TEST · NEVER PAID':'ETSY RECEIPT · VERIFIED STATUS'}</span>
                 <h2>{selectedTestOrder?.designId||'Etsy #'+selectedRow?.receipt.receipt_id}</h2>
-                <p>{selectedTestOrder?'Simulated on ':'Etsy order placed '}
-                  {dateLabel(selectedTestOrder?.createdAt||selectedRow?.receipt.created_at_etsy||null)}
-                  {' · '}{selectedTestOrder?.finish==='walnut'?'Two-tone walnut':
-                    selectedTestOrder?.finish==='ebony'?'Matte black':
-                      selectedTestOrder?.finish||selectedRow?.state}
-                  {selectedTestOrder?' · '+selectedTestOrder.stars+' physical stars':
-                    selectedRow?' · '+money(selectedRow.receipt):''}</p>
+                <div className="studio-workspace-meta">
+                  <span>{selectedTestOrder?'TEST · UNPAID':selectedRow?.state}</span>
+                  <span>{dateLabel(selectedTestOrder?.createdAt||
+                    selectedRow?.receipt.created_at_etsy||null)}</span>
+                  <span>{selectedTestOrder?.finish==='walnut'?'Walnut':
+                    selectedTestOrder?.finish==='ebony'?'Black':
+                    selectedTestOrder?.finish||'Etsy order'}</span>
+                </div>
               </div>
               {selectedTestOrder&&<button type="button" className="production-test-delete"
                 disabled={testDeleting===selectedTestOrder.designId}
@@ -573,42 +568,32 @@ export function ProductionDashboardPage() {
               </div>}
             </>}
             {(selectedTestOrder||chosenItem)&&<>
-              <p className="studio-module-intro">Choose what you need for this order.</p>
               <div className="studio-module-grid">
                 {([
-                  ['parts','Parts & supplies','See every component and update this order’s sourcing status.','01'],
-                  ['checklist','Build checklist','Track the assembly, testing and quality-control steps.','02'],
-                  ['files','Artwork & files','Open the exact photo, star map and print-ready downloads.','03'],
-                ] as const).map(([id,title,description,num])=><button
+                  ['parts','Parts & supplies','package'],
+                  ['checklist','Build checklist','check'],
+                  ['files','Artwork & files','file'],
+                ] as const).map(([id,title,symbol])=><button
                   key={id} type="button" className="studio-module-card"
                   onClick={event=>{
                     modalReturnRef.current=event.currentTarget
                     setOrderModule(id)
                   }}>
-                  <span className="studio-module-number">{num} / WORK ORDER</span>
+                  <span className="studio-simple-symbol" aria-hidden="true">
+                    {symbol==='package'?'□':symbol==='check'?'✓':'↓'}</span>
                   <strong>{title}</strong>
-                  <p>{description}</p>
-                  <span className="studio-module-open">Open module ↗</span>
+                  <span className="studio-module-open" aria-hidden="true">→</span>
                 </button>)}
               </div>
-              {selectedTestOrder&&<p className="studio-workspace-footnote">
-                TEST ONLY · No Etsy payment, supplier purchase or stock reservation.
-                Progress is saved independently for this Design ID.</p>}
             </>}
           </div>}
         </section>}
         {activeTab==='shopping'&&<section className="studio-shopping" aria-label="Shopping and suppliers">
-          <header className="studio-section-head">
-            <div><span className="production-eyebrow">SOURCING / PURCHASING</span>
-              <h2>Shopping & suppliers</h2>
-              <p>Find each component and its source without mixing supplier
-                research with real paid-order purchasing.</p></div>
-          </header>
+          <header className="studio-section-head"><h2>Shopping & suppliers</h2></header>
           <details className="studio-shopping-queue" open={shoppingQueueOpen}
             onToggle={event=>setShoppingQueueOpen(event.currentTarget.open)}>
             <summary><span><strong>Amazon shopping checklist</strong>
-              <small>View actual paid-order shortages, pack mappings and manually
-                record purchases already placed</small></span>
+              <small>Open purchasing checklist</small></span>
               <span aria-hidden="true">＋</span></summary>
             {shoppingQueueOpen&&<ManualAmazonPurchasingPanel adminKey={key}
               refreshVersion={manualQueueVersion}
@@ -914,19 +899,18 @@ export function ProductionDashboardPage() {
           <section className="studio-module-dialog" role="dialog" aria-modal="true"
             aria-labelledby="studio-module-dialog-title">
             <div className="studio-dialog-topbar">
-              <div><span className="production-eyebrow">
-                {selectedTestOrder?'SIMULATED · NO PAYMENT':'VERIFIED ETSY ORDER'}
-              </span>
+              <div>
                 <h2 id="studio-module-dialog-title">{orderModule==='parts'?
                   'Parts & supplies':orderModule==='checklist'?
                     'Build checklist':'Artwork & files'}</h2>
-                <p>{selectedTestOrder?.designId||chosenItem?.design_id}
-                  {' · '}All changes stay scoped to this order.</p></div>
+                <span className="studio-dialog-order-id">
+                  {selectedTestOrder?.designId||chosenItem?.design_id}</span>
+              </div>
               <button type="button" ref={modalCloseRef} className="studio-dialog-close"
                 onClick={()=>setOrderModule(null)} aria-label="Close module">×</button>
             </div>
             <div className="studio-dialog-body">
-              <OwnerProductionFiles
+              <SimpleStudioModule
                 key={(selectedTestOrder?.designId||chosenItem?.design_id||'')+orderModule}
                 adminKey={key}
                 simulated={Boolean(selectedTestOrder)}
