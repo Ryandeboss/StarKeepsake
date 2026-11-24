@@ -74,8 +74,9 @@ export function SimpleStudioModule({module,adminKey,designId,simulated,
     '/api/production/archive'+paid(receiptId,transactionId)+'&download=1'
   const needsZip=module==='files'||(module==='parts'&&!simulated)
   useEffect(()=>{
-    let active=true
-    setLoaded(false);setError('');setParts([]);setMarked({});setFrozen(null);setZip(null)
+    // The parent keys each modal by Design ID and view. Initial state is
+    // already empty; let asynchronous results update it once available.
+    let active=true,previewUrl=''
     void (async()=>{
       try{
         if(needsZip){
@@ -88,6 +89,10 @@ export function SimpleStudioModule({module,adminKey,designId,simulated,
           const parsed=await readFrozenMakerPacket(original,designId)
           if(!active)return
           setFrozen(parsed)
+          if(module==='files'){
+            previewUrl=URL.createObjectURL(parsed.preview)
+            setPreview(previewUrl)
+          }
           if(module==='parts')setParts(parsed.plan.parts)
         }
         if(module==='parts'){
@@ -117,14 +122,11 @@ export function SimpleStudioModule({module,adminKey,designId,simulated,
       }catch(e){if(active)setError(asError(e))}
       finally{if(active)setLoaded(true)}
     })()
-    return()=>{active=false}
+    return()=>{
+      active=false
+      if(previewUrl)URL.revokeObjectURL(previewUrl)
+    }
   },[adminKey,archiveEndpoint,designId,module,needsZip,partEndpoint,progressEndpoint,simulated])
-  useEffect(()=>{
-    if(!frozen?.preview)return
-    const url=URL.createObjectURL(frozen.preview)
-    setPreview(url)
-    return()=>{URL.revokeObjectURL(url);setPreview('')}
-  },[frozen])
   const relevant=useMemo(()=>parts.filter(p=>p.group!=='make'),[parts])
   const checkedParts=relevant.filter(p=>marked[p.key]).length
   const phases=simulated?testPhases:paidPhases
