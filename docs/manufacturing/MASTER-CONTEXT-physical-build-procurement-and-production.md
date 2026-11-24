@@ -1776,3 +1776,28 @@ Recommended next software priority:
 2. Treat low effective PPI as an obvious admin/customer production blocker or required owner approval.
 3. Verify original downloaded print PNG dimensions/DPI locally.
 4. Keep star/drill/electronics calibration holds explicit until physical prototype tests pass.
+
+
+---
+
+# Latest turn — Variable frame aspect ratio / size instead of fixed 11x14
+
+The user wants StarKeepsake to support different frame aspect ratios/sizes rather than forcing every design into 11x14. The rationale is that the owner can source a corresponding frame for the customer's image instead of distorting/cropping every image into one physical format.
+
+Key architectural correction:
+
+- The selected frame's actual visible opening / trim dimensions should become the manufacturing source of truth.
+- Do not equate "matching aspect ratio" with "compatible frame." The selected frame must also have verified internal depth, rabbet/opening, glazing, backing/rear access, hanging hardware, and enough volume for StarPods, wiring, electronics carrier, power entry and serviceability.
+- Remove fixed-11x14 assumptions from saved design/manufacturing logic where they represent physical trim, print, star coordinates, drill template, SINTRA panel, BOM and QA.
+- Keep 11x14 as one supported size/preset if desired, but not the only allowed geometry.
+- Preserve the current retail physical-star cap of 24 unless deliberately changed later; max star count is a product/electronics policy independent of frame size.
+- Never stretch the source photo to the frame aspect ratio. Use explicit crop/cover/contain behavior and show the exact customer-visible crop before finalization.
+- Effective print PPI must be recalculated from the chosen physical print dimensions, not assumed from 11x14.
+- Bleed/safe area must scale from actual trim size; print variants should be generated from actual width/height.
+- Physical star print-space coordinates and 1:1 drilling templates must be generated from the frozen actual trim width/height.
+- Per-order BOM must use the exact selected frame product/size, panel dimensions, print dimensions, packaging dimensions and any frame-specific spacer/rear-cover requirements.
+- The admin order should show the exact frame SKU/link, outer dimensions, visible opening, usable internal depth, trim size, and fit-validation status.
+- Prefer a curated catalog of supported, verified frame SKUs/sizes/aspect ratios rather than assuming any random Amazon frame is safe/compatible. The catalog can expand over time.
+- Legacy 11x14 designs should remain reproducible and must not be silently remapped.
+
+Current uploaded example showed exactly why this matters: the wide source image was being forced into a portrait 11x14 print, producing a preflight warning for stretching and very low effective PPI. The variable-frame refactor should prevent that class of distortion.
