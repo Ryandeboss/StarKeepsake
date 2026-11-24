@@ -26,7 +26,7 @@ test('original ZIP must be frozen before Etsy-ready state is displayed',()=>{
   const freeze=app.indexOf('withDeadline(freezeManufacturingPacket(receipt,packet)')
   const ready=app.indexOf('setPreparedOrder({key,packet})')
   assert.ok(freeze>0 && ready>freeze)
-  assert.match(app,/Everything you customized is safely stored/)
+  assert.match(app,/physical LED stars are frozen in your manufacturing files/)
   assert.match(app,/Download complete design backup \(ZIP\)/)
   assert.doesNotMatch(app,/etsyDesignCardFilename|Download design card again/)
   assert.match(app,/Copy my Design ID/)
